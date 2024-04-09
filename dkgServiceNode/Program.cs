@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
-using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,31 +24,31 @@ builder.Services.Configure<AppSecret>(builder.Configuration.GetSection("AppSecre
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+DbEnsure.Ensure(configuration.GetConnectionString("DefaultConnection") ?? "");
+
 builder.Services.AddDbContext<UserContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Ensure the database is created.
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<UserContext>();
-    DbEnsure.Ensure(context);
-}
-
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    // Cors policy for development
+    app.UseCors(x => x
+        .AllowAnyOrigin()
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+    );
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseMiddleware<JwtMiddleware>();
 
+// app.UseHttpsRedirection();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

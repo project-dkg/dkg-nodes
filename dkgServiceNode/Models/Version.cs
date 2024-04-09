@@ -24,64 +24,21 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using System.ComponentModel.DataAnnotations.Schema;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace dkgServiceNode.Models
 {
-    [Table("users")]
-    public class User
+    [Table("versions")]
+    public class Version
     {
         [Column("id")]
         public int Id { get; set; }
 
-        [Column("name")]
-        public required string Name { get; set; }
+        [Column("version")]
+        public required string VersionNumber { get; set; }
 
-        [Column("email")]
-        public required string Email { get; set; }
+        [Column("date")]
+        public required Date Date { get; set; }
 
-        [Column("password")]
-        public required string Password { get; set; }
-
-        [Column("is_enabled")]
-        public required bool IsEnabled { get; set; }
-
-        [Column("is_admin")]
-        public required bool IsAdmin { get; set; }
-    }
-
-    public class UserViewItem
-    {
-        public UserViewItem(User user)
-        {
-            Id = user.Id;
-            Name = user.Name;
-            Email = user.Email;
-            IsEnabled = user.IsEnabled;
-            IsAdmin = user.IsAdmin;
-        }
-
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Email { get; set; } = "";
-        public bool IsEnabled { get; set; }
-        public bool IsAdmin { get; set; }
-    }
-
-    public class UserViewItemWithJWT : UserViewItem
-    {
-        public UserViewItemWithJWT(User user) : base(user)
-        {
-            Token = "";
-        }
-        public string Token { get; set; } = "";
-    }
-
-    public class UserUpdateItem
-    {
-        public required string Name { get; set; }
-        public required string Email { get; set; }
-        public string? Password { get; set; }
-        public bool IsEnabled { get; set; }
-        public bool IsAdmin { get; set; }
     }
 }

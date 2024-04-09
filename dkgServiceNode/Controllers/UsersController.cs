@@ -95,12 +95,10 @@ namespace dkgServiceNode.Controllers
 
             user.Name = update.Name;
             user.Email = update.Email;
-            user.ApiKey = update.ApiKey;
             user.IsEnabled = update.IsEnabled;
             user.IsAdmin = update.IsAdmin;
 
             if (update.Password != null) user.Password = BCrypt.Net.BCrypt.HashPassword(update.Password);
-            if (update.ApiSecret != null) user.ApiSecret = update.ApiSecret;
 
             userContext.Entry(user).State = EntityState.Modified;
 

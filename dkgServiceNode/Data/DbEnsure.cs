@@ -23,7 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace dkgServiceNode.Data
 {
@@ -37,19 +37,17 @@ namespace dkgServiceNode.Data
 
     CREATE TABLE ""users"" (
       ""id""              SERIAL PRIMARY KEY,
-      ""name""            VARCHAR(16) NOT NULL,
+      ""name""            VARCHAR(64) NOT NULL,
       ""email""           VARCHAR(64) NOT NULL,
       ""password""        VARCHAR(64) NOT NULL,
-      ""api_key""         VARCHAR(64) NOT NULL,
-      ""api_secret""      VARCHAR(64) NOT NULL,
       ""is_enabled""      BOOLEAN NOT NULL DEFAULT TRUE,
       ""is_admin""        BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     CREATE UNIQUE INDEX ""idx_users_email"" ON ""users"" (""email"");
 
-    INSERT INTO ""users"" (""name"", ""email"", ""password"", ""api_key"", ""api_secret"", ""is_enabled"", ""is_admin"") VALUES
-    ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$PUWwhEUzqrusmtrDsH4wguSDVx1kmGcksoU1rOKjAcWkGKdGA55ZK', '', '', TRUE, TRUE);
+    INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
+    ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$s27FRc4jeV9F44dUCsA4hOx6JTtrdSVq1rYLmesa3anbaa937lrfW', TRUE, TRUE);
 
     DROP TABLE IF EXISTS ""versions"";
 
@@ -65,23 +63,30 @@ namespace dkgServiceNode.Data
     COMMIT;
     ";
 
-        public static int Ensure_0_1_0(DbContext context)
+        public static void Ensure_0_1_0(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
-            var sql = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
-            var rows = context.Database.ExecuteSqlRaw(sql);
+            var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
+            using var command = new NpgsqlCommand(sql, connection);
+            var rows = command.ExecuteScalar();
 
-            //if (rows == 0)
+            if (rows == null || (long)rows == 0)
             {
-                rows = context.Database.ExecuteSqlRaw(sqlScript_0_1_0);
+                using (var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection))
+                {
+                    int r = scriptCommand.ExecuteNonQuery();
+                }
             }
-            return rows;
         }
-    
-        public static void Ensure(DbContext context)
+
+        public static void Ensure(string connectionString)
         {
-            context.Database.EnsureCreated();
-            Ensure_0_1_0(context);
+
+            using (var connection = new NpgsqlConnection("Host=dkgservice_db;Port=5432;Database=dkgservice;Username=postgres;Password=postgres"))
+            {
+                connection.Open();
+                Ensure_0_1_0(connection);
+            }
         }
     }
 
