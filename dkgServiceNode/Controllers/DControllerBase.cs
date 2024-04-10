@@ -25,6 +25,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using dkgServiceNode.Data;
+using dkgServiceNode.Models;
 
 namespace dkgServiceNode.Controllers
 {
@@ -33,20 +34,44 @@ namespace dkgServiceNode.Controllers
         protected readonly UserContext userContext;
         protected readonly int curUserId;
 
+        protected ObjectResult _400()
+        {
+            return StatusCode(StatusCodes.Status400BadRequest,
+                              new ErrMessage { Msg = "Inconsistent request." });
+        }
+
         protected ObjectResult _403()
         {
             return StatusCode(StatusCodes.Status403Forbidden,
-                              new { message = "Недостаточно прав для выполнения операции." });
+                              new { message = "Insufficient privileges for the operation." });
+        }
+
+        protected ObjectResult _404(int id, string item)
+        {
+            return StatusCode(StatusCodes.Status404NotFound,
+                              new { message = $"Failed to find {item} [id={id}]." });
+        }
+        protected ObjectResult _404CurrentVersion()
+        {
+            return StatusCode(StatusCodes.Status404NotFound,
+                              new { message = "Failed to found current database version." });
+        }
+        protected ObjectResult _404Node(int id)
+        {
+            return _404(id, "Node");
+        }
+        protected ObjectResult _404Round(int id)
+        {
+            return _404(id, "Round");
         }
         protected ObjectResult _404User(int id)
         {
-            return StatusCode(StatusCodes.Status404NotFound,
-                              new { message = $"Не удалось найти пользователя [id={id}]." });
+            return _404(id, "User");
         }
         protected ObjectResult _409Email(string email)
         {
             return StatusCode(StatusCodes.Status409Conflict,
-                              new { message = $"Пользователь с таким адресом электронной почты уже зарегистрирован [email = {email}]." });
+                              new { message = $"A user with this email is already registered [email = {email}]." });
         }
         protected DControllerBase(IHttpContextAccessor httpContextAccessor, UserContext uContext)
         {

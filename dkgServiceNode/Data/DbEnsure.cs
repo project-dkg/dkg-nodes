@@ -49,6 +49,21 @@ namespace dkgServiceNode.Data
     INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
     ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$s27FRc4jeV9F44dUCsA4hOx6JTtrdSVq1rYLmesa3anbaa937lrfW', TRUE, TRUE);
 
+    DROP TABLE IF EXISTS ""rounds"";
+
+    CREATE TABLE ""rounds"" (
+      ""id""              SERIAL PRIMARY KEY,
+      ""status""          SMALLINT DEFAULT 0
+    );
+
+    DROP TABLE IF EXISTS ""nodes"";
+
+    CREATE TABLE ""nodes"" (
+      ""id""              SERIAL PRIMARY KEY,
+      ""address""         VARCHAR(64) NOT NULL,
+      ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
+    );
+
     DROP TABLE IF EXISTS ""versions"";
 
     CREATE TABLE ""versions"" (

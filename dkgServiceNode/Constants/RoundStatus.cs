@@ -23,50 +23,61 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
 using dkgServiceNode.Models;
 
-namespace dkgServiceNode.Data
+namespace dkgServiceNode.Constants
 {
-    public class UserContext : DbContext
+    public enum RStatus
     {
-        public UserContext(DbContextOptions<UserContext> options) : base(options) { }
-        public DbSet<User> Users { get; set; }
-        public bool Exists(int id)
+        NotStarted = 0,
+        Started = 10,
+        Processing = 20,
+        Finished = 30,
+        Unknown = 255
+    }
+    public static class RoundStatusConstants
+    {
+        public static readonly RoundStatus Unknown = new()
         {
-            return Users.Any(e => e.Id == id);
-        }
-        public bool Exists(string email)
+            RoundStatusId = RStatus.Unknown,
+            Name = "Unknown"
+        };
+
+        public static readonly RoundStatus NotStarted = new()
         {
-            return Users.Any(e => e.Email == email);
-        }
-        public async Task<List<UserViewItem>> UserViewItems()
+            RoundStatusId = RStatus.NotStarted,
+            Name = "Not started"
+        };
+
+        public static readonly RoundStatus Started = new()
         {
-            return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
-        }
-        public async Task<UserViewItem?> UserViewItem(int id)
+            RoundStatusId = RStatus.Started,
+            Name = "Started (collecting nodes)"
+        };
+
+        public static readonly RoundStatus Processing = new()
         {
-            var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
-            return user ?? null;
-        }
-        public async Task<ActionResult<bool>> CheckAdmin(int cuid)
+            RoundStatusId = RStatus.Processing,
+            Name = "Processing (running dkg algorithm)"
+        };
+
+        public static readonly RoundStatus Finished = new()
         {
-            var curUser = await UserViewItem(cuid);
-            return curUser != null && curUser.IsAdmin;
-        }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUser(int id, int cuid)
+            RoundStatusId = RStatus.Finished,
+            Name = "Finished (random number collected)"
+        };
+
+        public static readonly RoundStatus[] RoundStatusArray = [
+            NotStarted,
+            Started,
+            Processing,
+            Finished
+        ];
+        public static RoundStatus GetRoundStatusById(short id)
         {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return await CheckAdmin(cuid);
-        }
-        public bool CheckSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return false;
+            RoundStatus? ret = RoundStatusArray.FirstOrDefault(x => (short)x.RoundStatusId == id);
+            if (ret == null) ret = Unknown;
+            return ret;
         }
     }
 }

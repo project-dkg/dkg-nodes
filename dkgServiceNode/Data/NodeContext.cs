@@ -23,50 +23,28 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
 using dkgServiceNode.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace dkgServiceNode.Data
 {
-    public class UserContext : DbContext
+    public class NodeContext : DbContext
     {
-        public UserContext(DbContextOptions<UserContext> options) : base(options) { }
-        public DbSet<User> Users { get; set; }
+        public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
+        public DbSet<Node> Nodes { get; set; }
         public bool Exists(int id)
         {
-            return Users.Any(e => e.Id == id);
+            return Nodes.Any(e => e.Id == id);
         }
-        public bool Exists(string email)
+        public async Task<List<NodeViewItem>> NodeViewItems()
         {
-            return Users.Any(e => e.Email == email);
+            return await Nodes.AsNoTracking().Select(x => new NodeViewItem(x)).ToListAsync();
         }
-        public async Task<List<UserViewItem>> UserViewItems()
+        public async Task<NodeViewItem?> NodeViewItem(int id)
         {
-            return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
-        }
-        public async Task<UserViewItem?> UserViewItem(int id)
-        {
-            var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
+            var user = await Nodes.AsNoTracking().Where(x => x.Id == id).Select(x => new NodeViewItem(x)).FirstOrDefaultAsync();
             return user ?? null;
-        }
-        public async Task<ActionResult<bool>> CheckAdmin(int cuid)
-        {
-            var curUser = await UserViewItem(cuid);
-            return curUser != null && curUser.IsAdmin;
-        }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return await CheckAdmin(cuid);
-        }
-        public bool CheckSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return false;
         }
     }
 }

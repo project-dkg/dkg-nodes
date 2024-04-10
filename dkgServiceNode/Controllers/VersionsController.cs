@@ -23,50 +23,42 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
+using dkgServiceNode.Data;
 using dkgServiceNode.Models;
+using dkgServiceNode.Services.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Version = dkgServiceNode.Models.Version;
 
-namespace dkgServiceNode.Data
+namespace dkgServiceNode.Controllers
 {
-    public class UserContext : DbContext
+    [ApiController]
+    [Authorize]
+    [Route("api/[controller]")]
+    [Produces("application/json")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ErrMessage))]
+
+    public class VersionsController : DControllerBase
     {
-        public UserContext(DbContextOptions<UserContext> options) : base(options) { }
-        public DbSet<User> Users { get; set; }
-        public bool Exists(int id)
+        protected readonly VersionContext versionContext;
+
+        public VersionsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, VersionContext vContext) :
+               base(httpContextAccessor, uContext)
         {
-            return Users.Any(e => e.Id == id);
+            versionContext = vContext;
         }
-        public bool Exists(string email)
+
+        // GET: api/versions/current
+        [HttpGet("current")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Version))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
+        public async Task<ActionResult<Version>> GetCurrentVersion()
         {
-            return Users.Any(e => e.Email == email);
-        }
-        public async Task<List<UserViewItem>> UserViewItems()
-        {
-            return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
-        }
-        public async Task<UserViewItem?> UserViewItem(int id)
-        {
-            var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
-            return user ?? null;
-        }
-        public async Task<ActionResult<bool>> CheckAdmin(int cuid)
-        {
-            var curUser = await UserViewItem(cuid);
-            return curUser != null && curUser.IsAdmin;
-        }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return await CheckAdmin(cuid);
-        }
-        public bool CheckSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return false;
+            var version = await versionContext.Versions.OrderByDescending(v => v.Id).FirstOrDefaultAsync();
+            if (version == null) return _404CurrentVersion();
+            return version;
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
+﻿// Copyright (C) 2023-2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
 // All rights reserved.
-// This file is a part of dkg service node
+// This file is a part of TrustVPN applcation
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -23,22 +23,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using System.ComponentModel.DataAnnotations.Schema;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+namespace dkgServiceNode.Models;
 
-namespace dkgServiceNode.Models
+public class ErrMessage
 {
-    [Table("versions")]
-    public class Version
-    {
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Column("version")]
-        public required string VersionNumber { get; set; }
-
-        [Column("date")]
-        public required DateTime Date { get; set; }
-
-    }
+    public required string Msg { get; set; }
 }

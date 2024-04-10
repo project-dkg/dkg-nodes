@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,6 @@ builder.Services.AddCors();
 builder.Services.AddScoped<IJwtUtils, JwtUtils>();
 builder.Services.AddHttpContextAccessor();
 
-
 var configuration = builder.Configuration;
 
 // Configure Jwt secret
@@ -24,10 +24,13 @@ builder.Services.Configure<AppSecret>(builder.Configuration.GetSection("AppSecre
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-DbEnsure.Ensure(configuration.GetConnectionString("DefaultConnection") ?? "");
+var connectionString = configuration.GetConnectionString("DefaultConnection");
+DbEnsure.Ensure(connectionString ?? "");
 
-builder.Services.AddDbContext<UserContext>(options =>
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<RoundContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 

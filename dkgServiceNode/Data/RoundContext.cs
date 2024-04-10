@@ -23,50 +23,17 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
-using dkgServiceNode.Models;
 
 namespace dkgServiceNode.Data
 {
-    public class UserContext : DbContext
+    public class RoundContext : DbContext
     {
-        public UserContext(DbContextOptions<UserContext> options) : base(options) { }
-        public DbSet<User> Users { get; set; }
+        public RoundContext(DbContextOptions<RoundContext> options) : base(options) { }
+        public DbSet<Models.Round> Rounds { get; set; }
         public bool Exists(int id)
         {
-            return Users.Any(e => e.Id == id);
-        }
-        public bool Exists(string email)
-        {
-            return Users.Any(e => e.Email == email);
-        }
-        public async Task<List<UserViewItem>> UserViewItems()
-        {
-            return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
-        }
-        public async Task<UserViewItem?> UserViewItem(int id)
-        {
-            var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
-            return user ?? null;
-        }
-        public async Task<ActionResult<bool>> CheckAdmin(int cuid)
-        {
-            var curUser = await UserViewItem(cuid);
-            return curUser != null && curUser.IsAdmin;
-        }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return await CheckAdmin(cuid);
-        }
-        public bool CheckSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return false;
+            return Rounds.Any(e => e.Id == id);
         }
     }
 }

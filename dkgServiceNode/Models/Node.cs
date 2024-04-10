@@ -23,22 +23,39 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgServiceNode.Constants;
 using System.ComponentModel.DataAnnotations.Schema;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace dkgServiceNode.Models
 {
-    [Table("versions")]
-    public class Version
+    [Table("nodes")]
+    public class Node
     {
         [Column("id")]
         public int Id { get; set; }
 
-        [Column("version")]
-        public required string VersionNumber { get; set; }
+        [Column("address")]
+        public string Address { get; set; } = string.Empty;
 
-        [Column("date")]
-        public required DateTime Date { get; set; }
+        [Column("round_id")]
+        public int? RoundId { get; set; }
+
+        [ForeignKey("RoundId")]
+        public Round? Round{ get; set; }
 
     }
+
+    public class NodeViewItem
+    {
+        public NodeViewItem(Node node)
+        {
+            Id = node.Id;
+            Address = node.Address;
+            RoundId = node.RoundId;
+        }
+        public int Id { get; set; }
+        public string Address { get; set; } = string.Empty;
+        public int? RoundId { get; set; }
+    }
+
 }
