@@ -23,17 +23,47 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgServiceNode.Models;
-
-namespace dkgServiceNode.Constants
+namespace dkgServiceNode.Services.RoundRunner
 {
     public enum RStatus
     {
         NotStarted = 0,
         Started = 10,
-        Processing = 20,
+        Running = 20,
         Finished = 30,
+        Cancelled = 40,
         Unknown = 255
+    }
+
+    public sealed class RoundStatus
+    {
+        private Dictionary<RStatus, RStatus> roundStatusRoute = new()
+        {
+            { RStatus.NotStarted, RStatus.Started },
+            { RStatus.Started, RStatus.Running },
+            { RStatus.Running, RStatus.Finished }
+        };
+        public RStatus RoundStatusId { get; set; } = RStatus.Unknown;
+        public string Name { get; set; } = "Unknown";
+        public string ActionName { get; set; } = "--";
+        public string ActionIcon { get; set; } = "fa-question";
+        public bool IsVersatile()
+        {
+            return RoundStatusId < RStatus.Finished;
+        }
+
+        public RStatus NextStatusId()
+        {
+            return roundStatusRoute.TryGetValue(RoundStatusId, out RStatus value) ? value : RStatus.Unknown;
+        }
+        public RoundStatus NextStatus()
+        {
+            return RoundStatusConstants.GetRoundStatusById((short)NextStatusId());
+        }
+        public RoundStatus CancelStatus()
+        {
+            return RoundStatusConstants.GetRoundStatusById((short)RStatus.Cancelled);
+        }
     }
     public static class RoundStatusConstants
     {
@@ -52,26 +82,41 @@ namespace dkgServiceNode.Constants
         public static readonly RoundStatus Started = new()
         {
             RoundStatusId = RStatus.Started,
-            Name = "Started (collecting nodes)"
+            Name = "Started [collecting applications]",
+            ActionName = "Start round",
+            ActionIcon = "fa-play"
         };
 
-        public static readonly RoundStatus Processing = new()
+        public static readonly RoundStatus Running = new()
         {
-            RoundStatusId = RStatus.Processing,
-            Name = "Processing (running dkg algorithm)"
+            RoundStatusId = RStatus.Running,
+            Name = "Running dkg algorithm",
+            ActionName = "Run dkg algorithm",
+            ActionIcon = "fa-calculator"
         };
 
         public static readonly RoundStatus Finished = new()
         {
             RoundStatusId = RStatus.Finished,
-            Name = "Finished (random number collected)"
+            Name = "Finished [got round result]",
+            ActionName = "Finish round",
+            ActionIcon = "fa-hand"
+        };
+
+        public static readonly RoundStatus Cancelled = new()
+        {
+            RoundStatusId = RStatus.Cancelled,
+            Name = "Cancelled [no round result]",
+            ActionName = "Cancel round",
+            ActionIcon = "fa-xmark"
         };
 
         public static readonly RoundStatus[] RoundStatusArray = [
             NotStarted,
             Started,
-            Processing,
-            Finished
+            Running,
+            Finished,
+            Cancelled
         ];
         public static RoundStatus GetRoundStatusById(short id)
         {
@@ -80,4 +125,5 @@ namespace dkgServiceNode.Constants
             return ret;
         }
     }
+
 }

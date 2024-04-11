@@ -34,13 +34,13 @@ namespace dkgServiceNode.Data
     {
         public UserContext(DbContextOptions<UserContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
-        public bool Exists(int id)
+        public async Task<bool> Exists(int id)
         {
-            return Users.Any(e => e.Id == id);
+            return await Users.AnyAsync(e => e.Id == id);
         }
-        public bool Exists(string email)
+        public async Task<bool> Exists(string email)
         {
-            return Users.Any(e => e.Email == email);
+            return await Users.AnyAsync(e => e.Email == email);
         }
         public async Task<List<UserViewItem>> UserViewItems()
         {

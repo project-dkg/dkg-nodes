@@ -25,7 +25,6 @@
 
 using dkgServiceNode.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace dkgServiceNode.Data
 {
@@ -33,18 +32,13 @@ namespace dkgServiceNode.Data
     {
         public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
         public DbSet<Node> Nodes { get; set; }
-        public bool Exists(int id)
+        public async Task<bool> ExistsAsync(int id)
         {
-            return Nodes.Any(e => e.Id == id);
+            return await Nodes.AnyAsync(e => e.Id == id);
         }
-        public async Task<List<NodeViewItem>> NodeViewItems()
+        public async Task<Node?> FindByHostAndPortAsync(string host, int port)
         {
-            return await Nodes.AsNoTracking().Select(x => new NodeViewItem(x)).ToListAsync();
-        }
-        public async Task<NodeViewItem?> NodeViewItem(int id)
-        {
-            var user = await Nodes.AsNoTracking().Where(x => x.Id == id).Select(x => new NodeViewItem(x)).FirstOrDefaultAsync();
-            return user ?? null;
+            return await Nodes.FirstOrDefaultAsync(node => node.Host == host && node.Port == port);
         }
     }
 }

@@ -39,11 +39,15 @@ namespace dkgServiceNode.Controllers
             return StatusCode(StatusCodes.Status400BadRequest,
                               new ErrMessage { Msg = "Inconsistent request." });
         }
-
         protected ObjectResult _403()
         {
             return StatusCode(StatusCodes.Status403Forbidden,
                               new { message = "Insufficient privileges for the operation." });
+        }
+        protected ObjectResult _403Protect()
+        {
+            return StatusCode(StatusCodes.Status403Forbidden,
+                              new { message = "This user cannot be deleted or modified." });
         }
 
         protected ObjectResult _404(int id, string item)

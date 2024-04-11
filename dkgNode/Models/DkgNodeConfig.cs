@@ -23,31 +23,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgServiceNode.Services.RoundRunner;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace dkgServiceNode.Models
+namespace dkgNode.Models
 {
-    [Table("nodes")]
-    public class Node
+    // Конфигурация узла (он же "node", "участник")
+    class DkgNodeConfig
     {
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Column("host")]
+        // Host:Port gRPC сервера этого узла
+        public int Port { get; set; } = 5000;
         public string Host { get; set; } = "localhost";
+        public string? NiceName { get; set; } = null;
 
-        [Column("port")]
-        public int Port { get; set; } = 0;
-
-        [Column("name")]
-        public string Name { get; set; } = "--";
-
-        [Column("round_id")]
-        public int? RoundId { get; set; }
-
-        [ForeignKey("RoundId")]
-        public Round? Round{ get; set; }
+        // Name просто для красоты
+        public string Name
+        {
+            get { return NiceName ?? $"DkgNode @ {Host}:{Port}"; }
+        }
 
     }
 }

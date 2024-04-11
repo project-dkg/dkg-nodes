@@ -26,6 +26,7 @@
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
+using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -53,8 +54,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Round>))]
         public async Task<ActionResult<IEnumerable<Round>>> GetRounds()
         {
-
-            var res = await roundContext.Rounds.ToListAsync();
+            var res = await roundContext.Rounds.OrderByDescending(r => r.Id).ToListAsync();
             return res;
         }
 
@@ -73,11 +73,12 @@ namespace dkgServiceNode.Controllers
         [HttpPost("add")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
         [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<Round>> AddRound(Round round)
+        public async Task<ActionResult<Round>> AddRound()
         {
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
 
+            Round round = new();
             roundContext.Rounds.Add(round);
             await roundContext.SaveChangesAsync();
 
@@ -85,19 +86,23 @@ namespace dkgServiceNode.Controllers
             return CreatedAtAction(nameof(GetRound), new { id = round.Id }, reference);
         }
 
-
-        // PUT: api/rounds/5
-        [HttpPut("{id}")]
+        // POST: api/rounds/next/5
+        [HttpPost("next/{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrMessage))]
         [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<Round>> UpdateRound(int id, Round round)
+        public async Task<ActionResult<Round>> NextRoundStep(int id)
         {
-            if (id != round.Id) return _400();
-
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
+
+            Round? round = await roundContext.Rounds.FindAsync(id);
+            if (round == null) return _404Round(id);
+
+            round.ModifiedOn = DateTime.Now.ToUniversalTime();
+            round.CreatedOn = round.CreatedOn.ToUniversalTime();
+            round.Status = round.NextStatus;
 
             roundContext.Entry(round).State = EntityState.Modified;
             try
@@ -106,7 +111,44 @@ namespace dkgServiceNode.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!roundContext.Exists(id))
+                if (!await roundContext.ExistsAsync(id))
+                {
+                    return _404Round(id);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return NoContent();
+        }
+
+        // POST: api/rounds/cancel/5
+        [HttpPost("cancel/{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrMessage))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
+        public async Task<ActionResult<Round>> CancelRound(int id)
+        {
+            var ch = await userContext.CheckAdmin(curUserId);
+            if (ch == null || !ch.Value) return _403();
+
+            Round? round = await roundContext.Rounds.FindAsync(id);
+            if (round == null) return _404Round(id);
+
+            round.ModifiedOn = DateTime.Now.ToUniversalTime();
+            round.CreatedOn = round.CreatedOn.ToUniversalTime();
+            round.Status = RoundStatusConstants.Cancelled;
+
+            roundContext.Entry(round).State = EntityState.Modified;
+            try
+            {
+                await roundContext.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (! await roundContext.ExistsAsync(id))
                 {
                     return _404Round(id);
                 }

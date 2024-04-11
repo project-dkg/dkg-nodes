@@ -26,10 +26,11 @@
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
+using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text;
 
 namespace dkgServiceNode.Controllers
 {
@@ -51,69 +52,77 @@ namespace dkgServiceNode.Controllers
 
         // GET: api/Nodes
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<NodeViewItem>))]
-        public async Task<ActionResult<IEnumerable<NodeViewItem>>> GetNodes()
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Node>))]
+        public async Task<ActionResult<IEnumerable<Node>>> GetNodes()
         {
-            return await nodeContext.NodeViewItems();
+            var res = await nodeContext.Nodes.ToListAsync();
+            return res;
         }
 
         // GET: api/Nodes/5
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Round))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<NodeViewItem>> GetNode(int id)
+        public async Task<ActionResult<Node>> GetNode(int id)
         {
-            var node = await nodeContext.NodeViewItem(id);
+            var node = await nodeContext.Nodes.FindAsync(id);
             if (node == null) return _404Node(id);
             return node;
         }
 
-        // POST: api/Nodes/add
-        [HttpPost("add")]
+        // POST: api/Nodes/register
+        [HttpPost("register")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
-        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<Node>> AddNode(Node node)
+        public async Task<ActionResult<Node>> RegisterNode(Node node)
         {
-            var ch = await userContext.CheckAdmin(curUserId);
-            if (ch == null || !ch.Value) return _403();
+            var xNode = await nodeContext.FindByHostAndPortAsync(node.Host, node.Port);
+            int id;
+            if (xNode == null)
+            {
+                nodeContext.Nodes.Add(node);
+                await nodeContext.SaveChangesAsync();
+                id = node.Id;
+            }
+            else
+            {
+                id = xNode.Id;
+                xNode.Name = node.Name;
+                nodeContext.Entry(xNode).State = EntityState.Modified;
+                try
+                {
+                    await nodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await nodeContext.ExistsAsync(id))
+                    {
+                        return _404Node(id);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
 
-            nodeContext.Nodes.Add(node);
-            await nodeContext.SaveChangesAsync();
-
-            var reference = new Reference(node.Id) { Id = node.Id };
+            var reference = new Reference(node.Id) { Id = id };
             return CreatedAtAction(nameof(GetNode), new { id = node.Id }, reference);
         }
 
-
-        // PUT: api/Nodes/5
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ErrMessage))]
-        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
-        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<Node>> UpdateNode(int id, Node node)
+        // DELETE: api/nodes/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNode(int id)
         {
-            if (id != node.Id) return _400();
-
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            nodeContext.Entry(node).State = EntityState.Modified;
-            try
-            {
-                await nodeContext.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!nodeContext.Exists(id))
-                {
-                    return _404Node(id);
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            var node = await nodeContext.Nodes.FindAsync(id);
+            if (node == null) return _404Node(id);
+
+            nodeContext.Nodes.Remove(node);
+            await nodeContext.SaveChangesAsync();
+
             return NoContent();
         }
     }

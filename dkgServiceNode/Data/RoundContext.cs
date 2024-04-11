@@ -31,9 +31,9 @@ namespace dkgServiceNode.Data
     {
         public RoundContext(DbContextOptions<RoundContext> options) : base(options) { }
         public DbSet<Models.Round> Rounds { get; set; }
-        public bool Exists(int id)
+        public async Task<bool> ExistsAsync(int id)
         {
-            return Rounds.Any(e => e.Id == id);
+            return await Rounds.AnyAsync(e => e.Id == id);
         }
     }
 }

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +17,7 @@ builder.Services.AddHttpContextAccessor();
 var configuration = builder.Configuration;
 
 // Configure Jwt secret
-builder.Services.Configure<AppSecret>(builder.Configuration.GetSection("AppSecret"));
+builder.Services.Configure<AppSecret>(configuration.GetSection("AppSecret"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

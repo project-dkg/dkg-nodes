@@ -68,7 +68,7 @@ namespace dkgServiceNode.Controllers
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            if (userContext.Exists(user.Email)) return _409Email(user.Email);
+            if (await userContext.Exists(user.Email)) return _409Email(user.Email);
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
 
@@ -83,6 +83,8 @@ namespace dkgServiceNode.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, UserUpdateItem update)
         {
+            if (id == 1) return _403Protect();
+
             var user = await userContext.Users.FindAsync(id);
             if (user == null) return _404User(id);
 
@@ -110,6 +112,8 @@ namespace dkgServiceNode.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            if (id==1) return _403Protect();
+
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
 

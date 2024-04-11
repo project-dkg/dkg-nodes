@@ -30,53 +30,61 @@ namespace dkgServiceNode.Data
     public static class DbEnsure
     {
 
+        // Modify the table creation script to set the default value of "created" column to current date and time
         readonly static string sqlScript_0_1_0 = @"
-    START TRANSACTION;
+            START TRANSACTION;
 
-    DROP TABLE IF EXISTS ""users"";
+            DROP TABLE IF EXISTS ""users"";
 
-    CREATE TABLE ""users"" (
-      ""id""              SERIAL PRIMARY KEY,
-      ""name""            VARCHAR(64) NOT NULL,
-      ""email""           VARCHAR(64) NOT NULL,
-      ""password""        VARCHAR(64) NOT NULL,
-      ""is_enabled""      BOOLEAN NOT NULL DEFAULT TRUE,
-      ""is_admin""        BOOLEAN NOT NULL DEFAULT FALSE
-    );
+            CREATE TABLE ""users"" (
+              ""id""              SERIAL PRIMARY KEY,
+              ""name""            VARCHAR(64) NOT NULL,
+              ""email""           VARCHAR(64) NOT NULL,
+              ""password""        VARCHAR(64) NOT NULL,
+              ""is_enabled""      BOOLEAN NOT NULL DEFAULT TRUE,
+              ""is_admin""        BOOLEAN NOT NULL DEFAULT FALSE
+            );
 
-    CREATE UNIQUE INDEX ""idx_users_email"" ON ""users"" (""email"");
+            CREATE UNIQUE INDEX ""idx_users_email"" ON ""users"" (""email"");
 
-    INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
-    ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$s27FRc4jeV9F44dUCsA4hOx6JTtrdSVq1rYLmesa3anbaa937lrfW', TRUE, TRUE);
+            INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
+            ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$s27FRc4jeV9F44dUCsA4hOx6JTtrdSVq1rYLmesa3anbaa937lrfW', TRUE, TRUE);
 
-    DROP TABLE IF EXISTS ""rounds"";
+            DROP INDEX IF EXISTS ""idx_nodes_host_port"";
+            DROP TABLE IF EXISTS ""nodes"";
+            
+            DROP TABLE IF EXISTS ""rounds"";
 
-    CREATE TABLE ""rounds"" (
-      ""id""              SERIAL PRIMARY KEY,
-      ""status""          SMALLINT DEFAULT 0
-    );
+            CREATE TABLE ""rounds"" (
+              ""id""              SERIAL PRIMARY KEY,
+              ""status""          SMALLINT NOT NULL DEFAULT 0,
+              ""created""         TIMESTAMP NOT NULL DEFAULT now(), 
+              ""modified""        TIMESTAMP NOT NULL DEFAULT now()
+            );
 
-    DROP TABLE IF EXISTS ""nodes"";
+            CREATE TABLE ""nodes"" (
+              ""id""              SERIAL PRIMARY KEY,
+              ""host""            VARCHAR(64) NOT NULL DEFAULT 'localhost',
+              ""port""            INT NOT NULL DEFAULT 0,
+              ""name""            VARCHAR(64) NOT NULL DEFAULT '--',
+              ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
+            );
 
-    CREATE TABLE ""nodes"" (
-      ""id""              SERIAL PRIMARY KEY,
-      ""address""         VARCHAR(64) NOT NULL,
-      ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
-    );
+            CREATE INDEX ""idx_nodes_host_port"" ON ""nodes"" (""host"", ""port"");
+            
+            DROP TABLE IF EXISTS ""versions"";
 
-    DROP TABLE IF EXISTS ""versions"";
+            CREATE TABLE ""versions"" (
+              ""id""      SERIAL PRIMARY KEY,
+              ""version"" VARCHAR(16) NOT NULL,
+              ""date""    DATE NOT NULL DEFAULT now()
+            );
 
-    CREATE TABLE ""versions"" (
-      ""id""      SERIAL PRIMARY KEY,
-      ""version"" VARCHAR(16) NOT NULL,
-      ""date""    DATE NOT NULL
-    );
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.1.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
-    INSERT INTO ""versions"" (""version"", ""date"") VALUES
-    ('0.1.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-    COMMIT;
-    ";
+            COMMIT;
+            ";
 
         public static void Ensure_0_1_0(NpgsqlConnection connection)
         {

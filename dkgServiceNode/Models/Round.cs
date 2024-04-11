@@ -23,7 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgServiceNode.Constants;
+using dkgServiceNode.Services.RoundRunner;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace dkgServiceNode.Models
@@ -36,13 +36,36 @@ namespace dkgServiceNode.Models
         public int Id { get; set; }
 
         [Column("status")]
-        public short StatusValue { get; set; }
+        public short StatusValue { get; set; } = 0; // Not started
+
+        [Column("created")]
+        public DateTime CreatedOn { get; set; } = DateTime.Now.ToUniversalTime();
+
+        [Column("modified")]
+        public DateTime ModifiedOn { get; set; } = DateTime.Now.ToUniversalTime();
 
         [NotMapped]
         public RoundStatus Status
         {
             get { return RoundStatusConstants.GetRoundStatusById(StatusValue); }
             set { StatusValue = (short)value.RoundStatusId; }
+        }
+
+        [NotMapped]
+        public bool IsVersatile
+        {
+            get { return Status.IsVersatile(); }
+        }
+
+        [NotMapped]
+        public RoundStatus NextStatus
+        {
+            get { return Status.NextStatus(); }
+        }
+        [NotMapped]
+        public RoundStatus CancelStatus
+        {
+            get { return Status.CancelStatus(); }
         }
     }
 }

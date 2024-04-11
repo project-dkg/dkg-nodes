@@ -2,7 +2,56 @@ version: '3.4'
 
 services:
   dkgservicenode:
+    container_name: dkg_service_node
     image: ${DOCKER_REGISTRY-}dkgservicenode
     build:
       context: .
       dockerfile: dkgServiceNode/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+    depends_on:
+      - dkgservice_db
+
+  dkgnode:
+    container_name: dkg_node_1
+    image: ${DOCKER_REGISTRY-}dkgnode
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5000
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_1
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=My first shiny node
+    ports:
+      - 5000:5000
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+
+  dkgservice_db:
+    container_name: dkgservice_db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dkgservice
+    volumes:
+      - pgdata:/var/lib/postgresql
+ 
+  adminer:
+    container_name: adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8082:8080
+
+volumes:
+  pgdata: {}
+ 

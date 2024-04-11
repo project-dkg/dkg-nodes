@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgServiceNode", "dkgServic
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{357381D9-5241-448F-A5AC-40E90D2A19AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dkgNode", "dkgNode\dkgNode.csproj", "{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{357381D9-5241-448F-A5AC-40E90D2A19AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{357381D9-5241-448F-A5AC-40E90D2A19AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{357381D9-5241-448F-A5AC-40E90D2A19AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
