@@ -1,0 +1,101 @@
+version: '3.4'
+
+services:
+  dkgservicenode:
+    container_name: dkg_service_node
+    image: ghcr.io/maxirmx/dkg-service-node:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+    depends_on:
+      - dkgservice_db
+
+  dkgnode1:
+    container_name: dkg_node_1
+    image: ghcr.io/maxirmx/dkg-node:latest
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5001
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_1
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=First node
+    ports:
+      - 5001:5001
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
+
+  dkgnode2:
+    container_name: dkg_node_2
+    image: ghcr.io/maxirmx/dkg-node:latest
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5002
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_2
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Second node
+    ports:
+      - 5002:5002
+    depends_on:
+      - dkgservicenode
+
+  dkgnode3:
+    container_name: dkg_node_3
+    image: ghcr.io/maxirmx/dkg-node:latest
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5002
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_3
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Third node
+    ports:
+      - 5003:5003
+    depends_on:
+      - dkgservicenode
+
+  dkgnode4:
+    container_name: dkg_node_4
+    image: ghcr.io/maxirmx/dkg-node:latest
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5004
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_4
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Fourth node
+    ports:
+      - 5004:5004
+    depends_on:
+      - dkgservicenode
+
+  dkgnode5:
+    container_name: dkg_node_5
+    image: ghcr.io/maxirmx/dkg-node:latest
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5005
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_5
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Fifth node
+    ports:
+      - 5005:5005
+    depends_on:
+      - dkgservicenode
+
+  dkgservice_db:
+    container_name: dkgservice_db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dkgservice
+    volumes:
+      - pgdata:/var/lib/postgresql
+ 
+volumes:
+  pgdata: {}
+ 
