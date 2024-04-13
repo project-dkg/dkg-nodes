@@ -13,7 +13,7 @@ services:
       - "8081:8081"
       - "8082:8082"
     volumes:
-      -/etc/dkg:/etc/dkg
+      - /etc/dkg:/etc/dkg
 #      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
 #      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
     depends_on:
