@@ -7,8 +7,6 @@ on:
 jobs:
   release-service-node:
     runs-on: ubuntu-latest
-    if: ${{ contains(github.ref, 'refs/tags/v') }}
-    needs: test
     permissions:
       contents: read
       packages: write
@@ -49,6 +47,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   release-dkg-node:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
