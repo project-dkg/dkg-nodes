@@ -20,19 +20,85 @@ services:
     depends_on:
       - dkgservice_db
 
-  dkgnode:
+  dkgnode1:
     container_name: dkg_node_1
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5000
+      - DKG_NODE_SERVER_GRPC_PORT=5001
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_1
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=My first shiny node
+      - DKG_NODE_SERVER_NAME=First node
     ports:
-      - 5000:5000
+      - 5001:5001
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
+
+  dkgnode2:
+    container_name: dkg_node_2
+    image: ${DOCKER_REGISTRY-}dkgnode
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5002
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_2
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Second node
+    ports:
+      - 5002:5002
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
+
+  dkgnode3:
+    container_name: dkg_node_3
+    image: ${DOCKER_REGISTRY-}dkgnode
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5002
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_3
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Third node
+    ports:
+      - 5003:5003
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
+
+  dkgnode4:
+    container_name: dkg_node_4
+    image: ${DOCKER_REGISTRY-}dkgnode
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5004
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_4
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Fourth node
+    ports:
+      - 5004:5004
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
+
+  dkgnode5:
+    container_name: dkg_node_5
+    image: ${DOCKER_REGISTRY-}dkgnode
+    environment:
+      - DKG_NODE_SERVER_GRPC_PORT=5005
+      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_5
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
+      - DKG_NODE_SERVER_NAME=Fifth node
+    ports:
+      - 5005:5005
+    build:
+      context: .
+      dockerfile: dkgNode/Dockerfile
+    depends_on:
+      - dkgservicenode
 
   dkgservice_db:
     container_name: dkgservice_db

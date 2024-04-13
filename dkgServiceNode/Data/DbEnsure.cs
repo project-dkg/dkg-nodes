@@ -58,6 +58,8 @@ namespace dkgServiceNode.Data
             CREATE TABLE ""rounds"" (
               ""id""              SERIAL PRIMARY KEY,
               ""status""          SMALLINT NOT NULL DEFAULT 0,
+              ""node_count""      INT NOT NULL DEFAULT 0,
+              ""result""          INT,
               ""created""         TIMESTAMP NOT NULL DEFAULT now(), 
               ""modified""        TIMESTAMP NOT NULL DEFAULT now()
             );
@@ -67,6 +69,7 @@ namespace dkgServiceNode.Data
               ""host""            VARCHAR(64) NOT NULL DEFAULT 'localhost',
               ""port""            INT NOT NULL DEFAULT 0,
               ""name""            VARCHAR(64) NOT NULL DEFAULT '--',
+              ""public_key""      VARCHAR(128) NOT NULL DEFAULT '',
               ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
             );
 

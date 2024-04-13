@@ -32,6 +32,7 @@ namespace dkgServiceNode.Services.RoundRunner
         Running = 20,
         Finished = 30,
         Cancelled = 40,
+        Failed = 41,
         Unknown = 255
     }
 
@@ -111,16 +112,29 @@ namespace dkgServiceNode.Services.RoundRunner
             ActionIcon = "fa-xmark"
         };
 
+        public static readonly RoundStatus Failed = new()
+        {
+            RoundStatusId = RStatus.Failed,
+            Name = "Failed [no round result]"
+        };
+
         public static readonly RoundStatus[] RoundStatusArray = [
             NotStarted,
             Started,
             Running,
             Finished,
-            Cancelled
+            Cancelled,
+            Failed
         ];
         public static RoundStatus GetRoundStatusById(short id)
         {
             RoundStatus? ret = RoundStatusArray.FirstOrDefault(x => (short)x.RoundStatusId == id);
+            if (ret == null) ret = Unknown;
+            return ret;
+        }
+        public static RoundStatus GetRoundStatusById(RStatus st)
+        {
+            RoundStatus? ret = RoundStatusArray.FirstOrDefault(x => x.RoundStatusId == st);
             if (ret == null) ret = Unknown;
             return ret;
         }

@@ -77,6 +77,11 @@ namespace dkgServiceNode.Controllers
             return StatusCode(StatusCodes.Status409Conflict,
                               new { message = $"A user with this email is already registered [email = {email}]." });
         }
+        protected ObjectResult _409Round()
+        {
+            return StatusCode(StatusCodes.Status409Conflict,
+                              new { message = $"Could not fimd a round that is collecting node applications." });
+        }
         protected DControllerBase(IHttpContextAccessor httpContextAccessor, UserContext uContext)
         {
             userContext = uContext;

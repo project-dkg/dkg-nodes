@@ -43,6 +43,9 @@ namespace dkgServiceNode.Models
         [Column("name")]
         public string Name { get; set; } = "--";
 
+        [Column("public_key")]
+        public string PublicKey { get; set; } = string.Empty;
+
         [Column("round_id")]
         public int? RoundId { get; set; }
 

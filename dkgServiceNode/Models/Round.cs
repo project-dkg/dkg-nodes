@@ -36,7 +36,13 @@ namespace dkgServiceNode.Models
         public int Id { get; set; }
 
         [Column("status")]
-        public short StatusValue { get; set; } = 0; // Not started
+        public short StatusValue { get; set; } = 0;
+
+        [Column("node_count")]
+        public int NodeCount { get; set; } = 0;
+
+        [Column("result")]
+        public int? Result { get; set; } = null;
 
         [Column("created")]
         public DateTime CreatedOn { get; set; } = DateTime.Now.ToUniversalTime();

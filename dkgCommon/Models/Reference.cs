@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
+﻿// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
 // All rights reserved.
 // This file is a part of dkg service node
 //
@@ -23,66 +23,11 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-syntax = "proto3";
-
-option csharp_namespace = "dkgNode";
-
-package DkgNodeApi;
-
-service DkgNode {
-  rpc GetPublicKey (PublicKeyRequest) returns (PublicKeyReply) {}
-  rpc ProcessDeal (ProcessDealRequest) returns (ProcessDealReply) {}
-  rpc ProcessResponse (ProcessResponseRequest) returns (ProcessResponseReply) {}
-  rpc SendMessage (SendMessageRequest) returns (SendMessageReply) {}
-  rpc PartialDecrypt (PartialDecryptRequest) returns (PartialDecryptReply) {}   
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
-}
-
-message PublicKeyRequest {
-}
-
-message PublicKeyReply {
-  bytes data = 1;
-}
-
-message ProcessDealRequest {
-  bytes data = 1;
-}
-
-message ProcessDealReply {
-  bytes	data = 1;
-}
-
-message ProcessResponseRequest {
-  bytes data = 1;
-}
-
-message ProcessResponseReply {
-}
-
-message SendMessageRequest {
-  bytes C1 = 1;
-  bytes C2 = 2;
-}
-
-message SendMessageReply {
-}
-
-message PartialDecryptRequest {
-  bytes C1 = 1;
-  bytes C2 = 2;
-}
-
-message PartialDecryptReply {
-	optional bytes partial = 1;
-}
-
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
-}
-
-// The response message containing the greetings.
-message HelloReply {
-  string message = 1;
+namespace dkgCommon.Models
+{
+    public class Reference
+    {
+        public required int Id { get; set; }
+        public Reference(int id) { Id = id; }
+    }
 }

@@ -1,9 +1,15 @@
 ﻿using dkg.group;
 using dkg.poly;
 using dkg.share;
+using dkgNode.Constants;
 using Google.Protobuf;
 using Grpc.Core;
-using static dkgNode.DkgNode;
+using dkgCommon;
+using dkgNode.Models;
+
+using static dkgCommon.DkgNode;
+using static dkgNode.Constants.NStatus;
+
 
 namespace dkgNode.Services
 {
@@ -13,21 +19,62 @@ namespace dkgNode.Services
     {
         private IGroup G { get; }
         internal string Name { get; }
-        internal IScalar PrivateKey { get; }  // Публичный ключ этого узла
-        internal IPoint PublicKey { get; }    // Приватный ключ этого узла  
+        internal IScalar PrivateKey { get; }  // Приватный ключ этого узла  
+        internal IPoint PublicKey { get; }    // Публичный ключ этого узла
         internal PriShare? SecretShare { get; set; } = null;
+        internal DkgNodeConfig[] Configs { get; set; } = [];
 
+        // Distributed Key Generator 
         public DistKeyGenerator? Dkg { get; set; } = null;
-
         // Защищает Dkg от параллельной обработки наскольких запросов
-        internal readonly object dkgLock = new() { };
+        private readonly object dkgLock = new() { };
 
-        // Защищает сообщение, с которым мы работаем
-        internal readonly object messageLock = new() { };
+        // Node status
+        private NStatus Status { get; set; } = NotRegistered;
+        private int? Round { get; set; } = null;
+        private IPoint? DistributedPublicKey = null; // Distributed public key
+        private readonly object stsLock = new() { };
 
-        // Есть сообщение, с которым мы работаем
-        // Нерасшифрованное входящее соообщение может быть только одно
-        internal bool HasMessage { get; set; } = false;
+        public void SetStatus(NStatus status)
+        {
+            lock (stsLock)
+            {
+                Status = status;
+            }
+        }
+        public void SetStatusAndRound(NStatus status, int round)
+        {
+            lock (stsLock)
+            {
+                Status = status;
+                Round = round;
+            }
+        }
+        public NStatus GetStatus()
+        {
+            lock (stsLock)
+            {
+                return Status;
+            }
+        }
+
+        public void SetDistributedPublicKey(IPoint? dpk)
+        {
+            lock (stsLock)
+            {
+                DistributedPublicKey = dpk;
+            }
+        }
+
+        public IPoint? GetDistributedPublicKey()
+        {
+            IPoint? dpk = null;
+            lock (stsLock)
+            {
+                dpk = DistributedPublicKey;
+            }
+            return dpk;
+        }
 
         // Cipher
         internal IPoint C1 { get; set; }
@@ -43,14 +90,6 @@ namespace dkgNode.Services
             Name = name;
             PrivateKey = G.Scalar();
             PublicKey = G.Base().Mul(PrivateKey);
-        }
-
-        public override Task<HelloReply> SayHello(HelloRequest request, ServerCallContext context)
-        {
-            return Task.FromResult(new HelloReply
-            {
-                Message = "Hello " + request.Name
-            });
         }
 
 
@@ -123,77 +162,100 @@ namespace dkgNode.Services
             }
             return Task.FromResult(new ProcessResponseReply());
         }
-        public override Task<SendMessageReply> SendMessage(SendMessageRequest response, ServerCallContext context)
+
+        public override Task<RunRoundReply> RunRound(RunRoundRequest request, ServerCallContext context)
         {
-            string? error = null;
-            var c1 = G.Point();
-            var c2 = G.Point();
+            bool res = false;
+            DkgNodeConfig[] configs = request.DkgNodeRefs.Select(nodeRef => new DkgNodeConfig
+            {
+                Port = nodeRef.Port,
+                Host = nodeRef.Host,
+                PublicKey = nodeRef.PublicKey,
+            }).ToArray();
 
-            try
+            lock (stsLock)
             {
-                c1.SetBytes(response.C1.ToByteArray());
-                c2.SetBytes(response.C2.ToByteArray());
-            }
-            catch
-            {
-                error = "Invalid cipher received, discarded";
-            }
-
-            if (error == null)
-            {
-                lock (messageLock)
+                if (request.RoundId == Round)
                 {
-                    if (!HasMessage)
-                    {
-                        C1 = c1;
-                        C2 = c2;
-                        HasMessage = true;
-                    }
-                    else
-                    {
-                        error = "Could not process a second message, discarded";
-                    }
+                    Status = Running;
+                    Configs = configs;
+                    res = true;
                 }
             }
-            if (error != null)
-            {
-                Console.WriteLine($"{Name}: {error}");
-            }
 
-            return Task.FromResult(new SendMessageReply());
-        }
-        public override Task<PartialDecryptReply> PartialDecrypt(PartialDecryptRequest response, ServerCallContext context)
-        {
-            var reply = new PartialDecryptReply();
-            if (SecretShare == null)
+            if (!res)
             {
-                Console.WriteLine($"{Name}: could not process partial decrypt request since SecretShare is not set");
+                _logger.LogError($"RunRound request failed for '{Name}' [Node round: {Round}, Request round: {request.RoundId}]");
             }
             else
             {
-                try
+                _logger.LogDebug($"RunRound request executed for '{Name}' [Round: {request.RoundId}]");
+            }
+
+            return Task.FromResult(new RunRoundReply() { Res = res });
+        }
+
+        public override Task<EndRoundReply> EndRound(EndRoundRequest request, ServerCallContext context)
+        {
+            bool res = false;
+            lock (stsLock)
+            {
+                if (request.RoundId == Round)
                 {
-                    var c1 = G.Point();
-                    var c2 = G.Point();
-
-                    c1.SetBytes(response.C1.ToByteArray());
-                    c2.SetBytes(response.C2.ToByteArray());
-
-                    var S = c1.Mul(SecretShare!.V);
-                    var partial = c2.Sub(S);
-                    reply = new PartialDecryptReply
-                    {
-                        Partial = ByteString.CopyFrom(partial.GetBytes()
-                     )
-                    };
-
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"{Name}: could not process partial decrypt request: {ex.Message}");
+                    Status = NotRegistered;
+                    Round = null;
+                    DistributedPublicKey = null;
+                    res = true;
                 }
             }
-            return Task.FromResult(reply);
+
+            EndRoundReply endRoundReply = new EndRoundReply() { Res = res };
+
+            if (!res)
+            {
+                _logger.LogError($"EndRound request failed for '{Name}' [Node round: {Round}, Request round: {request.RoundId}]");
+            }
+            else
+            {
+                _logger.LogDebug($"EndRound request executed for '{Name}' [Round: {request.RoundId}]");
+            }
+            return Task.FromResult(endRoundReply);
         }
+
+        public override Task<RoundResultReply> RoundResult(RoundResultRequest request, ServerCallContext context)
+        {
+            bool res = false;
+            IPoint? dpk = null;
+            byte[] distributedPublicKey = [];
+            lock (stsLock)
+            {
+                if (request.RoundId == Round)
+                {
+                    dpk = DistributedPublicKey;
+                    res = true;
+                }
+            }
+
+            if (res && dpk == null)
+            {
+                _logger.LogError($"RoundResult request succeeded '{Name}' but distributed public key is not set, round: {request.RoundId}]");
+                res = false;
+            }
+
+            RoundResultReply roundResultReply = new RoundResultReply() { Res = res };
+
+            if (!res)
+            {
+                _logger.LogError($"RoundResult request failed for '{Name}' [Node round: {Round}, Request round: {request.RoundId}]");
+            }
+            else
+            {
+                distributedPublicKey = dpk!.GetBytes();
+                roundResultReply.DistributedPublicKey = ByteString.CopyFrom(distributedPublicKey);
+                _logger.LogDebug($"RoundResult request executed for '{Name}' [Round: {request.RoundId}]");
+            }
+            return Task.FromResult(roundResultReply);
+        }
+
     }
 }

@@ -23,6 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgCommon.Models;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
@@ -42,11 +43,13 @@ namespace dkgServiceNode.Controllers
     public class RoundsController : DControllerBase
     {
         protected readonly RoundContext roundContext;
+        protected readonly NodeContext nodeContext;
 
-        public RoundsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, RoundContext rContext) :
+        public RoundsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, RoundContext rContext, NodeContext nContext) :
                base(httpContextAccessor, uContext)
         {
             roundContext = rContext;
+            nodeContext = nContext;
         }
 
         // GET: api/rounds
@@ -55,6 +58,13 @@ namespace dkgServiceNode.Controllers
         public async Task<ActionResult<IEnumerable<Round>>> GetRounds()
         {
             var res = await roundContext.Rounds.OrderByDescending(r => r.Id).ToListAsync();
+            foreach (var round in res)
+            {
+                if (round.IsVersatile)
+                {
+                    round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
+                }
+            }
             return res;
         }
 
@@ -66,6 +76,12 @@ namespace dkgServiceNode.Controllers
         {
             var round = await roundContext.Rounds.FindAsync(id);
             if (round == null) return _404Round(id);
+
+            if (round.IsVersatile)
+            { 
+                round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
+            }
+
             return round;
         }
 
@@ -73,7 +89,7 @@ namespace dkgServiceNode.Controllers
         [HttpPost("add")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
         [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
-        public async Task<ActionResult<Round>> AddRound()
+        public async Task<ActionResult<Reference>> AddRound()
         {
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
@@ -83,7 +99,7 @@ namespace dkgServiceNode.Controllers
             await roundContext.SaveChangesAsync();
 
             var reference = new Reference(round.Id) { Id = round.Id };
-            return CreatedAtAction(nameof(GetRound), new { id = round.Id }, reference);
+            return CreatedAtAction(nameof(AddRound), new { id = round.Id }, reference);
         }
 
         // POST: api/rounds/next/5
@@ -104,6 +120,33 @@ namespace dkgServiceNode.Controllers
             round.CreatedOn = round.CreatedOn.ToUniversalTime();
             round.Status = round.NextStatus;
 
+            if (round.IsVersatile)
+            {
+                round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
+            }
+
+            switch (round.StatusValue)
+            {
+                case (short)RStatus.Started:
+                    Runner.StartRound(round);
+                    break;
+                case (short)RStatus.Running:
+                    Runner.RunRound(round, await nodeContext.Nodes.ToListAsync());
+                    break;
+                case (short)RStatus.Finished:
+                    round.Result = Runner.FinishRound(round, await nodeContext.Nodes.ToListAsync());
+                    if (round.Result == null)
+                    {
+                        round.StatusValue = (short)RStatus.Failed;
+                    }
+                    break;
+                case (short)RStatus.Cancelled:
+                    Runner.CancelRound(round, await nodeContext.Nodes.ToListAsync());
+                    break;
+                default:
+                    break;
+            }
+
             roundContext.Entry(round).State = EntityState.Modified;
             try
             {
@@ -120,6 +163,7 @@ namespace dkgServiceNode.Controllers
                     throw;
                 }
             }
+
             return NoContent();
         }
 
@@ -157,6 +201,7 @@ namespace dkgServiceNode.Controllers
                     throw;
                 }
             }
+            Runner.CancelRound(round, await nodeContext.Nodes.ToListAsync());
             return NoContent();
         }
     }

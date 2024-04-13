@@ -23,6 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgCommon.Models;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
@@ -43,11 +44,13 @@ namespace dkgServiceNode.Controllers
     public class NodesController : DControllerBase
     {
         protected readonly NodeContext nodeContext;
+        protected readonly RoundContext roundContext;
 
-        public NodesController(IHttpContextAccessor httpContextAccessor, UserContext uContext, NodeContext nContext) :
+        public NodesController(IHttpContextAccessor httpContextAccessor, UserContext uContext, NodeContext nContext, RoundContext rContext) :
                base(httpContextAccessor, uContext)
         {
             nodeContext = nContext;
+            roundContext = rContext;
         }
 
         // GET: api/Nodes
@@ -55,7 +58,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Node>))]
         public async Task<ActionResult<IEnumerable<Node>>> GetNodes()
         {
-            var res = await nodeContext.Nodes.ToListAsync();
+            var res = await nodeContext.Nodes.OrderBy(n => n.Id).ToListAsync();
             return res;
         }
 
@@ -74,20 +77,30 @@ namespace dkgServiceNode.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
-        public async Task<ActionResult<Node>> RegisterNode(Node node)
+        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ErrMessage))]
+        public async Task<ActionResult<Reference>> RegisterNode(Node node)
         {
+
+            List<Round> rounds = await roundContext.Rounds.Where(r => r.StatusValue == (short)RStatus.Started).ToListAsync();
+            if (rounds.Count == 0)
+            {
+                return _409Round();
+            }
+            Round round = rounds[new Random().Next(rounds.Count)];
+            int id = round.Id;
+
             var xNode = await nodeContext.FindByHostAndPortAsync(node.Host, node.Port);
-            int id;
             if (xNode == null)
             {
+                node.RoundId = id;
                 nodeContext.Nodes.Add(node);
                 await nodeContext.SaveChangesAsync();
-                id = node.Id;
             }
             else
             {
-                id = xNode.Id;
                 xNode.Name = node.Name;
+                xNode.PublicKey = node.PublicKey;
+                xNode.RoundId = id;
                 nodeContext.Entry(xNode).State = EntityState.Modified;
                 try
                 {
@@ -106,8 +119,8 @@ namespace dkgServiceNode.Controllers
                 }
             }
 
-            var reference = new Reference(node.Id) { Id = id };
-            return CreatedAtAction(nameof(GetNode), new { id = node.Id }, reference);
+            var reference = new Reference(round.Id) { Id = id };
+            return CreatedAtAction(nameof(RegisterNode), new { id = node.Id }, reference);
         }
 
         // DELETE: api/nodes/5

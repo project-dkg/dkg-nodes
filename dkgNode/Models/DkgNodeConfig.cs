@@ -32,6 +32,7 @@ namespace dkgNode.Models
         public int Port { get; set; } = 5000;
         public string Host { get; set; } = "localhost";
         public string? NiceName { get; set; } = null;
+        public string? PublicKey { get; set; } = null;
 
         // Name просто для красоты
         public string Name
