@@ -1,0 +1,3 @@
+[submodule "dkg"]
+	path = dkg
+	url = https://github.com/maxirmx/dkg

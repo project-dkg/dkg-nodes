@@ -16,13 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\dkg\dkgLibrary\dkgLibrary.csproj" />
     <ProjectReference Include="..\dkgCommon\dkgCommon.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="dkgLibrary">
-      <HintPath>..\..\dkg\dkgLibrary\bin\$(Configuration)\net8.0\dkgLibrary.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>
