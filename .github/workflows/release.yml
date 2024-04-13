@@ -14,14 +14,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: dkg-nodes
 
       - name: Checkout tools repo
         uses: actions/checkout@v4
         with:
           repository: maxirmx/dkg
-          path: dkg
+          path: ../dkg
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -49,7 +47,7 @@ jobs:
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
           context: .
-          file: dkg-nodes/dkgServiceNode/Dockerfile
+          file: dkgServiceNode/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -63,14 +61,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: dkg-nodes
 
       - name: Checkout tools repo
         uses: actions/checkout@v4
         with:
           repository: maxirmx/dkg
-          path: dkg
+          path: ../dkg
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -98,7 +94,7 @@ jobs:
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
           context: .
-          file: dkg-nodes/dkgNode/Dockerfile
+          file: dkgNode/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
