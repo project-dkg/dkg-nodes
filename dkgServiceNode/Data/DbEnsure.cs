@@ -84,7 +84,7 @@ namespace dkgServiceNode.Data
             );
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.1.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            ('0.0.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
             COMMIT;
             ";
