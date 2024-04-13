@@ -31,6 +31,15 @@ builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connecti
 builder.Services.AddDbContext<RoundContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
 
+builder.ConfigureWebHostDefaults(webBuilder =>
+{
+    webBuilder.UseStartup<Startup>()
+    .UseKestrel(options =>
+    {
+        options.Configure(builder.Configuration.GetSection("Kestrel"));
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
