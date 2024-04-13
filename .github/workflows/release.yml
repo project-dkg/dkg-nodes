@@ -2,13 +2,11 @@ name: Release workflow
 
 on:
   push:
-    tags:     [ 'v*' ]
+    tags: [ 'v*' ]
 
 jobs:
   release-service-node:
     runs-on: ubuntu-latest
-    if: ${{ contains(github.ref, 'refs/tags/v') }}
-    needs: test
     permissions:
       contents: read
       packages: write
@@ -49,9 +47,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   release-dkg-node:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1

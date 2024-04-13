@@ -52,7 +52,7 @@ namespace dkgServiceNode.Data
 
             DROP INDEX IF EXISTS ""idx_nodes_host_port"";
             DROP TABLE IF EXISTS ""nodes"";
-            
+
             DROP TABLE IF EXISTS ""rounds"";
 
             CREATE TABLE ""rounds"" (
@@ -60,7 +60,7 @@ namespace dkgServiceNode.Data
               ""status""          SMALLINT NOT NULL DEFAULT 0,
               ""node_count""      INT NOT NULL DEFAULT 0,
               ""result""          INT,
-              ""created""         TIMESTAMP NOT NULL DEFAULT now(), 
+              ""created""         TIMESTAMP NOT NULL DEFAULT now(),
               ""modified""        TIMESTAMP NOT NULL DEFAULT now()
             );
 
@@ -74,7 +74,7 @@ namespace dkgServiceNode.Data
             );
 
             CREATE INDEX ""idx_nodes_host_port"" ON ""nodes"" (""host"", ""port"");
-            
+
             DROP TABLE IF EXISTS ""versions"";
 
             CREATE TABLE ""versions"" (
@@ -84,7 +84,7 @@ namespace dkgServiceNode.Data
             );
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.0.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            ('0.1.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
             COMMIT;
             ";
