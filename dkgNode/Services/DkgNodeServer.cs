@@ -221,14 +221,14 @@ namespace dkgNode.Services
             }
 
             // Таймаут, который используется в точках синхронизации вместо синхронизации
-            int syncTimeout = Math.Max(1000, Configs.Length * 500);
+            int syncTimeout = Math.Max(10000, Configs.Length * 1000);
 
             PublicKeys = new IPoint[Configs.Length];
 
             // Пороговое значение для верификации ключа, то есть сколько нужно валидных commitment'ов
             // Алгоритм Шамира допускает минимальное значение = N/2+1, где N - количество участников, но мы
             // cделаем N-1, так чтобы 1 неадекватная нода позволяла расшифровать сообщение, а две - нет.
-            int threshold = PublicKeys.Length - 1;
+            int threshold = PublicKeys.Length/2 + 1;
 
             // 1. Собираем публичные ключи со всех участников
             //    Тут, конечно, упрощение. Предполагается, что все ответят без ошибкт
@@ -260,7 +260,7 @@ namespace dkgNode.Services
             }
 
             // Здесь будут distributed deals (не знаю, как перевести), предложенные этим узлом другим узлам
-            // <индекс другого узла> --> наш deal для другого узла              
+            // <индекс другого узла> --> наш deal для другого узла
             Dictionary<int, DistDeal> deals = [];
 
             if (ContinueDkg)
@@ -282,7 +282,7 @@ namespace dkgNode.Services
                     deals = DkgNodeSrv.Dkg.GetDistDeals() ??
                             throw new Exception($"Could not get a list of deals");
                 }
-                // Исключение может быть явно созданное выше, а может "выпасть" из DistKeyGenerator 
+                // Исключение может быть явно созданное выше, а может "выпасть" из DistKeyGenerator
                 // Ошибки здесь все фатальны
                 catch (Exception ex)
                 {
@@ -295,7 +295,7 @@ namespace dkgNode.Services
             IPoint? distrPublicKey = null;
 
             // 3. Разошkём наши "предложения" другим узлам
-            //    В ответ мы ожидаем distributed response, который мы для начала сохраним 
+            //    В ответ мы ожидаем distributed response, который мы для начала сохраним
 
             if (ContinueDkg)
             {
@@ -305,7 +305,7 @@ namespace dkgNode.Services
                     // Console.WriteLine($"Querying from {Index} to process for node {i}");
 
                     byte[] rspb = [];
-                    // Самому себе тоже пошлём, хотя можно вызвать локально 
+                    // Самому себе тоже пошлём, хотя можно вызвать локально
                     // if (Index == i) try { response = DkgNode.Dkg!.ProcessDeal(response) } catch { }
                     var rb = Clients[i].ProcessDeal(new ProcessDealRequest { Data = ByteString.CopyFrom(deal.GetBytes()) });
                     if (rb != null)
@@ -341,7 +341,7 @@ namespace dkgNode.Services
                     {
                         for (int i = 0; i < PublicKeys.Length; i++)
                         {
-                            // Самому себе тоже пошлём, хотя можно вызвать локально 
+                            // Самому себе тоже пошлём, хотя можно вызвать локально
                             // if (Index == i) try { DkgNode.Dkg!.ProcessResponse(response) } catch { }
                             Clients[i].ProcessResponse(new ProcessResponseRequest { Data = ByteString.CopyFrom(response.GetBytes()) });
                         }
