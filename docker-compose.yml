@@ -11,14 +11,16 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
-#      - ASPNETCORE_Kestrel__Certificates__Default__Path= 
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
 #      - ASPNETCORE_Kestrel__Certificates__Default__Password=
+#      - ASPNETCORE_Kestrel__Certificates__Default__Password_FILE=/etc/dkg/s.pwd
     ports:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - /etc/dkg:/etc/dkg
+#      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+#      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
     depends_on:
       - dkgservice_db
 
@@ -112,7 +114,7 @@ services:
       - POSTGRES_DB=dkgservice
     volumes:
       - pgdata:/var/lib/postgresql
- 
+
 #  adminer:
 #    container_name: adminer
 #    image: adminer
@@ -122,4 +124,3 @@ services:
 
 volumes:
   pgdata: {}
- 

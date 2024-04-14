@@ -6,12 +6,12 @@ services:
     image: ghcr.io/maxirmx/dkg-service-node:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8081
-      - ASPNETCORE_HTTPS_PORTS=8082
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
       - Kestrel__Certificates__Default__Password_FILE=/etc/dkg/s.pwd
     ports:
+      - "8080:8080"
       - "8081:8081"
-      - "8082:8082"
     volumes:
       - /etc/dkg:/etc/dkg
 #      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
