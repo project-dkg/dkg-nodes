@@ -33,16 +33,15 @@ builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connecti
 
 var app = builder.Build();
 
+app.UseCors(x => x
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+);
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Cors policy for development
-    app.UseCors(x => x
-        .AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-    );
-
     app.UseSwagger();
     app.UseSwaggerUI();
 }
