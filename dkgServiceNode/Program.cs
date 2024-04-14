@@ -49,7 +49,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<JwtMiddleware>();
 
-// app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 

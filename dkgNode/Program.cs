@@ -15,7 +15,7 @@ var config = new DkgNodeConfig()
     Host = Environment.GetEnvironmentVariable("DKG_NODE_SERVER_GRPC_HOST") ?? "localhost",
     NiceName = Environment.GetEnvironmentVariable("DKG_NODE_SERVER_NAME")
 };
-var serviceNodeUrl = Environment.GetEnvironmentVariable("DKG_SERVICE_NODE_URL") ?? "http://localhost:8080";
+var serviceNodeUrl = Environment.GetEnvironmentVariable("DKG_SERVICE_NODE_URL") ?? "https://localhost:8081";
 
 var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
 var logger = loggerFactory.CreateLogger("DkgNode");
