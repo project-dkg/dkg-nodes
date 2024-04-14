@@ -11,6 +11,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
+#      - ASPNETCORE_Kestrel__Certificates__Default__Path= 
+#      - ASPNETCORE_Kestrel__Certificates__Default__Password=
     ports:
       - "8080:8080"
       - "8081:8081"
@@ -111,12 +113,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
  
-  adminer:
-    container_name: adminer
-    image: adminer
-    restart: always
-    ports:
-      - 8082:8080
+#  adminer:
+#    container_name: adminer
+#    image: adminer
+#    restart: always
+#    ports:
+#      - 8082:8080
 
 volumes:
   pgdata: {}
