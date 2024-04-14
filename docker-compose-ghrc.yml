@@ -8,7 +8,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
-      - Kestrel__Certificates__Default__Password_FILE=/etc/dkg/s.pwd
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=
     ports:
       - "8080:8080"
       - "8081:8081"
@@ -25,7 +26,7 @@ services:
     environment:
       - DKG_NODE_SERVER_GRPC_PORT=5001
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_1
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8081
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=First node
     ports:
       - 5001:5001
@@ -41,7 +42,7 @@ services:
     environment:
       - DKG_NODE_SERVER_GRPC_PORT=5002
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_2
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8081
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=Second node
     ports:
       - 5002:5002
@@ -54,7 +55,7 @@ services:
     environment:
       - DKG_NODE_SERVER_GRPC_PORT=5002
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_3
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8081
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=Third node
     ports:
       - 5003:5003
@@ -67,7 +68,7 @@ services:
     environment:
       - DKG_NODE_SERVER_GRPC_PORT=5004
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_4
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8081
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=Fourth node
     ports:
       - 5004:5004
@@ -80,7 +81,7 @@ services:
     environment:
       - DKG_NODE_SERVER_GRPC_PORT=5005
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_5
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8081
+      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=Fifth node
     ports:
       - 5005:5005
