@@ -26,10 +26,4 @@
     <ProjectReference Include="..\dkgCommon\dkgCommon.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="s.pfx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

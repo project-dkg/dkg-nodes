@@ -89,22 +89,49 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
+        readonly static string sqlScript_0_2_0 = @"
+            START TRANSACTION;
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.2.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
+
+
         public static void Ensure_0_1_0(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
+            var command = new NpgsqlCommand(sql, connection);
+            var rows = command.ExecuteScalar();
+
+            if (rows != null && (long)rows != 0)
+            {
+                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.1.0';";
+                command = new NpgsqlCommand(sql, connection);
+                rows = command.ExecuteScalar();
+            }
+
+            if (rows == null || (long)rows == 0)
+            {
+                using var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection);
+                int r = scriptCommand.ExecuteNonQuery();
+            }
+        }
+
+        public static void Ensure_0_2_0(NpgsqlConnection connection)
+        {
+            // Check if table 'versions' exists
+            var sql = "SELECT COUNT(*) FROM versions WHERE version = '0.2.0';";
             using var command = new NpgsqlCommand(sql, connection);
             var rows = command.ExecuteScalar();
 
             if (rows == null || (long)rows == 0)
             {
-                using (var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection))
-                {
-                    int r = scriptCommand.ExecuteNonQuery();
-                }
+                using var scriptCommand = new NpgsqlCommand(sqlScript_0_2_0, connection);
+                int r = scriptCommand.ExecuteNonQuery();
             }
         }
-
         public static void Ensure(string connectionString)
         {
 
@@ -112,6 +139,7 @@ namespace dkgServiceNode.Data
             {
                 connection.Open();
                 Ensure_0_1_0(connection);
+                Ensure_0_2_0(connection);
             }
         }
     }
