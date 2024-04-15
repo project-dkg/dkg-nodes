@@ -107,7 +107,7 @@ namespace dkgServiceNode.Controllers
             {
                 roundId = 0;
             }
-            var reference = new Reference((int)roundId) { Id = (int)roundId };
+            var reference = new Reference((int)roundId);
             return Ok(reference);
         }
 
