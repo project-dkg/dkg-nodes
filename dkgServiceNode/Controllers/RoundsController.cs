@@ -98,7 +98,7 @@ namespace dkgServiceNode.Controllers
             roundContext.Rounds.Add(round);
             await roundContext.SaveChangesAsync();
 
-            var reference = new Reference(round.Id) { Id = round.Id };
+            var reference = new Reference(round.Id);
             return CreatedAtAction(nameof(AddRound), new { id = round.Id }, reference);
         }
 

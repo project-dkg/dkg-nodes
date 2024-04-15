@@ -76,7 +76,7 @@ namespace dkgServiceNode.Controllers
             userContext.Users.Add(user);
             await userContext.SaveChangesAsync();
 
-            var reference = new Reference(user.Id) { Id = user.Id };
+            var reference = new Reference(user.Id);
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, reference);
         }
 

@@ -25,9 +25,8 @@
 
 namespace dkgCommon.Models
 {
-    public class Reference
+    public class Reference(int id)
     {
-        public required int Id { get; set; }
-        public Reference(int id) { Id = id; }
+        public int Id { get; set; } = id;
     }
 }

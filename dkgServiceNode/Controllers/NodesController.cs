@@ -77,22 +77,20 @@ namespace dkgServiceNode.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
-        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Reference>> RegisterNode(Node node)
         {
-
+            int? roundId = null;
             List<Round> rounds = await roundContext.Rounds.Where(r => r.StatusValue == (short)RStatus.Started).ToListAsync();
-            if (rounds.Count == 0)
+            if (rounds.Count != 0)
             {
-                return _409Round();
+                Round round = rounds[new Random().Next(rounds.Count)];
+                roundId = round.Id;
             }
-            Round round = rounds[new Random().Next(rounds.Count)];
-            int id = round.Id;
 
             var xNode = await nodeContext.FindByHostAndPortAsync(node.Host, node.Port);
             if (xNode == null)
             {
-                node.RoundId = id;
+                node.RoundId = roundId;
                 nodeContext.Nodes.Add(node);
                 await nodeContext.SaveChangesAsync();
             }
@@ -100,27 +98,17 @@ namespace dkgServiceNode.Controllers
             {
                 xNode.Name = node.Name;
                 xNode.PublicKey = node.PublicKey;
-                xNode.RoundId = id;
+                xNode.RoundId = roundId;
                 nodeContext.Entry(xNode).State = EntityState.Modified;
-                try
-                {
-                    await nodeContext.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!await nodeContext.ExistsAsync(id))
-                    {
-                        return _404Node(id);
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                await nodeContext.SaveChangesAsync();
             }
 
-            var reference = new Reference(round.Id) { Id = id };
-            return CreatedAtAction(nameof(RegisterNode), new { id = node.Id }, reference);
+            if (roundId == null) 
+            {
+                roundId = 0;
+            }
+            var reference = new Reference((int)roundId);
+            return Ok(reference);
         }
 
         // DELETE: api/nodes/5

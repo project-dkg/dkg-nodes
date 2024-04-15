@@ -125,7 +125,16 @@ namespace dkgNode.Services
                         }
                         else
                         {
-                            roundId = reference.Id;
+                            if (reference.Id == 0)
+                            {
+                                roundId = null;
+                                Logger.LogInformation($"Node '{Config.Name}' not registered with {ServiceNodeUrl} - no rounds");
+                            }
+                            else
+                            {
+                                roundId = reference.Id;
+                                Logger.LogInformation($"Node '{Config.Name}' succesfully registered with {ServiceNodeUrl}");
+                            }
                         }
                     }
                     catch (JsonException ex)
@@ -133,7 +142,11 @@ namespace dkgNode.Services
                         Logger.LogError($"Node '{Config.Name}' failed to parse service node response '{responseContent}' from {ServiceNodeUrl}");
                         Logger.LogError(ex.Message);
                     }
-                    Logger.LogInformation($"Node '{Config.Name}' succesfully registered with {ServiceNodeUrl}");
+                }
+                else
+                {
+                    Logger.LogError($"Node '{Config.Name}' failed to register with {ServiceNodeUrl}: {response.StatusCode}");
+                    Logger.LogError(responseContent);
                 }
             }
             return roundId;
@@ -160,7 +173,7 @@ namespace dkgNode.Services
                 }
                 else
                 {
-                    if (j++ % 10 == 0)
+                    if (j++ % 30 == 0)
                     {
                         Logger.LogDebug($" '{Config.Name}': '{NodeStatusConstants.GetRoundStatusById(Status).Name}'");
                     }
@@ -184,7 +197,7 @@ namespace dkgNode.Services
             GRpcServer = new Server
             {
                 Services = { BindService(DkgNodeSrv) },
-                Ports = { new ServerPort(Config.Host, Config.Port, ServerCredentials.Insecure) }
+                Ports = { new ServerPort("0.0.0.0", Config.Port, ServerCredentials.Insecure) }
             };
 
             RunnerThread = new Thread(Runner);
