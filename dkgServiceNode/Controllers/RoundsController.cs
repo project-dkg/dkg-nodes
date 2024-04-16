@@ -44,12 +44,14 @@ namespace dkgServiceNode.Controllers
     {
         protected readonly RoundContext roundContext;
         protected readonly NodeContext nodeContext;
+        protected readonly Runner runner;
 
-        public RoundsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, RoundContext rContext, NodeContext nContext) :
+        public RoundsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, RoundContext rContext, NodeContext nContext, Runner rnner) :
                base(httpContextAccessor, uContext)
         {
             roundContext = rContext;
             nodeContext = nContext;
+            runner = rnner;
         }
 
         // GET: api/rounds
@@ -76,11 +78,7 @@ namespace dkgServiceNode.Controllers
         {
             var round = await roundContext.Rounds.FindAsync(id);
             if (round == null) return _404Round(id);
-
-            if (round.IsVersatile)
-            { 
-                round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
-            }
+            round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
 
             return round;
         }
@@ -120,28 +118,29 @@ namespace dkgServiceNode.Controllers
             round.CreatedOn = round.CreatedOn.ToUniversalTime();
             round.Status = round.NextStatus;
 
+            var rNodes = await nodeContext.Nodes.Where(n => n.RoundId == round.Id).ToListAsync();
             if (round.IsVersatile)
             {
-                round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
+                round.NodeCount = rNodes.Count;
             }
 
             switch (round.StatusValue)
             {
                 case (short)RStatus.Started:
-                    Runner.StartRound(round);
+                    runner.StartRound(round);
                     break;
                 case (short)RStatus.Running:
-                    Runner.RunRound(round, await nodeContext.Nodes.ToListAsync());
+                    runner.RunRound(round, rNodes);
                     break;
                 case (short)RStatus.Finished:
-                    round.Result = Runner.FinishRound(round, await nodeContext.Nodes.ToListAsync());
+                    round.Result = runner.FinishRound(round, rNodes);
                     if (round.Result == null)
                     {
                         round.StatusValue = (short)RStatus.Failed;
                     }
                     break;
                 case (short)RStatus.Cancelled:
-                    Runner.CancelRound(round, await nodeContext.Nodes.ToListAsync());
+                    runner.CancelRound(round, rNodes);
                     break;
                 default:
                     break;
@@ -201,7 +200,7 @@ namespace dkgServiceNode.Controllers
                     throw;
                 }
             }
-            Runner.CancelRound(round, await nodeContext.Nodes.ToListAsync());
+            runner.CancelRound(round, await nodeContext.Nodes.ToListAsync());
             return NoContent();
         }
     }

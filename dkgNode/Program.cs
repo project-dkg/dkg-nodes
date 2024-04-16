@@ -19,7 +19,7 @@ var serviceNodeUrl = Environment.GetEnvironmentVariable("DKG_SERVICE_NODE_URL") 
 
 var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
 var logger = loggerFactory.CreateLogger("DkgNode");
-var server = new DkgNodeServer(config, serviceNodeUrl, logger);
+var server = new DkgNodeService(config, serviceNodeUrl, logger);
 
 var cts = new CancellationTokenSource();
 AssemblyLoadContext.Default.Unloading += ctx =>
