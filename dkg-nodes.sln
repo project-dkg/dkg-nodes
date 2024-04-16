@@ -16,7 +16,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgCommon", "dkgCommon\dkgC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgLibrary", "dkg\dkgLibrary\dkgLibrary.csproj", "{8C58697D-1A09-40EB-B840-CDB9BBE49FA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dkgNodesTests", "dkgNodesTests\dkgNodesTests.csproj", "{598AFFF1-61B6-43FD-B170-9E44CC6D7EC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgNodesTests", "dkgNodesTests\dkgNodesTests.csproj", "{598AFFF1-61B6-43FD-B170-9E44CC6D7EC4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{64F90486-5C7C-4D4B-A1EE-00AAF380B5A7} = {64F90486-5C7C-4D4B-A1EE-00AAF380B5A7}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

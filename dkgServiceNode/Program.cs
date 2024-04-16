@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
+using dkgServiceNode.Services.RoundRunner;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,8 @@ builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(conne
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<RoundContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
+
+builder.Services.AddSingleton<Runner>();
 
 var app = builder.Build();
 

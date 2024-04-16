@@ -47,7 +47,8 @@ message PublicKeyReply {
 }
 
 message ProcessDealRequest {
-  bytes data = 1;
+  int32 roundId = 1;
+  bytes data = 2;
 }
 
 message ProcessDealReply {
@@ -55,7 +56,8 @@ message ProcessDealReply {
 }
 
 message ProcessResponseRequest {
-  bytes data = 1;
+  int32 roundId = 1;
+  bytes data = 2;
 }
 
 message ProcessResponseReply {

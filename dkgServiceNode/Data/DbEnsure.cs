@@ -89,14 +89,28 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
-        readonly static string sqlScript_0_2_0 = @"
+       
+        private static string PuVersionUpdateQuery(string v)
+        {
+            return @"
             START TRANSACTION;
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.2.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
+            ('" + v +"', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
             COMMIT;
             ";
 
+        }
+        private static string VQuery(string v)
+        {
+            return $"SELECT COUNT(*) FROM versions WHERE version = '{v}';";
+        }
+
+        private static bool VCheck(string v, NpgsqlConnection connection)
+        {
+            var command = new NpgsqlCommand(VQuery(v), connection);
+            var rows = command.ExecuteScalar();
+            return (rows != null && (long)rows != 0);
+        }
 
         public static void Ensure_0_1_0(NpgsqlConnection connection)
         {
@@ -114,21 +128,16 @@ namespace dkgServiceNode.Data
 
             if (rows == null || (long)rows == 0)
             {
-                using var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection);
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection);
                 int r = scriptCommand.ExecuteNonQuery();
             }
         }
 
-        public static void Ensure_0_2_0(NpgsqlConnection connection)
+        private static void PuVersionUpdate(string v, NpgsqlConnection connection)
         {
-            // Check if table 'versions' exists
-            var sql = "SELECT COUNT(*) FROM versions WHERE version = '0.2.0';";
-            using var command = new NpgsqlCommand(sql, connection);
-            var rows = command.ExecuteScalar();
-
-            if (rows == null || (long)rows == 0)
+            if (!VCheck(v, connection))
             {
-                using var scriptCommand = new NpgsqlCommand(sqlScript_0_2_0, connection);
+                var scriptCommand = new NpgsqlCommand(PuVersionUpdateQuery(v), connection);
                 int r = scriptCommand.ExecuteNonQuery();
             }
         }
@@ -139,7 +148,8 @@ namespace dkgServiceNode.Data
             {
                 connection.Open();
                 Ensure_0_1_0(connection);
-                Ensure_0_2_0(connection);
+                PuVersionUpdate("0.2.0", connection);
+                PuVersionUpdate("0.2.3", connection);
             }
         }
     }

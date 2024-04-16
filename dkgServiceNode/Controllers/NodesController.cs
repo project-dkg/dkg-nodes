@@ -108,7 +108,9 @@ namespace dkgServiceNode.Controllers
                 roundId = 0;
             }
             var reference = new Reference((int)roundId);
+            
             return Ok(reference);
+
         }
 
         // DELETE: api/nodes/5
