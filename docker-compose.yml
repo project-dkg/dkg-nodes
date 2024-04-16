@@ -11,6 +11,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__EndpointDefaults__Protocols=Http1AndHttp2
 #      - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
 #      - ASPNETCORE_Kestrel__Certificates__Default__Password=
 #      - ASPNETCORE_Kestrel__Certificates__Default__Password_FILE=/etc/dkg/s.pwd

@@ -39,6 +39,8 @@ using dkg;
 using dkgCommon;
 using Google.Protobuf;
 using Grpc.Net.Client;
+using System.Net.Sockets;
+using System.Net;
 
 namespace dkgNode.Services
 {
@@ -60,7 +62,7 @@ namespace dkgNode.Services
 
         internal bool ContinueDkg
         {
-            get { return Status == Running && IsRunning;  }
+            get { return Status == Running && IsRunning; }
         }
         internal NStatus Status
         {
@@ -75,7 +77,7 @@ namespace dkgNode.Services
 
         internal int? Round
         {
-            get { return DkgNodeSrv.GetRound();  }
+            get { return DkgNodeSrv.GetRound(); }
         }
         internal IGroup G { get; }
 
@@ -84,7 +86,7 @@ namespace dkgNode.Services
         DkgNodeConfig Config { get; }
         DkgNodeConfig[] Configs
         {
-            get { return DkgNodeSrv.Configs;  }
+            get { return DkgNodeSrv.Configs; }
         }
         public byte[] PublicKey
         {
@@ -109,7 +111,7 @@ namespace dkgNode.Services
             }
             catch (Exception e)
             {
-                Logger.LogError("'{Name}': failed to register with {ServiceNodeUrl}, Exception: {Message}", 
+                Logger.LogError("'{Name}': failed to register with {ServiceNodeUrl}, Exception: {Message}",
                                  Config.Name, ServiceNodeUrl, e.Message);
             }
             if (response == null)
@@ -196,17 +198,25 @@ namespace dkgNode.Services
             Logger = logger;
             ServiceNodeUrl = serviceNodeUrl;
 
-            logger.LogInformation("'{Name}': starting at {Config.Host}:{Config.Port}",
+            logger.LogInformation("'{Name}': starting at {Host}:{Port}",
                 Config.Name, Config.Host, Config.Port);
             G = new Secp256k1Group();
 
             DkgNodeSrv = new DkgNodeServer(logger, Config.Name, G);
             Config.PublicKey = Convert.ToBase64String(PublicKey);
 
+            // Obtain the machine's IP address
+            var addressList = Dns.GetHostEntry(Dns.GetHostName()).AddressList;
+            var address = addressList.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+            string? ipAddress = address?.ToString();
+
+            logger.LogInformation("'{Name}': binding to {ipAddress}:{Port}",
+                Config.Name, ipAddress, Config.Port);
+
             GRpcServer = new Server
             {
                 Services = { BindService(DkgNodeSrv) },
-                Ports = { new ServerPort("0.0.0.0", Config.Port, ServerCredentials.Insecure) }
+                Ports = { new ServerPort(ipAddress, Config.Port, ServerCredentials.Insecure) }
             };
 
             RunnerThread = new Thread(Runner);
@@ -252,7 +262,7 @@ namespace dkgNode.Services
             // Пороговое значение для верификации ключа, то есть сколько нужно валидных commitment'ов
             // Алгоритм Шамира допускает минимальное значение = N/2+1, где N - количество участников, но мы
             // cделаем N-1, так чтобы 1 неадекватная нода позволяла расшифровать сообщение, а две - нет.
-            int threshold = PublicKeys.Length/2 + 1;
+            int threshold = PublicKeys.Length / 2 + 1;
 
             // 1. Декодируем публичные ключи со для вчех участников
             //    Тут, конечно, упрощение. Предполагается, что все ответят без ошибoк
@@ -296,9 +306,9 @@ namespace dkgNode.Services
                     Config.Name, Configs.Length, Round);
                 Thread.Sleep(syncTimeout);
 
-            // 2. Создаём генератор/обработчик распределённого ключа для этого узла
-            //    Это будет DkgNode.Dkg.  Он создаётся уровнем ниже, чтобы быть доступным как из gRPC клиента (этот объект),
-            //    так и из сервера (DkgNode)
+                // 2. Создаём генератор/обработчик распределённого ключа для этого узла
+                //    Это будет DkgNode.Dkg.  Он создаётся уровнем ниже, чтобы быть доступным как из gRPC клиента (этот объект),
+                //    так и из сервера (DkgNode)
 
                 try
                 {
@@ -327,32 +337,37 @@ namespace dkgNode.Services
                 List<DistResponse> responses = new(deals.Count);
                 foreach (var (i, deal) in deals)
                 {
-                    // Console.WriteLine($"Querying from {Index} to process for node {i}");
-
-                    byte[] rspb = [];
-                    // Самому себе тоже пошлём, хотя можно вызвать локально
-                    // if (Index == i) try { response = DkgNode.Dkg!.ProcessDeal(response) } catch { }
-                    var rb = Clients[i].ProcessDeal(new ProcessDealRequest {
-                        RoundId = (int)(Round == null ? 0 : Round),
-                        Data = ByteString.CopyFrom(deal.GetBytes()) 
-                    });
-                    if (rb != null)
+                    try
                     {
-                        rspb = rb.Data.ToByteArray();
+                        byte[] rspb = [];
+                        var rb = Clients[i].ProcessDeal(new ProcessDealRequest
+                        {
+                            RoundId = (int)(Round == null ? 0 : Round),
+                            Data = ByteString.CopyFrom(deal.GetBytes())
+                        });
+                        if (rb != null)
+                        {
+                            rspb = rb.Data.ToByteArray();
+                        }
+                        if (rspb.Length != 0)
+                        {
+                            DistResponse response = new();
+                            response.SetBytes(rspb);
+                            responses.Add(response);
+                        }
+                        else
+                        {
+                            // На этом этапе ошибка не является фатальной
+                            // Просто у нас или получится или не получится достаточное количество commitment'ов
+                            // См. комментариё выше про Threshold
+                            Logger.LogDebug("'{Name}': failed to get response from node '{OtherName}'",
+                                Config.Name, Configs[i].Name);
+                        }
                     }
-                    if (rspb.Length != 0)
+                    catch (Exception ex)
                     {
-                        DistResponse response = new();
-                        response.SetBytes(rspb);
-                        responses.Add(response);
-                    }
-                    else
-                    {
-                        // На этом этапе ошибка не является фатальной
-                        // Просто у нас или получится или не получится достаточное количество commitment'ов
-                        // См. комментариё выше про Threshold
-                        Logger.LogDebug("'{Name}': failed to get response from node '{OtherName}'", 
-                            Config.Name, Configs[i].Name);
+                        Logger.LogDebug("'{Name}': exception on call of ProcessDeal to node '{OtherName}'\n{Message}",
+                            Config.Name, Configs[i].Name, ex.Message);
                     }
                 }
 
@@ -369,50 +384,59 @@ namespace dkgNode.Services
 
                     foreach (var response in responses)
                     {
+
                         for (int i = 0; i < PublicKeys.Length; i++)
                         {
-                            // Самому себе тоже пошлём, хотя можно вызвать локально
-                            // if (Index == i) try { DkgNode.Dkg!.ProcessResponse(response) } catch { }
-                            Clients[i].ProcessResponse(new ProcessResponseRequest { 
-                                RoundId = (int)(Round == null ? 0: Round),
-                                Data = ByteString.CopyFrom(response.GetBytes()) 
-                            });
+                            try
+                            {
+                                // Самому себе тоже пошлём, хотя можно вызвать локально
+                                // if (Index == i) try { DkgNode.Dkg!.ProcessResponse(response) } catch { }
+                                Clients[i].ProcessResponse(new ProcessResponseRequest
+                                {
+                                    RoundId = (int)(Round == null ? 0 : Round),
+                                    Data = ByteString.CopyFrom(response.GetBytes())
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogDebug("'{Name}': exception on call of ProcessResponse to node '{OtherName}'\n{Message}",
+                                    Config.Name, Configs[i].Name, ex.Message);
+                            }
                         }
                     }
                 }
+            }
 
-                if (ContinueDkg)
+            if (ContinueDkg)
+            {
+                // И ещё одна точка синхронизации
+                // Теперь мы ждём, пока все обменяются responsе'ами
+                Logger.LogDebug("'{Name}': Running Dkg algorithm for {Length} nodes [Round {round}, step 4]",
+                    Config.Name, Configs.Length, Round);
+                Thread.Sleep(syncTimeout);
+
+                DkgNodeSrv.Dkg!.SetTimeout();
+
+                // Обрадуемся тому, что нас признали достойными :)
+                bool crt = DkgNodeSrv.Dkg!.ThresholdCertified();
+                string certified = crt ? "" : "not ";
+                Logger.LogInformation("'{Name}': {certified}certified", Config.Name, certified);
+
+                if (crt)
                 {
-                    // И ещё одна точка синхронизации
-                    // Теперь мы ждём, пока все обменяются responsе'ами
-                    Logger.LogDebug("'{Name}': Running Dkg algorithm for {Length} nodes [Round {round}, step 4]",
-                        Config.Name, Configs.Length, Round);
-                    Thread.Sleep(syncTimeout);
-
-                    DkgNodeSrv.Dkg!.SetTimeout();
-
-                    // Обрадуемся тому, что нас признали достойными :)
-                    bool crt = DkgNodeSrv.Dkg!.ThresholdCertified();
-                    string certified = crt ? "" : "not ";
-                    Logger.LogInformation("'{Name}': {certified}certified", Config.Name, certified);
-
-                    if (crt)
-                    {
-                        // Методы ниже безопасно вызывать, только если ThresholdCertified() вернул true
-                        distrKey = DkgNodeSrv.Dkg!.DistKeyShare();
-                        DkgNodeSrv.SecretShare = distrKey.PriShare();
-                        distrPublicKey = distrKey.Public();
-                        DistributedPublicKey = distrPublicKey;
-                        Status = Finished;
-                    }
-                    else
-                    {
-                        DistributedPublicKey = null;
-                        Status = Failed;
-                    }
+                    // Методы ниже безопасно вызывать, только если ThresholdCertified() вернул true
+                    distrKey = DkgNodeSrv.Dkg!.DistKeyShare();
+                    DkgNodeSrv.SecretShare = distrKey.PriShare();
+                    distrPublicKey = distrKey.Public();
+                    DistributedPublicKey = distrPublicKey;
+                    Status = Finished;
+                }
+                else
+                {
+                    DistributedPublicKey = null;
+                    Status = Failed;
                 }
             }
         }
-
     }
 }

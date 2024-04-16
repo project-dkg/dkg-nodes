@@ -23,12 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Grpc.Net.Client;
-
-using dkgCommon;
 using dkgServiceNode.Models;
-using static dkgCommon.DkgNode;
-
 
 namespace dkgServiceNode.Services.RoundRunner
 {
@@ -55,7 +50,7 @@ namespace dkgServiceNode.Services.RoundRunner
             ActiveRound? roundToRun = null;
             lock (lockObject)
             {
-                roundToRun = ActiveRounds.First(r => r.Id == round.Id);
+                roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
                 if (roundToRun != null && nodes != null)
                 {
                     roundToRun.Run(nodes);
@@ -68,7 +63,7 @@ namespace dkgServiceNode.Services.RoundRunner
             ActiveRound? roundToRun = null;
             lock (lockObject)
             {
-                roundToRun = ActiveRounds.First(r => r.Id == round.Id);
+                roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
             }
             if (roundToRun != null)
             {
@@ -96,7 +91,7 @@ namespace dkgServiceNode.Services.RoundRunner
             ActiveRound? roundToRemove = null;
             lock (lockObject)
             {
-                roundToRemove = ActiveRounds.First(r => r.Id == round.Id);
+                roundToRemove = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
                 if (roundToRemove != null)
                 {
                     roundToRemove.Clear(nodes);
