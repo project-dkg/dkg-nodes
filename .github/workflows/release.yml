@@ -49,7 +49,7 @@ jobs:
       - name: Purge old versions
         if: contains(github.ref, 'refs/tags/v')
         continue-on-error: true
-        uses: actions/delete-package-versions@v4
+        uses: actions/delete-package-versions@v5
         with:
           package-name: dkg-service-node
           package-type: 'container'
@@ -102,7 +102,7 @@ jobs:
       - name: Purge old versions
         if: contains(github.ref, 'refs/tags/v')
         continue-on-error: true
-        uses: actions/delete-package-versions@v4
+        uses: actions/delete-package-versions@v5
         with:
           package-name: dkg-node
           package-type: 'container'
