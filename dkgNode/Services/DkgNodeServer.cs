@@ -1,17 +1,42 @@
-﻿using dkg.group;
-using dkg.poly;
-using dkg.share;
-using dkgNode.Constants;
+﻿// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
+// All rights reserved.
+// This file is a part of dkg service node
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
+// documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 using Google.Protobuf;
 using Grpc.Core;
+
+using dkg.group;
+using dkg.poly;
+using dkg.share;
+
+
 using dkgCommon;
 using dkgNode.Models;
+using dkgCommon.Constants;
 
 using static dkgCommon.DkgNode;
-using static dkgNode.Constants.NStatus;
-using Org.BouncyCastle.Asn1.Ocsp;
-using static Org.BouncyCastle.Math.EC.ECCurve;
-using dkg.vss;
+using static dkgCommon.Constants.NStatus;
 
 
 namespace dkgNode.Services
@@ -51,6 +76,14 @@ namespace dkgNode.Services
             {
                 Status = status;
                 Round = round;
+            }
+        }
+        public void SetStatusClearRound(NStatus status)
+        {
+            lock (stsLock)
+            {
+                Status = status;
+                Round = null;
             }
         }
         public NStatus GetStatus()
@@ -103,7 +136,6 @@ namespace dkgNode.Services
             PublicKey = G.Base().Mul(PrivateKey);
         }
 
-
         // gRPC сервер реализует 4 метода
         //
         // Выдача публичного ключа
@@ -119,9 +151,14 @@ namespace dkgNode.Services
 
         public override Task<ProcessDealReply> ProcessDeal(ProcessDealRequest deal, ServerCallContext context)
         {
-            ProcessDealReply resp;
+            ProcessDealReply resp = new ProcessDealReply(); ;
 
             bool proceed = false;
+            bool proceed2 = false;
+            int attempt = 0;
+            const int maxAttempts = 5;
+            const int timeout = 1000;
+
             lock (stsLock)
             {
                 if (deal.RoundId == Round)
@@ -135,39 +172,55 @@ namespace dkgNode.Services
                 DistDeal distDeal = new();
                 distDeal.SetBytes(deal.Data.ToByteArray());
 
-                lock (dkgLock)
+                while (!proceed2)
                 {
-                    ByteString data = ByteString.CopyFrom([]);
-                    if (Dkg != null)
+                    lock (dkgLock)
                     {
-                        try
+                        ByteString data = ByteString.CopyFrom([]);
+                        if (Dkg != null)
                         {
-                            data = ByteString.CopyFrom(Dkg.ProcessDeal(distDeal).GetBytes());
-                            _logger.LogDebug("'{Name}': ProcessDeal request [Round: {RoundId}]", Name, Round);
+                            try
+                            {
+                                data = ByteString.CopyFrom(Dkg.ProcessDeal(distDeal).GetBytes());
+                                resp = new ProcessDealReply { Data = data };
+                                proceed2 = true;
+                                _logger.LogDebug("'{Name}': ProcessDeal request [Round: {RoundId}]", Name, Round);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Ошибки на данном этапе не являются фатальными
+                                // Если response'а нет, это просто значит, что в дальнейшую обработку ничего не уйдёт. 
+                                _logger.LogDebug("'{Name}': ProcessDeal request failed [Round: {RoundId}],\n {Message}", Name, Round, ex.Message);
+                            }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            // Ошибки на данном этапе не являются фатальными
-                            // Если response'а нет, это просто значит, что в дальнейшую обработку ничего не уйдёт. 
-                            _logger.LogDebug("'{Name}': ProcessDeal request failed [Round: {RoundId}]\n, {Message}", Name, Round, ex.Message);
+                            _logger.LogDebug("'{Name}': DistKeyGenerator is null [Round: {RoundId}], timeout {attempt} of {N}", Name, Round, attempt + 1, maxAttempts);
                         }
                     }
-                    resp = new ProcessDealReply { Data = data };
+                    if (attempt++ > maxAttempts)
+                    {
+                        proceed2 = true;
+                        _logger.LogDebug("'{Name}': DistKeyGenerator was not created after {N} timeouts [Round: {RoundId}]", Name, Round, maxAttempts);
+                    }
+                    else
+                    {
+                        Thread.Sleep(timeout);
+                    }
                 }
             }
             else
             {
-                resp = new ProcessDealReply();
                 _logger.LogError("'{Name}': ProcessDeal request Id mismatch [Node round: {Round}, Request round: {RoundId}]",
                     Name, Round, deal.RoundId);
             }
 
             return Task.FromResult(resp);
         }
-
         public override Task<ProcessResponseReply> ProcessResponse(ProcessResponseRequest response, ServerCallContext context)
         {
             bool proceed = false;
+            bool res = false;  
             lock (stsLock)
             {
                 if (response.RoundId == Round)
@@ -181,29 +234,30 @@ namespace dkgNode.Services
                 DistResponse distResponse = new();
                 distResponse.SetBytes(response.Data.ToByteArray());
 
-                lock (dkgLock)
-                {
-                    ByteString data = ByteString.CopyFrom([]);
-                    if (Dkg != null)
+                    lock (dkgLock)
                     {
-                        try
+                        ByteString data = ByteString.CopyFrom([]);
+                        if (Dkg != null)
                         {
-                            DistJustification? distJust = Dkg.ProcessResponse(distResponse);
-                            string anno = "no justification";
-                            if (distJust != null)
+                            try
                             {
-                                anno = "with jsutification";
+                                DistJustification? distJust = Dkg.ProcessResponse(distResponse);
+                                string anno = "no justification";
+                                if (distJust != null)
+                                {
+                                    anno = "with jsutification";
+                                }
+                                //    data = ByteString.CopyFrom(distJust.GetBytes());
+                                _logger.LogDebug("'{Name}': ProcessResponse request [Round: {RoundId}, {anno}]", Name, Round, anno);
+                                res = true;
                             }
-                            //    data = ByteString.CopyFrom(distJust.GetBytes());
-                            _logger.LogDebug("'{Name}': ProcessResponse request [Round: {RoundId}, {anno}]", Name, Round, anno);
+                            catch (Exception ex)
+                            {
+                                // Ошибки на данном этапе не являются фатальными
+                                // Если response не удалось обработать, это значит, что он не учитывается. Как будто и не было.
+                                _logger.LogDebug("'{Name}': ProcessResponse request failed [Round: {RoundId}],\n{Message}", Name, Round, ex.Message);
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            // Ошибки на данном этапе не являются фатальными
-                            // Если response не удалось обработать, это значит, что он не учитывается. Как будто и не было.
-                            _logger.LogDebug("'{Name}': ProcessResponse request failed [Round: {RoundId}]\n, {Message}", Name, Round, ex.Message);
-                        }
-                    }
                 }
             }
             else
@@ -211,7 +265,7 @@ namespace dkgNode.Services
                 _logger.LogError("'{Name}': ProcessResponse request Id mismatch [Node round: {Round}, Request round: {RoundId}]", 
                     Name, Round, response.RoundId);
             }
-            return Task.FromResult(new ProcessResponseReply());
+            return Task.FromResult(new ProcessResponseReply { Res = res });
         }
 
         public override Task<RunRoundReply> RunRound(RunRoundRequest request, ServerCallContext context)

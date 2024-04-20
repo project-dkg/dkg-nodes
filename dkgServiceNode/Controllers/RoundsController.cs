@@ -23,6 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgCommon.Constants;
 using dkgCommon.Models;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
@@ -62,10 +63,11 @@ namespace dkgServiceNode.Controllers
             var res = await roundContext.Rounds.OrderByDescending(r => r.Id).ToListAsync();
             foreach (var round in res)
             {
-                if (round.IsVersatile)
-                {
-                    round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
-                }
+                round.NodeCount = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id);
+                round.NodeCountRunning = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id && n.StatusValue == (short)NStatus.Running);
+                round.NodeCountFailed = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id && n.StatusValue == (short)NStatus.Failed);
+                round.NodeCountFinished = await nodeContext.Nodes.CountAsync(n => n.RoundId == round.Id && n.StatusValue == (short)NStatus.Finished);
+
             }
             return res;
         }
@@ -126,7 +128,7 @@ namespace dkgServiceNode.Controllers
 
             switch (round.StatusValue)
             {
-                case (short)RStatus.Started:
+                case (short)RStatus.Registration:
                     runner.StartRound(round);
                     break;
                 case (short)RStatus.Running:

@@ -23,24 +23,27 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkg.group;
-using dkgNode.Models;
-using Grpc.Core;
-using System.Text.Json;
-using System.Text;
-using dkgNode.Constants;
-using static dkgNode.Constants.NStatus;
-
-using static dkgCommon.DkgNode;
-
-using dkgCommon.Models;
-using dkg.share;
-using dkg;
-using dkgCommon;
-using Google.Protobuf;
-using Grpc.Net.Client;
 using System.Net.Sockets;
 using System.Net;
+using System.Text.Json;
+using System.Text;
+
+using Google.Protobuf;
+using Grpc.Net.Client;
+using Grpc.Core;
+
+using dkg;
+using dkg.share;
+using dkg.group;
+
+using dkgNode.Models;
+using dkgCommon;
+using dkgCommon.Constants;
+using dkgCommon.Models;
+
+using static dkgCommon.Constants.NStatus;
+using static dkgCommon.DkgNode;
+using dkg.vss;
 
 namespace dkgNode.Services
 {
@@ -107,16 +110,16 @@ namespace dkgNode.Services
 
             try
             {
-                response = await httpClient.PostAsync(ServiceNodeUrl + "/api/nodes/register", httpContent);
+                response = await httpClient.PostAsync($"{ServiceNodeUrl}/api/nodes/register", httpContent);
             }
             catch (Exception e)
             {
-                Logger.LogError("'{Name}': failed to register with {ServiceNodeUrl}, Exception: {Message}",
+                Logger.LogError("'{Name}': failed to register with '{ServiceNodeUrl}', Exception: {Message}",
                                  Config.Name, ServiceNodeUrl, e.Message);
             }
             if (response == null)
             {
-                Logger.LogError("Node '{Name}' failed to register with {ServiceNodeUrl}, no response received",
+                Logger.LogError("Node '{Name}' failed to register with '{ServiceNodeUrl}', no response received",
                                  Config.Name, ServiceNodeUrl);
             }
             else
@@ -130,7 +133,7 @@ namespace dkgNode.Services
                         Reference? reference = JsonSerializer.Deserialize<Reference>(responseContent, JsonSerializerOptions);
                         if (reference == null)
                         {
-                            Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from {ServiceNodeUrl}",
+                            Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from '{ServiceNodeUrl}'",
                                              Config.Name, responseContent, ServiceNodeUrl);
                         }
                         else
@@ -138,32 +141,71 @@ namespace dkgNode.Services
                             if (reference.Id == 0)
                             {
                                 roundId = null;
-                                Logger.LogDebug("'{Name}': registered with {ServiceNodeUrl} [No round]",
+                                Logger.LogDebug("'{Name}': attempted to register with '{ServiceNodeUrl}' [No round]",
                                                        Config.Name, ServiceNodeUrl);
                             }
                             else
                             {
                                 roundId = reference.Id;
-                                Logger.LogInformation("'{Name}': registered with {ServiceNodeUrl} [Round {roundId}]",
+                                Logger.LogInformation("'{Name}': registered with '{ServiceNodeUrl}' [Round {roundId}]",
                                                         Config.Name, ServiceNodeUrl, roundId);
                             }
                         }
                     }
                     catch (JsonException ex)
                     {
-                        Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from {ServiceNodeUrl}",
+                        Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from '{ServiceNodeUrl}'",
                                          Config.Name, responseContent, ServiceNodeUrl);
                         Logger.LogError(ex.Message);
                     }
                 }
                 else
                 {
-                    Logger.LogError("'{Name}': failed to register with {ServiceNodeUrl}: {StatusCode}",
+                    Logger.LogError("'{Name}': failed to register with '{ServiceNodeUrl}': {StatusCode}",
                                     Config.Name, ServiceNodeUrl, response.StatusCode);
                     Logger.LogError(responseContent);
                 }
             }
             return roundId;
+        }
+
+        internal async Task<bool> ReportStatus(HttpClient httpClient)
+        {
+            bool res = false;
+            string r = $"[status '{NodeStatusConstants.GetNodeStatusById(Status).Name}', round '{(Round == null ? 0: Round)}']";
+
+            StatusReport report = new StatusReport(Config.Port, Config.Host, Round ?? 0, Status);
+            HttpResponseMessage? response = null;
+            var jsonPayload = JsonSerializer.Serialize(report);
+            var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            try
+            {
+                response = await httpClient.PostAsync($"{ServiceNodeUrl}/api/nodes/status", httpContent);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError("'{Name}': failed to report {r} to '{ServiceNodeUrl}', Exception: {Message}",
+                                 Config.Name, r, ServiceNodeUrl, e.Message);
+            }
+            if (response == null)
+            {
+                Logger.LogError("Node '{Name}' failed to report {r} to '{ServiceNodeUrl}', no response received",
+                                 Config.Name, r, ServiceNodeUrl);
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    Logger.LogDebug("'{Name}': reported {r} to '{ServiceNodeUrl}'  [Ok, {Status}]", Config.Name, r, ServiceNodeUrl, response.StatusCode);
+                    res = true;
+                }
+                else
+                {
+                    Logger.LogDebug("'{Name}': reported {r} to '{ServiceNodeUrl}' [Needs reset, {Status}]\n{Message}", Config.Name, r, ServiceNodeUrl, response.StatusCode, responseContent);
+                }
+            }
+            return res;
         }
 
         internal async void Runner()
@@ -179,17 +221,24 @@ namespace dkgNode.Services
                         DkgNodeSrv.SetStatusAndRound(WaitingRoundStart, (int)roundId);
                     }
                 }
-
-                if (Status == Running)
+                bool conf = await ReportStatus(httpClient);
+                if (!conf)  // Hard reset
                 {
-                    RunDkg();
+                    DkgNodeSrv.SetStatusClearRound(NotRegistered);
                 }
                 else
                 {
-                    Logger.LogDebug("'{Name}': '{StatusName}'",
-                                     Name, NodeStatusConstants.GetRoundStatusById(Status).Name);
-                    Thread.Sleep(3000);
+                    if (Status == Running)
+                    {
+                        RunDkg();
+                    }
+                    else
+                    {
+                        Thread.Sleep(3000);
+                    }
                 }
+
+
             }
         }
         public DkgNodeService(DkgNodeConfig config, string serviceNodeUrl, ILogger logger)
@@ -339,29 +388,33 @@ namespace dkgNode.Services
                 {
                     try
                     {
+                        int progress = 0;
                         byte[] rspb = [];
                         var rb = Clients[i].ProcessDeal(new ProcessDealRequest
                         {
                             RoundId = (int)(Round == null ? 0 : Round),
                             Data = ByteString.CopyFrom(deal.GetBytes())
                         });
+                        progress = 1;
                         if (rb != null)
                         {
                             rspb = rb.Data.ToByteArray();
+                            progress = 2;
                         }
                         if (rspb.Length != 0)
                         {
                             DistResponse response = new();
                             response.SetBytes(rspb);
                             responses.Add(response);
+                            progress = 3;
                         }
                         else
                         {
                             // На этом этапе ошибка не является фатальной
                             // Просто у нас или получится или не получится достаточное количество commitment'ов
                             // См. комментариё выше про Threshold
-                            Logger.LogDebug("'{Name}': failed to get response from node '{OtherName}'",
-                                Config.Name, Configs[i].Name);
+                            Logger.LogDebug("'{Name}': failed to get response from node '{OtherName}, progress [{p}]'",
+                                Config.Name, Configs[i].Name, progress);
                         }
                     }
                     catch (Exception ex)
@@ -369,6 +422,7 @@ namespace dkgNode.Services
                         Logger.LogDebug("'{Name}': exception on call of ProcessDeal to node '{OtherName}'\n{Message}",
                             Config.Name, Configs[i].Name, ex.Message);
                     }
+                    if (!ContinueDkg) break;
                 }
 
                 if (ContinueDkg)
@@ -385,7 +439,7 @@ namespace dkgNode.Services
                     foreach (var response in responses)
                     {
 
-                        for (int i = 0; i < PublicKeys.Length; i++)
+                        for (int i = 0; i < PublicKeys.Length && ContinueDkg; i++)
                         {
                             try
                             {
@@ -403,6 +457,7 @@ namespace dkgNode.Services
                                     Config.Name, Configs[i].Name, ex.Message);
                             }
                         }
+                        if (!ContinueDkg) break;
                     }
                 }
             }
@@ -414,28 +469,33 @@ namespace dkgNode.Services
                 Logger.LogDebug("'{Name}': Running Dkg algorithm for {Length} nodes [Round {round}, step 4]",
                     Config.Name, Configs.Length, Round);
                 Thread.Sleep(syncTimeout);
+            }
 
-                DkgNodeSrv.Dkg!.SetTimeout();
+            DistributedPublicKey = null;
+            Status = Failed;
+
+            if (DkgNodeSrv.Dkg != null)
+            { 
+                DkgNodeSrv.Dkg.SetTimeout();
 
                 // Обрадуемся тому, что нас признали достойными :)
-                bool crt = DkgNodeSrv.Dkg!.ThresholdCertified();
+                bool crt = DkgNodeSrv.Dkg.ThresholdCertified();
                 string certified = crt ? "" : "not ";
                 Logger.LogInformation("'{Name}': {certified}certified", Config.Name, certified);
 
                 if (crt)
                 {
                     // Методы ниже безопасно вызывать, только если ThresholdCertified() вернул true
-                    distrKey = DkgNodeSrv.Dkg!.DistKeyShare();
+                    distrKey = DkgNodeSrv.Dkg.DistKeyShare();
                     DkgNodeSrv.SecretShare = distrKey.PriShare();
                     distrPublicKey = distrKey.Public();
                     DistributedPublicKey = distrPublicKey;
                     Status = Finished;
                 }
-                else
-                {
-                    DistributedPublicKey = null;
-                    Status = Failed;
-                }
+            }
+            else
+            {
+                Logger.LogInformation("'{Name}': Dkg algorith has been cancelled prematurely", Config.Name);
             }
         }
     }

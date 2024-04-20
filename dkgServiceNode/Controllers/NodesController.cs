@@ -23,15 +23,19 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgCommon.Constants;
 using dkgCommon.Models;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
+using Grpc.Core;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using System.Text;
+
+using static dkgCommon.Constants.NodeStatusConstants;
+using static dkgServiceNode.Services.RoundRunner.RoundStatusConstants;
+
 
 namespace dkgServiceNode.Controllers
 {
@@ -40,6 +44,8 @@ namespace dkgServiceNode.Controllers
     [Route("api/[controller]")]
     [Produces("application/json")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ErrMessage))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
 
     public class NodesController : DControllerBase
     {
@@ -65,7 +71,6 @@ namespace dkgServiceNode.Controllers
         // GET: api/Nodes/5
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Round))]
-        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Node>> GetNode(int id)
         {
             var node = await nodeContext.Nodes.FindAsync(id);
@@ -80,7 +85,7 @@ namespace dkgServiceNode.Controllers
         public async Task<ActionResult<Reference>> RegisterNode(Node node)
         {
             int? roundId = null;
-            List<Round> rounds = await roundContext.Rounds.Where(r => r.StatusValue == (short)RStatus.Started).ToListAsync();
+            List<Round> rounds = await roundContext.Rounds.Where(r => r.StatusValue == (short)RStatus.Registration).ToListAsync();
             if (rounds.Count != 0)
             {
                 Round round = rounds[new Random().Next(rounds.Count)];
@@ -110,11 +115,74 @@ namespace dkgServiceNode.Controllers
             var reference = new Reference((int)roundId);
             
             return Ok(reference);
+        }
 
+        // POST: api/Nodes/status
+        [HttpPost("status")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ErrMessage))]
+        public async Task<ActionResult<Reference>> Status(StatusReport statusReport)
+        {
+            var node = await nodeContext.FindByHostAndPortAsync(statusReport.Host, statusReport.Port);
+            if (node == null)
+            {
+                return _404Node(statusReport.Host, statusReport.Port);
+            }
+
+            var round = await roundContext.Rounds.FirstOrDefaultAsync(r => r.Id == statusReport.RoundId);
+            if (round == null)
+            {
+                if (statusReport.Status != NStatus.NotRegistered)
+                {
+                    return _404Round(statusReport.RoundId);
+                }
+            }
+            else
+            {
+                if (!round.IsVersatile && statusReport.Status == NStatus.WaitingRoundStart)
+                {
+                    return StatusCode(StatusCodes.Status409Conflict,
+                      new
+                      {
+                          message = $"Node [{statusReport.Host}:{statusReport.Port}] reports status '{GetNodeStatusById(statusReport.Status)}' that does not fit round status {GetRoundStatusById(round.StatusValue)}"
+                      });
+                }
+            }
+
+            if (node.StatusValue != (short)statusReport.Status)
+            {
+                node.StatusValue = (short)statusReport.Status;
+                nodeContext.Entry(node).State = EntityState.Modified;
+                await nodeContext.SaveChangesAsync();
+            }
+
+            return Accepted();
+        }
+
+
+        // RESET: api/nodes/reset/5
+        [HttpPost("reset/{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> ResetNode(int id)
+        {
+            var ch = await userContext.CheckAdmin(curUserId);
+            if (ch == null || !ch.Value) return _403();
+
+            var node = await nodeContext.Nodes.FindAsync(id);
+            if (node == null) return _404Node(id);
+
+            node.StatusValue = (short)NStatus.NotRegistered;
+            node.RoundId = null;
+            nodeContext.Entry(node).State = EntityState.Modified;
+            await nodeContext.SaveChangesAsync();
+
+            return NoContent();
         }
 
         // DELETE: api/nodes/5
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> DeleteNode(int id)
         {
             var ch = await userContext.CheckAdmin(curUserId);

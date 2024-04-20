@@ -61,6 +61,7 @@ message ProcessResponseRequest {
 }
 
 message ProcessResponseReply {
+	bool res = 1;
 }
 
 message DkgNodeRef {

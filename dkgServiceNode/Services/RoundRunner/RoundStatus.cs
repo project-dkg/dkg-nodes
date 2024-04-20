@@ -23,25 +23,46 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkgCommon.Constants;
+
 namespace dkgServiceNode.Services.RoundRunner
 {
     public enum RStatus
     {
         NotStarted = 0,
-        Started = 10,
+        Registration = 10,
         Running = 20,
         Finished = 30,
         Cancelled = 40,
         Failed = 41,
         Unknown = 255
     }
-
     public sealed class RoundStatus
     {
-        private Dictionary<RStatus, RStatus> roundStatusRoute = new()
+
+
+        private readonly List<(RStatus, NStatus)> statusValididtyMap =
+        [
+              // (RStatus.NotStarted, ...),                      No nodes in this state
+              (RStatus.Registration, NStatus.WaitingRoundStart),                    
+              (RStatus.Running, NStatus.Running),
+              (RStatus.Running, NStatus.Finished),
+              (RStatus.Running, NStatus.Failed),
+              (RStatus.Finished, NStatus.Running),
+              (RStatus.Finished, NStatus.Finished),
+              (RStatus.Finished, NStatus.Failed),
+              (RStatus.Cancelled, NStatus.Running),
+              (RStatus.Cancelled, NStatus.Finished),
+              (RStatus.Cancelled, NStatus.Failed),
+              (RStatus.Failed, NStatus.Running),
+              (RStatus.Failed, NStatus.Finished),
+              (RStatus.Failed, NStatus.Failed)
+        ];
+
+        private readonly Dictionary<RStatus, RStatus> roundStatusRoute = new()
         {
-            { RStatus.NotStarted, RStatus.Started },
-            { RStatus.Started, RStatus.Running },
+            { RStatus.NotStarted, RStatus.Registration },
+            { RStatus.Registration, RStatus.Running },
             { RStatus.Running, RStatus.Finished }
         };
         public RStatus RoundStatusId { get; set; } = RStatus.Unknown;
@@ -82,9 +103,9 @@ namespace dkgServiceNode.Services.RoundRunner
 
         public static readonly RoundStatus Started = new()
         {
-            RoundStatusId = RStatus.Started,
-            Name = "Started [collecting applications]",
-            ActionName = "Start round",
+            RoundStatusId = RStatus.Registration,
+            Name = "Registration [collecting applications]",
+            ActionName = "Open Registration",
             ActionIcon = "fa-play"
         };
 
