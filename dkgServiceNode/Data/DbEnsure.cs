@@ -29,8 +29,6 @@ namespace dkgServiceNode.Data
 {
     public static class DbEnsure
     {
-
-        // Modify the table creation script to set the default value of "created" column to current date and time
         readonly static string sqlScript_0_1_0 = @"
             START TRANSACTION;
 
@@ -89,7 +87,13 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
-       
+        readonly static string sqlScript_0_3_0 = @"
+                START TRANSACTION;
+                ALTER TABLE ""nodes"" ADD COLUMN ""status"" SMALLINT NOT NULL DEFAULT 0;
+                INSERT INTO ""versions"" (""version"", ""date"") VALUES
+                ('0.3.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+                COMMIT;
+                ";
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -132,13 +136,20 @@ namespace dkgServiceNode.Data
                 int r = scriptCommand.ExecuteNonQuery();
             }
         }
-
+        public static void Ensure_0_3_0(NpgsqlConnection connection)
+        {
+            if (!VCheck("0.3.0", connection))
+            {
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_3_0, connection);
+                scriptCommand.ExecuteNonQuery();
+            }
+        }
         private static void PuVersionUpdate(string v, NpgsqlConnection connection)
         {
             if (!VCheck(v, connection))
             {
                 var scriptCommand = new NpgsqlCommand(PuVersionUpdateQuery(v), connection);
-                int r = scriptCommand.ExecuteNonQuery();
+                scriptCommand.ExecuteNonQuery();
             }
         }
         public static void Ensure(string connectionString)
@@ -150,6 +161,8 @@ namespace dkgServiceNode.Data
                 Ensure_0_1_0(connection);
                 PuVersionUpdate("0.2.0", connection);
                 PuVersionUpdate("0.2.3", connection);
+                PuVersionUpdate("0.2.4", connection);
+                Ensure_0_3_0(connection);
             }
         }
     }

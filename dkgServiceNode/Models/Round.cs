@@ -41,6 +41,15 @@ namespace dkgServiceNode.Models
         [Column("node_count")]
         public int NodeCount { get; set; } = 0;
 
+        [NotMapped]
+        public int NodeCountRunning { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountFinished { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountFailed { get; set; } = 0;
+
         [Column("result")]
         public int? Result { get; set; } = null;
 
@@ -73,5 +82,7 @@ namespace dkgServiceNode.Models
         {
             get { return Status.CancelStatus(); }
         }
+
+        public ICollection<Node> Nodes { get; set; } = [];
     }
 }

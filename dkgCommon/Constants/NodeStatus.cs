@@ -23,7 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-namespace dkgNode.Constants
+namespace dkgCommon.Constants
 {
     public enum NStatus
     {
@@ -85,14 +85,14 @@ namespace dkgNode.Constants
             Finished,
             Failed
         ];
-        public static NodeStatus GetRoundStatusById(short id)
+        public static NodeStatus GetNodeStatusById(short id)
         {
             NodeStatus? ret = NodeStatusArray.FirstOrDefault(x => (short)x.NodeStatusId == id);
             if (ret == null) ret = Unknown;
             return ret;
         }
 
-        public static NodeStatus GetRoundStatusById(NStatus st)
+        public static NodeStatus GetNodeStatusById(NStatus st)
         {
             NodeStatus? ret = NodeStatusArray.FirstOrDefault(x => x.NodeStatusId == st);
             if (ret == null) ret = Unknown;

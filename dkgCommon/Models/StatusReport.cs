@@ -24,43 +24,15 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using dkgCommon.Constants;
-using dkgServiceNode.Services.RoundRunner;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace dkgServiceNode.Models
+namespace dkgCommon.Models
 {
-    [Table("nodes")]
-    public class Node
+    public class StatusReport(int port, string host, int roundId, NStatus status)
     {
-        [Column("id")]
-        public int Id { get; set; }
+        public int Port { get; set; } = port;
+        public string Host { get; set; } = host;
+        public int RoundId { get; set; } = roundId;
+        public NStatus Status { get; set; } = status;
 
-        [Column("host")]
-        public string Host { get; set; } = "localhost";
-
-        [Column("port")]
-        public int Port { get; set; } = 0;
-
-        [Column("name")]
-        public string Name { get; set; } = "--";
-
-        [Column("public_key")]
-        public string PublicKey { get; set; } = string.Empty;
-
-        [Column("round_id")]
-        public int? RoundId { get; set; }
-
-        [Column("status")]
-        public short StatusValue { get; set; } = 0;
-
-        [ForeignKey("RoundId")]
-        public Round? Round{ get; set; }
-
-        [NotMapped]
-        public NodeStatus Status
-        {
-            get { return NodeStatusConstants.GetNodeStatusById(StatusValue); }
-            set { StatusValue = (short)value.NodeStatusId; }
-        }
     }
 }

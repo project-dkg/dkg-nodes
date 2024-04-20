@@ -11,7 +11,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
-      - ASPNETCORE_Kestrel__EndpointDefaults__Protocols=Http1AndHttp2
+#      - ASPNETCORE_Kestrel__EndpointDefaults__Protocols=Http1AndHttp2
 #      - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
 #      - ASPNETCORE_Kestrel__Certificates__Default__Password=
 #      - ASPNETCORE_Kestrel__Certificates__Default__Password_FILE=/etc/dkg/s.pwd
@@ -19,9 +19,8 @@ services:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - /etc/dkg:/etc/dkg
-#      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-#      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
     depends_on:
       - dkgservice_db
 
@@ -61,7 +60,7 @@ services:
     container_name: dkg_node_3
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5002
+      - DKG_NODE_SERVER_GRPC_PORT=5003
       - DKG_NODE_SERVER_GRPC_HOST=dkg_node_3
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_SERVER_NAME=Third node

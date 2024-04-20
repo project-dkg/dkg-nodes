@@ -64,6 +64,11 @@ namespace dkgServiceNode.Controllers
         {
             return _404(id, "Node");
         }
+        protected ObjectResult _404Node(string host, int port)
+        {
+            return StatusCode(StatusCodes.Status404NotFound,
+                              new { message = $"Failed to find node [{host}:{port}]." });
+        }
         protected ObjectResult _404Round(int id)
         {
             return _404(id, "Round");
