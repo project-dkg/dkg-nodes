@@ -13,5 +13,5 @@ docker run --env=DKG_NODE_SERVER_GRPC_PORT=<port> --env=DKG_NODE_SERVER_GRPC_HOS
            --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NODE_SERVER_NAME=<name> \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           --workdir=/app -p <port>:<port> --runtime=runc -d ghcr.io/maxirmx/dkg-node:0.2.3
+           --workdir=/app -p <port>:<port> --runtime=runc -d ghcr.io/maxirmx/dkg-node:0.3.0
 ```
