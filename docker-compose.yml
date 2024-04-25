@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   dkgservicenode:
     container_name: dkg_service_node
@@ -28,12 +26,10 @@ services:
     container_name: dkg_node_1
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5001
-      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_1
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=First node
-    ports:
-      - 5001:5001
+      - DKG_NODE_NAME=First node
+      - DKG_NODE_POLLING_INTERVAL=3500
+      - DKG_NODE_GUID=f244f103-90c7-6bf1-f32d-8a8561b79aef
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -44,12 +40,9 @@ services:
     container_name: dkg_node_2
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5002
-      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_2
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=Second node
-    ports:
-      - 5002:5002
+      - DKG_NODE_NAME=Second node
+      - DKG_NODE_GUID=f2bb9203-5c9d-c7d2-71ea-157651b2dad1
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -60,12 +53,9 @@ services:
     container_name: dkg_node_3
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5003
-      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_3
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=Third node
-    ports:
-      - 5003:5003
+      - DKG_NODE_NAME=Third node
+      - DKG_NODE_GUID=7ad7be03-3d00-3ba9-56fb-2f808047519c
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -76,12 +66,9 @@ services:
     container_name: dkg_node_4
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5004
-      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_4
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=Fourth node
-    ports:
-      - 5004:5004
+      - DKG_NODE_NAME=Fourth node
+      - DKG_NODE_GUID=b4389c03-136b-1540-27c2-dc5e3b8124eb
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -92,12 +79,9 @@ services:
     container_name: dkg_node_5
     image: ${DOCKER_REGISTRY-}dkgnode
     environment:
-      - DKG_NODE_SERVER_GRPC_PORT=5005
-      - DKG_NODE_SERVER_GRPC_HOST=dkg_node_5
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_SERVER_NAME=Fifth node
-    ports:
-      - 5005:5005
+      - DKG_NODE_NAME=Fifth node
+      - DKG_NODE_GUID=90981502-f478-927d-ebdf-17426a80d4f7
     build:
       context: .
       dockerfile: dkgNode/Dockerfile

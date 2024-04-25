@@ -23,26 +23,37 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using dkgCommon.Constants;
 
-namespace dkgServiceNode.Models
+namespace dkgCommon.Models
 {
-    [Table("versions")]
-    public class Version
+    public class StatusResponse
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Required]
-        [Column("version")]
-        public required string VersionNumber { get; set; }
-
-        [Required]
-        [Column("date")]
-        public required DateTime Date { get; set; }
-
+        public int RoundId { get; set; }
+        public NStatus Status { get; set; }
+        public string[] Data { get; set; }
+        public StatusResponse()
+        {
+            RoundId = -1;
+            Status = NStatus.Unknown;
+            Data = [];
+        }
+        public StatusResponse(int roundId, NStatus status)
+        {
+            RoundId = roundId;
+            Status = status;
+            Data = [];        
+        }
+        public StatusResponse(int roundId, NStatus status, string[] data)
+        {
+            RoundId = roundId;
+            Status = status;
+            Data = data;
+        }
+        public override string ToString()
+        {
+            return $"StatusResponse [RoundId: {RoundId}, Status: {(NodeStatus)Status}, Data: [{string.Join(", ", Data)}]]";
+        }
     }
+
 }

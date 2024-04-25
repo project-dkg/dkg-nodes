@@ -23,22 +23,29 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgServiceNode.Models;
-using Microsoft.EntityFrameworkCore;
+using dkgCommon.Constants;
 
-namespace dkgServiceNode.Data
+namespace dkgServiceNode.Models
 {
-    public class NodeContext : DbContext
+    public class NodeCountResult
     {
-        public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
-        public DbSet<Node> Nodes { get; set; }
-        public async Task<bool> ExistsAsync(int id)
+        public int RoundId { get; set; }
+        public NStatus Status { get; set; }
+        public int Count { get; set; }
+
+        public static int GetCount(List<NodeCountResult> count, int roundId, NStatus? status)
         {
-            return await Nodes.AnyAsync(e => e.Id == id);
-        }
-        public async Task<Node?> FindByHostAndPortAsync(string host, int port)
-        {
-            return await Nodes.FirstOrDefaultAsync(node => node.Host == host && node.Port == port);
+
+            NodeCountResult? pre;
+            if (status != null)
+            {
+                pre = count.Where(nc => nc.RoundId == roundId && nc.Status == status).FirstOrDefault();
+                return pre?.Count ?? 0;
+            }
+            else
+            {
+                return count.Where(nc => nc.RoundId == roundId).Sum(nc => nc.Count);
+            }
         }
     }
 }

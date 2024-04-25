@@ -23,26 +23,42 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using dkgServiceNode.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace dkgServiceNode.Models
+namespace dkgServiceNode.Data
 {
-    [Table("versions")]
-    public class Version
+    public class DkgContext : DbContext
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
+        public DkgContext(DbContextOptions<DkgContext> options) : base(options) { }
+        public DbSet<Node> Nodes { get; set; }
+        public DbSet<Round> Rounds { get; set; }
+        public DbSet<NodesRoundHistory> NodesRoundHistory { get; set; }
+        public async Task<bool> NodeExistsAsync(int id)
+        {
+            return await Nodes.AnyAsync(e => e.Id == id);
+        }
+        public async Task<bool> RoundExistsAsync(int id)
+        {
+            return await Rounds.AnyAsync(e => e.Id == id);
+        }
 
-        [Required]
-        [Column("version")]
-        public required string VersionNumber { get; set; }
+        public async Task<int?> LastRoundResult()
+        {
+            Round? lastRR = await Rounds
+                         .Where(r => r.Result != null)
+                         .OrderByDescending(r => r.Id)
+                         .FirstOrDefaultAsync();
+            return lastRR?.Result;
+        }
 
-        [Required]
-        [Column("date")]
-        public required DateTime Date { get; set; }
-
+        public async Task<Node?> FindNodeByPublicKeyAsync(string publicKey)
+        {
+            return await Nodes.FirstOrDefaultAsync(node => node.PublicKey == publicKey);
+        }
+        public async Task<Node?> FindNodeByGuidAsync(Guid guid)
+        {
+            return await Nodes.FirstOrDefaultAsync(node => node.Gd == guid);
+        }
     }
 }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\dkgCommon\dkgCommon.csproj" />
-    <ProjectReference Include="..\dkgNode\dkgNode.csproj" />
+    <ProjectReference Include="..\dkgNodeLibrary\dkgNodeLibrary.csproj" />
     <ProjectReference Include="..\dkgServiceNode\dkgServiceNode.csproj" />
     <ProjectReference Include="..\dkg\dkgLibrary\dkgLibrary.csproj" />
   </ItemGroup>

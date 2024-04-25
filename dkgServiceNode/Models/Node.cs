@@ -24,22 +24,21 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using dkgCommon.Constants;
-using dkgServiceNode.Services.RoundRunner;
+using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json.Serialization;
 
 namespace dkgServiceNode.Models
 {
     [Table("nodes")]
     public class Node
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Column("id")]
         public int Id { get; set; }
-
-        [Column("host")]
-        public string Host { get; set; } = "localhost";
-
-        [Column("port")]
-        public int Port { get; set; } = 0;
 
         [Column("name")]
         public string Name { get; set; } = "--";
@@ -53,6 +52,10 @@ namespace dkgServiceNode.Models
         [Column("status")]
         public short StatusValue { get; set; } = 0;
 
+        [Column("guid")]
+        [JsonPropertyName("GUID")]
+        public Guid Gd { get; set; }
+
         [ForeignKey("RoundId")]
         public Round? Round{ get; set; }
 
@@ -61,6 +64,31 @@ namespace dkgServiceNode.Models
         {
             get { return NodeStatusConstants.GetNodeStatusById(StatusValue); }
             set { StatusValue = (short)value.NodeStatusId; }
+        }
+
+        [JsonIgnore]
+        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
+
+        [NotMapped]
+        [JsonIgnore]
+        internal int? IntValue { get; set; } = null;
+
+        public override string ToString() => Name;
+
+        public static implicit operator int?(Node? node)
+        {
+            if (node != null && node.IntValue == null && node.PublicKey.Length != 0)
+            {
+                try
+                {
+                    byte[] decodedBytes = Convert.FromBase64String(node.PublicKey);
+                    node.IntValue = BitConverter.ToInt32(decodedBytes, 0);
+                }
+                catch
+                {
+                }
+            }
+            return node?.IntValue;
         }
     }
 }

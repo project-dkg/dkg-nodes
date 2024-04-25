@@ -23,176 +23,282 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Grpc.Net.Client;
-
-using dkgCommon;
 using dkgServiceNode.Models;
-using static dkgCommon.DkgNode;
+using dkg.group;
+using dkg.poly;
+using dkg.vss;
+
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("dkgNodesTests")]
+
 
 
 namespace dkgServiceNode.Services.RoundRunner
 {
     public class ActiveRound
     {
-        private GrpcChannel[]? _channels { get; set; } = null;
-        private DkgNodeClient[]? _dkgNodes { get; set; } = null;
-        private Round _round { get; set; }
-        private readonly ILogger<ActiveRound> _logger;
-        private static readonly object lockObject = new();
-        public ActiveRound(Round round, ILogger<ActiveRound> logger)
+        internal ActiveNode[]? Nodes { get; set; } = null;
+        internal Round Round { get; set; }
+        public int Id { get { return Round.Id; } }
+        internal readonly ILogger<ActiveRound> Logger;
+        internal bool ForceProcessDeals { get; set; } = false;
+        internal bool ForceProcessResponses { get; set; } = false;
+        internal string[] StepOneData { get; set; } = [];
+        internal string[] StepThreeData { get; set; } = [];
+
+        public ActiveRound(Round rnd, ILogger<ActiveRound> lgr)
         {
-            _logger = logger;
-            _round = round;
-
-            _logger.LogDebug("Round [{Id}]: Created", Id);
+            Logger = lgr;
+            Round = rnd;
+            Logger.LogDebug("ActiveRound [{Id}]: Create", Id);
         }
-        public int Id
+        public void Clear()
         {
-            get { return _round.Id; }
+            Logger.LogDebug("ActiveRound [{Id}]: Clear", Id);
+            Nodes = null;
+            ForceProcessDeals = false;
+            ForceProcessResponses = false;
+            StepOneData = [];
+            StepThreeData = [];
         }
-        private void InitInternal(List<Node> nodes)
-        {
-            _logger.LogDebug("Round [{Id}]: InitInternal", Id);
-            _channels = new GrpcChannel[nodes.Count];
-            _dkgNodes = new DkgNodeClient[nodes.Count];
-            int j = 0;
-            foreach (Node node in nodes)
-            {
-                string dest = $"http://{node.Host}:{node.Port}";
-                _channels[j] = GrpcChannel.ForAddress(dest);
-                _dkgNodes[j] = new DkgNodeClient(_channels[j]);  // ChannelCredentials.Insecure ???
-                _logger.LogDebug("Round [{Id}]: Created channel to {dest}", Id, dest);
-                j++;
-            }
-            _logger.LogDebug("Round [{Id}]: InitInternal completed", Id);
-        }
-
-        private void ClearInternal()
-        {
-            _logger.LogDebug("Round [{Id}]: ClearInternal", Id);
-
-            List<Task> shutdownTasks = [];
-            try
-            {
-                for (int j = 0; j < _dkgNodes?.Length; j++)
-                {
-                    shutdownTasks.Add(_dkgNodes[j].EndRoundAsync(new EndRoundRequest { RoundId = Id }).ResponseAsync);
-                }
-                Task.WaitAll([.. shutdownTasks]);
-            } 
-            catch (Exception ex) 
-            {
-                _logger.LogError("Round [{Id}]: ClearInternal exception at EndRound\n{message}", Id, ex.Message);
-            }
-
-            shutdownTasks.Clear();
-            try
-            {
-                for (int i = 0; i < _channels?.Length; i++)
-                {
-                    shutdownTasks.Add(_channels[i].ShutdownAsync());
-                }
-                Task.WaitAll([.. shutdownTasks]);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Round [{Id}]: ClearInternal exception at Shutdown\n{message}", Id, ex.Message);
-            }
-            _logger.LogDebug("Round [{Id}]: ClearInternal completed", Id);
-        }
-
-        public void Run(List<Node> nodes)
-        {
-            _logger.LogDebug("Round [{Id}]: Run for {count} nodes", Id, _dkgNodes?.Length);
-            lock (lockObject)
-            {
-                InitInternal(nodes);
-
-                try
-                {
-                    var runRoundRequest = new RunRoundRequest
-                    {
-                        RoundId = Id
-                    };
-
-                    foreach (var node in nodes)
-                    {
-                        runRoundRequest.DkgNodeRefs.Add(new DkgNodeRef
-                        {
-                            Port = node.Port,
-                            Host = node.Host,
-                            PublicKey = node.PublicKey,
-                        });
-                    }
-
-
-                    List<Task> startRounsTasks = [];
-                    for (int j = 0; j < _dkgNodes?.Length; j++)
-                    {
-                        startRounsTasks.Add(_dkgNodes[j].RunRoundAsync(runRoundRequest).ResponseAsync);
-                    }
-
-                    Task.WaitAll([.. startRounsTasks]);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Round [{Id}]: Run exception at RunRound\n{message}", Id, ex.Message);
-                }
-                _logger.LogDebug("Round [{Id}]: Run completed", Id);
-            }
-        }
-
         public int? GetResult()
         {
             int? result = null;
-
-            _logger.LogDebug("Round [{Id}]: GetResult", Id);
-            lock (lockObject)
+            if (Nodes != null)
             {
-                if (_dkgNodes != null)
+                try
                 {
-                    try
+                    List<PriShare> shares = [];
+                    foreach (var node in Nodes)
                     {
-                        foreach (var dkgNode in _dkgNodes)
+                        if (node?.SecretShare != null)
                         {
-                            var roundResultRequest = new RoundResultRequest
-                            {
-                                RoundId = _round.Id
-                            };
-
-                            RoundResultReply roundResultReply = dkgNode.RoundResult(roundResultRequest);
-
-                            if (roundResultReply.Res)
-                            {
-                                result = BitConverter.ToInt32(roundResultReply.DistributedPublicKey.ToByteArray(), 0);
-                                break;
-                            }
+                            shares.Add(node.SecretShare);
                         }
                     }
-                    catch (Exception ex)
+                    IScalar secretKey = PriPoly.RecoverSecret(new Secp256k1Group(), [.. shares], VssTools.MinimumT(Nodes.Length));
+                    result = BitConverter.ToInt32(secretKey.GetBytes(), 0);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogInformation("ActiveRound [{Id}]: GetResult failed\n{message}", Id, ex.Message);
+                }
+            }
+
+            Logger.LogDebug("ActiveRound [{Id}]: GetResult returning {result}", Id, result);
+            return result;
+        }
+        public string[] GetStepOneData()
+        {
+            Logger.LogDebug("ActiveRound [{Id}]: GetStepOneData", Id);
+            return StepOneData;
+        }
+
+        public string[] GetStepTwoData(Node node)
+        {
+            string[] result = [];
+            Logger.LogDebug("ActiveRound [{Id}]: GetStepTwoData for node [{node}]", Id, node);
+            if (Nodes != null)
+            {
+                int activeNodeIndex = FindNodeIndex(node);
+                if (activeNodeIndex != -1)
+                {
+                    result = new string[Nodes.Length];
+                    for (int i = 0; i < Nodes.Length; i++)
                     {
-                        _logger.LogError("Round [{Id}]: GetResult terminating with exception\n{message}", Id, ex.Message);
+                        if (Nodes[i].Deals != null)
+                        {
+                            result[i] = Nodes[i].Deals![activeNodeIndex];
+                        }
+                        else
+                        {
+                            result[i] = string.Empty;
+                        }
                     }
                 }
             }
-            _logger.LogDebug("Round [{Id}]: GetResult returning {result}", Id, result);
-
             return result;
         }
 
-        public void Clear(List<Node>? nodes)
+        public string[] GetStepThreeData(Node node)
         {
-            _logger.LogDebug("Round [{Id}]: Clear", Id);
-            lock (lockObject)
+            Logger.LogDebug("ActiveRound [{Id}]: GetStepThreeData for node [{node}]", Id, node);
+            if (Nodes != null)
             {
-                if (_dkgNodes == null && nodes != null)
+                if (StepThreeData.Length == 0)
                 {
-                    InitInternal(nodes);
+                    StepThreeData = new string[Nodes.Length * Nodes.Length];
+                    int index = 0;
+                    for (int i = 0; i < Nodes!.Length; i++)
+                    {
+                        if (Nodes[i].Responses != null)
+                        {
+                            for (int j = 0; j < Nodes[i].Responses!.Length; j++)
+                            {
+                                StepThreeData[index] = Nodes[i].Responses![j];
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            StepThreeData[index] = string.Empty;
+                            index++;
+                        }
+                    }
                 }
-                ClearInternal();
             }
-            _logger.LogDebug("Round [{Id}]: Clear completed", Id);
+            return StepThreeData;
         }
 
+        public bool IsResultReady()
+        {
+            bool result = false;
+            if (Nodes != null)
+            {
+                result = true;
+                foreach (var node in Nodes)
+                {
+                    if (!node.Finalized)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+        public bool IsStepTwoDataReady()
+        {
+            bool result = ForceProcessDeals;
+            if (!ForceProcessDeals && Nodes != null)
+            {
+                result = true;
+                foreach (var node in Nodes)
+                {
+                    if (node.Deals == null)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+        public bool IsStepThreeDataReady()
+        {
+            bool result = ForceProcessResponses || StepThreeData.Length != 0;
+            if (!ForceProcessResponses && Nodes != null)
+            {
+                result = true;
+                foreach (var node in Nodes)
+                {
+                    if (node.Responses == null)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        public void ProcessDeals() => ForceProcessDeals = true;
+        public void ProcessResponses() => ForceProcessResponses = true;
+
+        public void Run(List<Node> nodes)
+        {
+            Logger.LogDebug("ActiveRound [{Id}]: Run for {count} nodes", Id, nodes.Count);
+            try
+            {
+                Nodes = new ActiveNode[nodes.Count];
+                int j = 0;
+                foreach (Node node in nodes)
+                {
+                    Nodes[j] = new ActiveNode(Id, node, Logger);
+                    j++;
+                }
+                SetStepOneData();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("ActiveRound [{Id}]: Run exception at RunRound\n{message}", Id, ex.Message);
+            }
+        }
+        public void SetNoResult(Node node)
+        {
+            ActiveNode? activeNode = FindNode(node);
+            if (activeNode is not null)
+            {
+                activeNode.SetNoResult();
+            }
+        }
+
+        public void SetResult(Node node, string[] data)
+        {
+            ActiveNode? activeNode = FindNode(node);
+            if (activeNode is not null)
+            {
+                activeNode.SetResult(data);
+            }
+        }
+        public void SetStepOneData()
+        {
+           Logger.LogDebug("ActiveRound [{Id}]: SetStepOneData", Id);
+            if (Nodes != null)
+            {
+                StepOneData = new string[Nodes.Length];
+                for (int i = 0; i <Nodes.Length; i++)
+                {
+                    StepOneData[i] = Nodes[i]?.Key ?? "";
+                }
+            }
+        }
+
+        public void SetStepTwoData(Node node, string[] data) => SetStepData(node, data, (node, data) => { node.Deals = data; }, "SetStepTwoData");
+        public void SetStepThreeData(Node node, string[] data) => SetStepData(node, data, (node, data) => { node.Responses = data; }, "SetStepThreeData");
+
+        private ActiveNode? FindNode(Node node)
+        {
+            ActiveNode? result = null;
+            if (Nodes != null)
+            {
+                foreach (var activeNode in Nodes)
+                {
+                    if (activeNode == node)
+                    {
+                        result = activeNode;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+        private int FindNodeIndex(Node node)
+        {
+            int result = -1;
+
+            if (Nodes != null)
+            {
+                for (int i = 0; i < Nodes.Length; i++)
+                {
+                    if (Nodes[i] == node)
+                    {
+                        result = i;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        private void SetStepData(Node node, string[] data, Action<ActiveNode, string[]> setDataAction, string name)
+        {
+            Logger.LogDebug("ActiveRound [{Id}]: {name} for node [{node}]", Id, name, node);
+            ActiveNode? activeNode = FindNode(node);
+            if (activeNode is not null)
+            {
+                setDataAction(activeNode, data);
+            }
+        }
     }
 }

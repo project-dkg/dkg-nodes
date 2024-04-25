@@ -23,15 +23,15 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgCommon.Constants;
-
-namespace dkgServiceNode.Services.RoundRunner
+namespace dkgServiceNode.Constants
 {
     public enum RStatus
     {
         NotStarted = 0,
         Registration = 10,
-        Running = 20,
+        CreatingDeals = 20,
+        ProcessingDeals = 21,
+        ProcessingResponses = 22,
         Finished = 30,
         Cancelled = 40,
         Failed = 41,
@@ -39,31 +39,13 @@ namespace dkgServiceNode.Services.RoundRunner
     }
     public sealed class RoundStatus
     {
-
-
-        private readonly List<(RStatus, NStatus)> statusValididtyMap =
-        [
-              // (RStatus.NotStarted, ...),                      No nodes in this state
-              (RStatus.Registration, NStatus.WaitingRoundStart),                    
-              (RStatus.Running, NStatus.Running),
-              (RStatus.Running, NStatus.Finished),
-              (RStatus.Running, NStatus.Failed),
-              (RStatus.Finished, NStatus.Running),
-              (RStatus.Finished, NStatus.Finished),
-              (RStatus.Finished, NStatus.Failed),
-              (RStatus.Cancelled, NStatus.Running),
-              (RStatus.Cancelled, NStatus.Finished),
-              (RStatus.Cancelled, NStatus.Failed),
-              (RStatus.Failed, NStatus.Running),
-              (RStatus.Failed, NStatus.Finished),
-              (RStatus.Failed, NStatus.Failed)
-        ];
-
         private readonly Dictionary<RStatus, RStatus> roundStatusRoute = new()
         {
             { RStatus.NotStarted, RStatus.Registration },
-            { RStatus.Registration, RStatus.Running },
-            { RStatus.Running, RStatus.Finished }
+            { RStatus.Registration, RStatus.CreatingDeals },
+            { RStatus.CreatingDeals, RStatus.ProcessingDeals },
+            { RStatus.ProcessingDeals, RStatus.ProcessingResponses },
+            { RStatus.ProcessingResponses, RStatus.Finished }
         };
         public RStatus RoundStatusId { get; set; } = RStatus.Unknown;
         public string Name { get; set; } = "Unknown";
@@ -86,6 +68,24 @@ namespace dkgServiceNode.Services.RoundRunner
         {
             return RoundStatusConstants.GetRoundStatusById((short)RStatus.Cancelled);
         }
+
+        public static implicit operator RStatus(RoundStatus st) => st.RoundStatusId;
+        public static implicit operator RoundStatus(RStatus st) => RoundStatusConstants.GetRoundStatusById(st);
+        public static implicit operator short(RoundStatus st) => (short)st.RoundStatusId;
+        public static implicit operator RoundStatus(short st) => RoundStatusConstants.GetRoundStatusById(st);
+        public override string ToString() => Name;
+
+        public static bool operator ==(RoundStatus a, RoundStatus b) => a.RoundStatusId == b.RoundStatusId;
+        public static bool operator !=(RoundStatus a, RoundStatus b) => a.RoundStatusId != b.RoundStatusId;
+        public override bool Equals(object? obj) => obj is RoundStatus st && st.RoundStatusId == RoundStatusId;
+        public override int GetHashCode() => RoundStatusId.GetHashCode();
+        public bool IsRunning()
+        {
+            return RoundStatusId == RStatus.CreatingDeals ||
+                   RoundStatusId == RStatus.ProcessingDeals ||
+                   RoundStatusId == RStatus.ProcessingResponses;
+        }
+        public static bool IsRunning(RStatus st) => ((RoundStatus)st).IsRunning();
     }
     public static class RoundStatusConstants
     {
@@ -104,17 +104,33 @@ namespace dkgServiceNode.Services.RoundRunner
         public static readonly RoundStatus Started = new()
         {
             RoundStatusId = RStatus.Registration,
-            Name = "Registration [collecting applications]",
+            Name = "Collecting applications",
             ActionName = "Open Registration",
             ActionIcon = "fa-play"
         };
 
-        public static readonly RoundStatus Running = new()
+        public static readonly RoundStatus CreatingDeals = new()
         {
-            RoundStatusId = RStatus.Running,
-            Name = "Running dkg algorithm",
+            RoundStatusId = RStatus.CreatingDeals,
+            Name = "Creating dkg deals",
             ActionName = "Run dkg algorithm",
-            ActionIcon = "fa-calculator"
+            ActionIcon = "fa-forward"
+        };
+
+        public static readonly RoundStatus ProcessingDeals = new()
+        {
+            RoundStatusId = RStatus.ProcessingDeals,
+            Name = "Processing dkg deals",
+            ActionName = "Process dkg deals",
+            ActionIcon = "fa-forward"
+        };
+
+        public static readonly RoundStatus ProcessingResponses = new()
+        {
+            RoundStatusId = RStatus.ProcessingResponses,
+            Name = "Processing dkg responses",
+            ActionName = "Process dkg responses",
+            ActionIcon = "fa-forward"
         };
 
         public static readonly RoundStatus Finished = new()
@@ -122,7 +138,7 @@ namespace dkgServiceNode.Services.RoundRunner
             RoundStatusId = RStatus.Finished,
             Name = "Finished [got round result]",
             ActionName = "Finish round",
-            ActionIcon = "fa-hand"
+            ActionIcon = "fa-forward-fast"
         };
 
         public static readonly RoundStatus Cancelled = new()
@@ -142,21 +158,21 @@ namespace dkgServiceNode.Services.RoundRunner
         public static readonly RoundStatus[] RoundStatusArray = [
             NotStarted,
             Started,
-            Running,
+            CreatingDeals,
+            ProcessingDeals,
+            ProcessingResponses,
             Finished,
             Cancelled,
             Failed
         ];
         public static RoundStatus GetRoundStatusById(short id)
         {
-            RoundStatus? ret = RoundStatusArray.FirstOrDefault(x => (short)x.RoundStatusId == id);
-            if (ret == null) ret = Unknown;
+            RoundStatus ret = RoundStatusArray.FirstOrDefault(x => (short)x.RoundStatusId == id) ?? Unknown;
             return ret;
         }
         public static RoundStatus GetRoundStatusById(RStatus st)
         {
-            RoundStatus? ret = RoundStatusArray.FirstOrDefault(x => x.RoundStatusId == st);
-            if (ret == null) ret = Unknown;
+            RoundStatus ret = RoundStatusArray.FirstOrDefault(x => x.RoundStatusId == st) ?? Unknown;
             return ret;
         }
     }

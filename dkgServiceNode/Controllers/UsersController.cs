@@ -64,7 +64,7 @@ namespace dkgServiceNode.Controllers
 
         // POST: api/users
         [HttpPost("add")]
-        public async Task<ActionResult<Reference>> PostUser(User user)
+        public async Task<ActionResult<Reference>> AddUser(User user)
         {
             var ch = await userContext.CheckAdmin(curUserId);
             if (ch == null || !ch.Value) return _403();
@@ -82,7 +82,7 @@ namespace dkgServiceNode.Controllers
 
         // PUT: api/users/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, UserUpdateItem update)
+        public async Task<IActionResult> UpdateUser(int id, UserUpdateItem update)
         {
             if (id == 1) return _403Protect();
 

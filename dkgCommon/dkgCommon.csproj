@@ -6,13 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.57.0" />
-    <PackageReference Include="Grpc.Core" Version="2.46.6" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="Protos\DkgNode.proto" GrpcServices="Server, Client" />
-  </ItemGroup>
-
 </Project>

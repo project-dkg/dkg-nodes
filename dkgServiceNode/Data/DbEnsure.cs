@@ -24,6 +24,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using Npgsql;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace dkgServiceNode.Data
 {
@@ -94,6 +95,64 @@ namespace dkgServiceNode.Data
                 ('0.3.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
                 COMMIT;
                 ";
+
+        readonly static string sqlScript_0_4_0 = @"
+            START TRANSACTION;
+
+            DROP INDEX IF EXISTS ""idx_nodes_host_port"";
+            DROP INDEX IF EXISTS ""idx_nodes_public_key"";
+
+
+            ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""host"";
+            ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""port"";
+
+            ALTER TABLE ""nodes"" ADD COLUMN ""guid"" UUID NOT NULL;
+
+            CREATE UNIQUE INDEX ""idx_nodes_public_key"" ON ""nodes"" (""public_key"");
+            CREATE UNIQUE INDEX ""idx_nodes_guid"" ON ""nodes"" (""guid"");           
+
+            CREATE TABLE ""nodes_round_history"" (
+              ""id""                 SERIAL PRIMARY KEY,
+              ""round_id""           INTEGER NOT NULL REFERENCES ""rounds"" (""id"") ON DELETE CASCADE,
+              ""node_id""            INTEGER NOT NULL REFERENCES ""nodes"" (""id"") ON DELETE CASCADE,
+              ""node_final_status""  SMALLINT NOT NULL DEFAULT 0
+            );
+
+            CREATE INDEX ""idx_nodes_round_history_round_id"" ON ""nodes_round_history"" (""round_id"");
+
+            ALTER TABLE ""rounds"" DROP COLUMN ""node_count"";
+            ALTER TABLE ""rounds"" ADD COLUMN ""max_nodes"" INT NOT NULL DEFAULT 256;
+
+            CREATE OR REPLACE FUNCTION update_nodes_round_history() RETURNS TRIGGER AS $$
+            BEGIN
+                IF OLD.round_id IS NOT NULL AND NEW.round_id IS NULL THEN
+                    -- Check if a record already exists in nodes_round_history
+                    IF EXISTS (SELECT 1 FROM nodes_round_history WHERE node_id = OLD.id AND round_id = OLD.round_id) THEN
+                        -- Update the existing record
+                        UPDATE nodes_round_history 
+                        SET node_final_status = OLD.status
+                        WHERE node_id = OLD.id AND round_id = OLD.round_id;
+                    ELSE
+                        -- Insert a new record
+                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status)
+                        VALUES (OLD.round_id, OLD.id, OLD.status);
+                    END IF;
+                END IF;
+                RETURN NEW;
+             END;
+             $$ LANGUAGE plpgsql;
+
+             CREATE TRIGGER nodes_before_update_trigger
+             BEFORE UPDATE ON nodes
+             FOR EACH ROW
+             EXECUTE PROCEDURE update_nodes_round_history();
+
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.4.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -102,7 +161,6 @@ namespace dkgServiceNode.Data
             ('" + v +"', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
             COMMIT;
             ";
-
         }
         private static string VQuery(string v)
         {
@@ -136,19 +194,20 @@ namespace dkgServiceNode.Data
                 int r = scriptCommand.ExecuteNonQuery();
             }
         }
-        public static void Ensure_0_3_0(NpgsqlConnection connection)
-        {
-            if (!VCheck("0.3.0", connection))
-            {
-                var scriptCommand = new NpgsqlCommand(sqlScript_0_3_0, connection);
-                scriptCommand.ExecuteNonQuery();
-            }
-        }
         private static void PuVersionUpdate(string v, NpgsqlConnection connection)
         {
             if (!VCheck(v, connection))
             {
                 var scriptCommand = new NpgsqlCommand(PuVersionUpdateQuery(v), connection);
+                scriptCommand.ExecuteNonQuery();
+            }
+        }
+
+        public static void EnsureVersion(string v, string s, NpgsqlConnection connection)
+        {
+            if (!VCheck(v, connection))
+            {
+                var scriptCommand = new NpgsqlCommand(s, connection);
                 scriptCommand.ExecuteNonQuery();
             }
         }
@@ -162,7 +221,8 @@ namespace dkgServiceNode.Data
                 PuVersionUpdate("0.2.0", connection);
                 PuVersionUpdate("0.2.3", connection);
                 PuVersionUpdate("0.2.4", connection);
-                Ensure_0_3_0(connection);
+                EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
+                EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
             }
         }
     }

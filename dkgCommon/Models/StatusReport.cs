@@ -27,12 +27,17 @@ using dkgCommon.Constants;
 
 namespace dkgCommon.Models
 {
-    public class StatusReport(int port, string host, int roundId, NStatus status)
+    public class StatusReport(string publicKey, string name, int roundId, NStatus status)
     {
-        public int Port { get; set; } = port;
-        public string Host { get; set; } = host;
+        public string PublicKey { get; set; } = publicKey;
+        public string Name { get; set; } = name;
         public int RoundId { get; set; } = roundId;
         public NStatus Status { get; set; } = status;
+        public string[] Data { get; set; } = [];
 
+        public override string ToString()
+        {
+            return $"StatusReport [RoundId: {RoundId}, Status: {(NodeStatus)Status}, Data: [{string.Join(", ", Data)}]]";
+        }
     }
 }
