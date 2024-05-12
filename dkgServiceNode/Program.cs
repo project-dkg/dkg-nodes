@@ -29,8 +29,7 @@ DbEnsure.Ensure(connectionString ?? "");
 
 builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<RoundContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<DkgContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddSingleton<Runner>();
 

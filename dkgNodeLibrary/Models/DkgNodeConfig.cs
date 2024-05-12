@@ -23,22 +23,62 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+[assembly: InternalsVisibleTo("dkgNodesTests")]
+
 namespace dkgNode.Models
 {
     // Конфигурация узла (он же "node", "участник")
-    class DkgNodeConfig
+    public class DkgNodeConfig
     {
-        // Host:Port gRPC сервера этого узла
-        public int Port { get; set; } = 5000;
-        public string Host { get; set; } = "localhost";
-        public string? NiceName { get; set; } = null;
-        public string? PublicKey { get; set; } = null;
+        [JsonIgnore]
+        public string? NiceName { get; set; }
 
-        // Name просто для красоты
-        public string Name
+        [JsonIgnore]
+        public int PollingInterval { get; set; }
+
+        [JsonIgnore]
+        public string ServiceNodeUrl { get; set; }
+
+        [JsonPropertyName("GUID")]
+        public Guid Gd { get; set; }
+
+        [JsonPropertyName("PublicKey")]
+        public string? SerializedPublicKey
         {
-            get { return NiceName ?? $"DkgNode @ {Host}:{Port}"; }
+            get { return PublicKey; }
+        }
+        [JsonIgnore]
+        internal string? PublicKey { get; set; }
+
+        public string? GetPublicKey() => PublicKey;
+        public void EncodePublicKey(byte[] value)
+        {
+            PublicKey = Convert.ToBase64String(value);
         }
 
+        [JsonPropertyName("Name")]
+        public string Name
+        {
+            get { return NiceName ?? Gd.ToString(); }
+        }
+        public DkgNodeConfig()
+        {
+            NiceName = null;
+            PublicKey = null;
+            Gd = Guid.NewGuid();
+            PollingInterval = 3000;
+            ServiceNodeUrl = "https://localhost:8081";
+        }
+        public DkgNodeConfig(DkgNodeConfig other)
+        {
+            NiceName = other.NiceName;
+            PublicKey = other.PublicKey;
+            Gd = other.Gd;
+            PollingInterval = other.PollingInterval;
+            ServiceNodeUrl = other.ServiceNodeUrl;
+        }
     }
 }
+

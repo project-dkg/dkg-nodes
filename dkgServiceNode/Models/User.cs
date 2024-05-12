@@ -23,6 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace dkgServiceNode.Models
@@ -30,49 +31,43 @@ namespace dkgServiceNode.Models
     [Table("users")]
     public class User
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Column("id")]
         public int Id { get; set; }
 
+        [Required]
         [Column("name")]
         public required string Name { get; set; }
 
+        [Required]
         [Column("email")]
         public required string Email { get; set; }
 
+        [Required]
         [Column("password")]
         public required string Password { get; set; }
 
+        [Required]
         [Column("is_enabled")]
         public required bool IsEnabled { get; set; }
 
+        [Required]
         [Column("is_admin")]
         public required bool IsAdmin { get; set; }
     }
 
-    public class UserViewItem
+    public class UserViewItem(User user)
     {
-        public UserViewItem(User user)
-        {
-            Id = user.Id;
-            Name = user.Name;
-            Email = user.Email;
-            IsEnabled = user.IsEnabled;
-            IsAdmin = user.IsAdmin;
-        }
-
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Email { get; set; } = "";
-        public bool IsEnabled { get; set; }
-        public bool IsAdmin { get; set; }
+        public int Id { get; set; } = user.Id;
+        public string Name { get; set; } = user.Name;
+        public string Email { get; set; } = user.Email;
+        public bool IsEnabled { get; set; } = user.IsEnabled;
+        public bool IsAdmin { get; set; } = user.IsAdmin;
     }
 
-    public class UserViewItemWithJWT : UserViewItem
+    public class UserViewItemWithJWT(User user) : UserViewItem(user)
     {
-        public UserViewItemWithJWT(User user) : base(user)
-        {
-            Token = "";
-        }
         public string Token { get; set; } = "";
     }
 

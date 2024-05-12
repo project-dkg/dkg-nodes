@@ -23,17 +23,46 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.EntityFrameworkCore;
+using dkgCommon.Constants;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace dkgServiceNode.Data
+namespace dkgServiceNode.Models
 {
-    public class RoundContext : DbContext
+    [Table("nodes_round_history")]
+
+    public class NodesRoundHistory
     {
-        public RoundContext(DbContextOptions<RoundContext> options) : base(options) { }
-        public DbSet<Models.Round> Rounds { get; set; }
-        public async Task<bool> ExistsAsync(int id)
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Required]
+        [Column("round_id")]
+        public required int RoundId { get; set; }
+
+        [Required]
+        [ForeignKey("RoundId")]
+        public required Round Round { get; set; }
+
+        [Required]
+        [Column("node_id")]
+        public required int NodeId { get; set; }
+
+        [Required]
+        [ForeignKey("NodeId")]
+        public required Node Node { get; set; }
+
+        [Required]
+        [Column("node_final_status")]
+        public required short NodeFinalStatusValue { get; set; } = 0;
+
+        [NotMapped]
+        public NodeStatus NodeFinalStatus
         {
-            return await Rounds.AnyAsync(e => e.Id == id);
+            get { return NodeStatusConstants.GetNodeStatusById(NodeFinalStatusValue); }
+            set { NodeFinalStatusValue = (short)value.NodeStatusId; }
         }
     }
 }

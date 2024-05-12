@@ -25,26 +25,28 @@
 
 using dkgServiceNode.Models;
 
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("dkgNodesTests")]
+
 namespace dkgServiceNode.Services.RoundRunner
 {
     public class Runner
     {
-        private readonly ILogger<ActiveRound> _logger;
-        private List<ActiveRound> ActiveRounds { get; set; } = [];
+        internal readonly ILogger<ActiveRound> Logger;
+        internal List<ActiveRound> ActiveRounds { get; set; } = [];
         private readonly object lockObject = new();
 
         public Runner(ILogger<ActiveRound> logger)
         {
-            _logger = logger;
+            Logger = logger;
         }
         public void StartRound(Round round)
         {
             lock (lockObject)
             {
-                ActiveRounds.Add(new ActiveRound(round, _logger));
+                ActiveRounds.Add(new ActiveRound(round, Logger));
             }
         }
-
         public void RunRound(Round round, List<Node>? nodes)
         {
             ActiveRound? roundToRun = null;
@@ -57,36 +59,116 @@ namespace dkgServiceNode.Services.RoundRunner
                 }
             }
         }
-
         public int? GetRoundResult(Round round)
+        {
+            int? res = null;
+            lock (lockObject)
+            {
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    res = roundToRun.GetResult();
+                }
+            }
+            return res;
+        }
+
+        public int? FinishRound(Round round)
+        {
+            int? result = GetRoundResult(round);
+            RemoveRound(round);
+            return result;
+        }
+
+        internal void Process(Round round, Action<ActiveRound> processAction)
         {
             ActiveRound? roundToRun = null;
             lock (lockObject)
             {
                 roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    processAction(roundToRun);
+                }
             }
-            if (roundToRun != null)
+        }   
+
+        public void ProcessDeals(Round round) => Process(round, roundToRun => roundToRun.ProcessDeals());
+        public void ProcessResponses(Round round) => Process(round, roundToRun => roundToRun.ProcessResponses());
+
+        public void CancelRound(Round round) => RemoveRound(round);
+        public void SetNoResult(Round round, Node node)
+        {
+            lock (lockObject)
             {
-                return roundToRun.GetResult();
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    roundToRun.SetNoResult(node);
+                }
             }
-            else
+        }
+        public void SetResult(Round round, Node node, string[] data) =>
+            SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetResult(node, data));
+        public void SetStepTwoData(Round round, Node node, string[] data) =>
+            SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetStepTwoData(node, data));
+        public void SetStepThreeData(Round round, Node node, string[] data) =>
+            SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetStepThreeData(node, data));
+        public bool IsResultReady(Round round) =>
+            IsStepDataReady(round, roundToRun => roundToRun.IsResultReady());
+        public bool IsStepTwoDataReady(Round round) => 
+            IsStepDataReady(round, roundToRun => roundToRun.IsStepTwoDataReady());
+        public bool IsStepThreeDataReady(Round round) => 
+            IsStepDataReady(round, roundToRun => roundToRun.IsStepThreeDataReady());
+        public string[] GetStepOneData(Round round) =>
+            GetStepData(round, roundToRun => roundToRun.GetStepOneData());
+        public string[] GetStepTwoData(Round round, Node node) => 
+            GetStepData(round, roundToRun => roundToRun.GetStepTwoData(node));
+        public string[] GetStepThreeData(Round round, Node node) => 
+            GetStepData(round, roundToRun => roundToRun.GetStepThreeData(node));
+
+
+        // Private methods
+        internal void SetStepData(Round round, Node node, string[] data, Action<ActiveRound, Node, string[]> setDataAction)
+        {
+            lock (lockObject)
             {
-                return null;
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    setDataAction(roundToRun, node, data);
+                }
             }
+        }
+        internal bool IsStepDataReady(Round round, Func<ActiveRound, bool> isDataReadyFunc)
+        {
+            bool res = false;
+            lock (lockObject)
+            {
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    res = isDataReadyFunc(roundToRun);
+                }
+            }
+            return res;
         }
 
-        public int? FinishRound(Round round, List<Node>? nodes)
+        internal string[] GetStepData(Round round, Func<ActiveRound, string[]> getDataFunc)
         {
-            int? result = GetRoundResult(round);
-            RemoveRound(round, nodes);
-            return result;
+            string[] res = [];
+            lock (lockObject)
+            {
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    res = getDataFunc(roundToRun);
+                }
+            }
+            return res;
         }
 
-        public void CancelRound(Round round, List<Node>? nodes)
-        {
-            RemoveRound(round, nodes);
-        }
-        internal void RemoveRound(Round round, List<Node>? nodes)
+        internal void RemoveRound(Round round)
         {
             ActiveRound? roundToRemove = null;
             lock (lockObject)
@@ -94,10 +176,11 @@ namespace dkgServiceNode.Services.RoundRunner
                 roundToRemove = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
                 if (roundToRemove != null)
                 {
-                    roundToRemove.Clear(nodes);
+                    roundToRemove.Clear();
                     ActiveRounds.Remove(roundToRemove);
                 }
             }
         }
+
     }
 }

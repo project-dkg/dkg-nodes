@@ -23,26 +23,45 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgServiceNode.Services.RoundRunner;
+using dkgServiceNode.Constants;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+using System.Xml.Linq;
 
 namespace dkgServiceNode.Models
 {
-
     [Table("rounds")]
     public class Round
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Column("id")]
         public int Id { get; set; }
 
         [Column("status")]
         public short StatusValue { get; set; } = 0;
 
-        [Column("node_count")]
+        [Column("max_nodes")]
+        public int MaxNodes { get; set; } = 256;
+
+        [NotMapped]
         public int NodeCount { get; set; } = 0;
 
         [NotMapped]
-        public int NodeCountRunning { get; set; } = 0;
+        public int NodeCountStepOne { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountWStepTwo { get; set; } = 0;
+        [NotMapped]
+        public int NodeCountStepTwo { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountWStepThree { get; set; } = 0;
+        [NotMapped]
+        public int NodeCountStepThree { get; set; } = 0;
+        [NotMapped]
+        public int NodeCountStepFour { get; set; } = 0;
 
         [NotMapped]
         public int NodeCountFinished { get; set; } = 0;
@@ -83,6 +102,13 @@ namespace dkgServiceNode.Models
             get { return Status.CancelStatus(); }
         }
 
+        [JsonIgnore]
         public ICollection<Node> Nodes { get; set; } = [];
+
+        [JsonIgnore]
+        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
+
+        public override string ToString() => $"Round {Id}";
+
     }
 }

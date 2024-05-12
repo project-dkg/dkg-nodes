@@ -23,26 +23,10 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace dkgServiceNode.Models
 {
-    [Table("versions")]
-    public class Version
+    public class RoundSettings
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Required]
-        [Column("version")]
-        public required string VersionNumber { get; set; }
-
-        [Required]
-        [Column("date")]
-        public required DateTime Date { get; set; }
-
+        public required int MaxNodes { get; set; }
     }
 }

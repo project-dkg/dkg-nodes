@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
+﻿// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
 // All rights reserved.
 // This file is a part of dkg service node
 //
@@ -23,75 +23,41 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-syntax = "proto3";
+using dkgServiceNode.Models;
 
-option csharp_namespace = "dkgCommon";
+namespace dkgServiceNode.Services.NodeComparer
+{
+    public class NodeComparer : IComparer<Node>
+    {
+        private readonly int ZPoint;
+        public NodeComparer(int zPoint)
+        {
+            ZPoint = zPoint;
+        }
+        public int Compare(Node? x, Node? y)
+        {
+            int? a = x ?? null;
+            int? b = y ?? null;
 
-package DkgNodeApi;
-
-service DkgNode {
-  rpc GetPublicKey (PublicKeyRequest) returns (PublicKeyReply) {}
-  rpc ProcessDeal (ProcessDealRequest) returns (ProcessDealReply) {}
-  rpc ProcessResponse (ProcessResponseRequest) returns (ProcessResponseReply) {}
-
-  rpc RunRound (RunRoundRequest) returns (RunRoundReply) {}
-  rpc EndRound (EndRoundRequest) returns (EndRoundReply) {}
-  rpc RoundResult (RoundResultRequest) returns (RoundResultReply) {}
-}
-
-message PublicKeyRequest {
-}
-
-message PublicKeyReply {
-  bytes data = 1;
-}
-
-message ProcessDealRequest {
-  int32 roundId = 1;
-  bytes data = 2;
-}
-
-message ProcessDealReply {
-  bytes	data = 1;
-}
-
-message ProcessResponseRequest {
-  int32 roundId = 1;
-  bytes data = 2;
-}
-
-message ProcessResponseReply {
-	bool res = 1;
-}
-
-message DkgNodeRef {
-  int32 port = 1;
-  string host = 2;
-  string publicKey = 3;
-}
-
-message RunRoundRequest {
-  int32 roundId = 1;
-  repeated DkgNodeRef dkgNodeRefs = 2;
-}
-
-message RunRoundReply {
-  bool res = 1;
-}
-
-message EndRoundRequest {
-  int32 roundId = 1;
-}
-
-message EndRoundReply {
-  bool res = 1;
-}
-
-message RoundResultRequest {
-  int32 roundId = 1;
-}
-
-message RoundResultReply {
-  bool res = 1;
-  bytes distributedPublicKey = 2;
+            if (a == null)
+            {
+                return b == null ? 0 : 1; // If a is null and b is null, they're equal. If a is null and b is not null, b is smaller. 
+            }
+            else
+            {
+                // a is not null...
+                if (b == null)
+                {
+                    // ...and b is null, a is smaller.
+                    return -1;
+                }
+                else
+                {
+                    int AValue = Math.Abs((int)a - ZPoint);
+                    int BValue = Math.Abs((int)b - ZPoint);
+                    return AValue.CompareTo(BValue);
+                }
+            }
+        }
+    }
 }

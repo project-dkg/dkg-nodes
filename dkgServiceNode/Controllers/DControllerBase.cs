@@ -26,6 +26,8 @@
 using Microsoft.AspNetCore.Mvc;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
+using dkgCommon.Constants;
+using dkgServiceNode.Services.RoundRunner;
 
 namespace dkgServiceNode.Controllers
 {
@@ -64,10 +66,10 @@ namespace dkgServiceNode.Controllers
         {
             return _404(id, "Node");
         }
-        protected ObjectResult _404Node(string host, int port)
+        protected ObjectResult _404Node(string publicKey, string name)
         {
             return StatusCode(StatusCodes.Status404NotFound,
-                              new { message = $"Failed to find node [{host}:{port}]." });
+                              new { message = $"Failed to find node [{name}:{publicKey}]." });
         }
         protected ObjectResult _404Round(int id)
         {
@@ -85,7 +87,13 @@ namespace dkgServiceNode.Controllers
         protected ObjectResult _409Round()
         {
             return StatusCode(StatusCodes.Status409Conflict,
-                              new { message = $"Could not fimd a round that is collecting node applications." });
+                              new { message = $"Could not find a round that is collecting node applications." });
+        }
+
+        protected ObjectResult _409Status(string publicKey, string name, string nStatus, string rStatus)
+        {
+            return StatusCode(StatusCodes.Status409Conflict,
+                              new { message = $"Node [{name}:{publicKey}] reports status '{nStatus}' that does not fit round status {rStatus}" });
         }
         protected DControllerBase(IHttpContextAccessor httpContextAccessor, UserContext uContext)
         {
