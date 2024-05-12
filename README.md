@@ -17,3 +17,6 @@ docker run --env=DKG_NODE_SERVER_GRPC_PORT=<port> --env=DKG_NODE_SERVER_GRPC_HOS
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
            --workdir=/app -p <port>:<port> --runtime=runc -d ghcr.io/maxirmx/dkg-node:0.3.0
 ```
+
+## Project financing
+Initial development of this project was financed by [NarayanaSupramati](https://www.github.com/NarayanaSupramati)
