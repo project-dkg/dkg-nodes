@@ -104,7 +104,6 @@ namespace dkgServiceNode.Data
             DROP INDEX IF EXISTS ""idx_nodes_host_port"";
             DROP INDEX IF EXISTS ""idx_nodes_public_key"";
 
-
             ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""host"";
             ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""port"";
 
@@ -112,7 +111,6 @@ namespace dkgServiceNode.Data
             UPDATE ""nodes"" SET ""guid"" = uuid_generate_v4();
             ALTER TABLE ""nodes"" ALTER COLUMN ""guid"" SET NOT NULL;
 
-            CREATE UNIQUE INDEX ""idx_nodes_public_key"" ON ""nodes"" (""public_key"");
             CREATE UNIQUE INDEX ""idx_nodes_guid"" ON ""nodes"" (""guid"");           
 
             CREATE TABLE ""nodes_round_history"" (
@@ -157,6 +155,17 @@ namespace dkgServiceNode.Data
 
             COMMIT;
             ";
+        readonly static string sqlScript_0_4_3 = @"
+            START TRANSACTION;
+
+            DROP INDEX IF EXISTS ""idx_nodes_public_key"";
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.4.3', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
+
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -229,6 +238,7 @@ namespace dkgServiceNode.Data
                 EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
                 PuVersionUpdate("0.4.1", connection);
                 PuVersionUpdate("0.4.2", connection);
+                EnsureVersion("0.4.3", sqlScript_0_4_3, connection);
             }
         }
     }
