@@ -27,7 +27,8 @@ __Parameters__
 * ```<Name>``` -- имя ```dkg node```, опционально, по умолчанию ```<GUID>```
 * ```<GUID>``` -- GUID ```dkg node```, опционально. Если GUID не указан, он генерируется автоматически при запуске ```dkg node```.
   Обратите внимание, что при автоматически сгенерированном GUID ```dkg node``` считаются «разными» для каждого запуска, а явно указанный GUID гарантирует, что ```dkg node``` «одним и тем же».
-* ```<URL-адрес узла службы>``` -- полный URL-адрес ```dkg service node```.  
+* ```<URL-адрес узла службы>``` -- полный URL-адрес ```dkg service node```.
+    
 __Command__
 ```
 docker run --env=DKG_SERVICE_NODE_URL=<Service node URL> --env=DKG_NODE_NAME=<Name> \
