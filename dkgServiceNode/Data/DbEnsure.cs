@@ -99,6 +99,8 @@ namespace dkgServiceNode.Data
         readonly static string sqlScript_0_4_0 = @"
             START TRANSACTION;
 
+            CREATE EXTENSION IF NOT EXISTS ""uuid-ossp"";
+
             DROP INDEX IF EXISTS ""idx_nodes_host_port"";
             DROP INDEX IF EXISTS ""idx_nodes_public_key"";
 
@@ -106,7 +108,9 @@ namespace dkgServiceNode.Data
             ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""host"";
             ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""port"";
 
-            ALTER TABLE ""nodes"" ADD COLUMN ""guid"" UUID NOT NULL;
+            ALTER TABLE ""nodes"" ADD COLUMN ""guid"" UUID;
+            UPDATE ""nodes"" SET ""guid"" = uuid_generate_v4();
+            ALTER TABLE ""nodes"" ALTER COLUMN ""guid"" SET NOT NULL;
 
             CREATE UNIQUE INDEX ""idx_nodes_public_key"" ON ""nodes"" (""public_key"");
             CREATE UNIQUE INDEX ""idx_nodes_guid"" ON ""nodes"" (""guid"");           
@@ -214,7 +218,7 @@ namespace dkgServiceNode.Data
         public static void Ensure(string connectionString)
         {
 
-            using (var connection = new NpgsqlConnection("Host=dkgservice_db;Port=5432;Database=dkgservice;Username=postgres;Password=postgres"))
+            using (var connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
                 Ensure_0_1_0(connection);
@@ -224,6 +228,7 @@ namespace dkgServiceNode.Data
                 EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
                 EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
                 PuVersionUpdate("0.4.1", connection);
+                PuVersionUpdate("0.4.2", connection);
             }
         }
     }
