@@ -1,4 +1,6 @@
 # Dkg nodes
+[![Test](https://github.com/maxirmx/dkg-nodes/actions/workflows/test.yml/badge.svg)](https://github.com/maxirmx/dkg-nodes/actions/workflows/test.yml)
+
 
 ## Starting dkg node in docker container
 
