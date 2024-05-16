@@ -82,6 +82,7 @@ services:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Fifth node
       - DKG_NODE_GUID=90981502-f478-927d-ebdf-17426a80d4f7
+#      - DKG_NODE_DIE_ON_STEP_THREE=Yes
     build:
       context: .
       dockerfile: dkgNode/Dockerfile

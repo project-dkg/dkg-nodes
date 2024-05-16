@@ -88,8 +88,15 @@ namespace dkgNode.Services
         internal string Name => Config.Name;
         internal string ServiceNodeUrl => Config.ServiceNodeUrl;
         internal int PollingInterval => Config.PollingInterval;
-        public DkgNodeService(DkgNodeConfig config, ILogger<DkgNodeService> logger)
+
+        internal bool dieOnStep2 = false;
+        internal bool dieOnStep3 = false;
+
+        public DkgNodeService(DkgNodeConfig config, ILogger<DkgNodeService> logger, bool dos2 = false, bool dos3 = false)
         {
+            dieOnStep2 = dos2;
+            dieOnStep3 = dos3;
+
             Config = config;
             Logger = logger;
 
@@ -211,6 +218,7 @@ namespace dkgNode.Services
                             Name, PublicKeys.Length, Round);
             Status = WaitingStepTwo;
 
+            if (dieOnStep2) return;
             statusResponse = await ReportStatus(httpClient, encodedDeals);
             if (!ShallContinue([WaitingStepTwo, RunningStepTwo], stoppingToken)) return;
 
@@ -229,6 +237,7 @@ namespace dkgNode.Services
                              Name, PublicKeys.Length, Round);
             Status = WaitingStepThree;
 
+            if (dieOnStep3) return;
             statusResponse = await ReportStatus(httpClient, encodedResponses);
             if (!ShallContinue([WaitingStepThree, RunningStepThree], stoppingToken)) return;
 
@@ -344,7 +353,7 @@ namespace dkgNode.Services
                         if (Status != statusResponse.Status)
                         {
                             Logger.LogDebug("'{Name}': Changing node state to {Status}", Name, statusResponse.Status);
-                            if (statusResponse.Status == NotRegistered) SetStatusClearRound(statusResponse.Status);
+                            if (statusResponse.Status == NotRegistered || statusResponse.RoundId == 0) SetStatusClearRound(statusResponse.Status);
                             else SetStatus(statusResponse.Status);
                         }
                     }

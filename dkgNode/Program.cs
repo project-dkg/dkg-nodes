@@ -67,7 +67,10 @@ builder.Services.AddHostedService(serviceProvider =>
         Gd = guid
     };
 
-    return new dkgNode.DkgNodeWorker(config, logger);
+    string? dieOnStep2 = Environment.GetEnvironmentVariable("DKG_NODE_DIE_ON_STEP_TWO");
+    string? dieOnStep3 = Environment.GetEnvironmentVariable("DKG_NODE_DIE_ON_STEP_THREE");
+
+    return new dkgNode.DkgNodeWorker(config, logger, dieOnStep2 != null, dieOnStep3 != null);
 });
 
 var host = builder.Build();

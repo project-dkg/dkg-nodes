@@ -9,10 +9,10 @@ namespace dkgNode
         internal DkgNodeService Service;
         internal int PollingInterval;
 
-        public DkgNodeWorker(DkgNodeConfig config, ILogger<DkgNodeService> logger)
+        public DkgNodeWorker(DkgNodeConfig config, ILogger<DkgNodeService> logger, bool dos2 = false, bool dos3 = false)
         {
             PollingInterval = config.PollingInterval;
-            Service = new DkgNodeService(config, logger);
+            Service = new DkgNodeService(config, logger,dos2, dos3);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

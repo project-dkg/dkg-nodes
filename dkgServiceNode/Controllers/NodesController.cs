@@ -32,7 +32,6 @@ using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography.X509Certificates;
 using static dkgCommon.Constants.NodeStatusConstants;
 using static dkgServiceNode.Constants.RoundStatusConstants;
 
@@ -53,8 +52,8 @@ namespace dkgServiceNode.Controllers
         protected readonly Runner runner;
         protected readonly ILogger logger;
 
-        public NodesController(IHttpContextAccessor httpContextAccessor, 
-                               UserContext uContext, DkgContext dContext, 
+        public NodesController(IHttpContextAccessor httpContextAccessor,
+                               UserContext uContext, DkgContext dContext,
                                Runner rnner, ILogger<NodesController> lgger) :
                base(httpContextAccessor, uContext)
         {
@@ -116,8 +115,162 @@ namespace dkgServiceNode.Controllers
 
             roundId ??= 0;
             var reference = new Reference((int)roundId);
-            
+
             return Ok(reference);
+        }
+
+        // Accept action
+        // Acknowledges that the status report has been received
+        internal async Task<ObjectResult> Accept(Round? round, Node node, StatusReport stReport)
+        {
+            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
+            var response = new StatusResponse(round != null ? round.Id : 0, stReport.Status);
+            return Accepted(response);
+        }
+
+        internal async Task<ObjectResult> TrToNotRegistered(Round? round, Node node, StatusReport stReport)
+        {
+            if (round != null)
+            {
+                runner.SetNoResult(round, node);
+            }
+
+            await ResetNodeState(node);
+            var response = new StatusResponse(0, NStatus.NotRegistered);
+            if (stReport.Status != NStatus.NotRegistered || stReport.RoundId != 0)
+            {
+                return Ok(response);
+            }
+            return Accepted(response);
+        }
+
+        internal async Task<ObjectResult> TrToRunningStepOne(Round? round, Node _node, StatusReport _stReport)
+        {
+            if (round == null)
+            {
+                return _500UndefinedRound();
+            }
+
+            await Task.Delay(0);
+            string[] data = runner.GetStepOneData(round!);
+            if (data.Length == 0)
+            {
+                return _500MisssingStepOneData(round.Id, GetRoundStatusById(round.StatusValue).ToString());
+            }
+            return Ok(new StatusResponse(round!.Id, NStatus.RunningStepOne, data));
+        }
+        internal async Task<ObjectResult> TrToRunningStepTwoConditional(Round? round, Node node, StatusReport stReport)
+        {
+            if (round == null)
+            {
+                return _500UndefinedRound();
+            }
+
+            if (stReport.Data.Length != 0)
+            {
+                runner.SetStepTwoData(round, node, stReport.Data);
+            }
+            if (runner.IsStepTwoDataReady(round))
+            {
+                await UpdateRoundState(round);
+                return Ok(new StatusResponse(round.Id, NStatus.RunningStepTwo, runner.GetStepTwoData(round, node)));
+            }
+            return Accepted(new StatusResponse(round.Id, stReport.Status));
+        }
+        internal async Task<ObjectResult> TrToRunningStepThreeConditional(Round? round, Node node, StatusReport stReport)
+        {
+            if (round == null)
+            {
+                return _500UndefinedRound();
+            }
+            if (stReport.Data.Length != 0)
+            {
+                runner.SetStepThreeData(round, node, stReport.Data);
+            }
+            if (runner.IsStepThreeDataReady(round))
+            {
+                await UpdateRoundState(round);
+                return Ok(new StatusResponse(round.Id, NStatus.RunningStepThree, runner.GetStepThreeData(round, node)));
+            }
+            return Accepted(new StatusResponse(round.Id, stReport.Status));
+        }
+        internal async Task<ObjectResult> WrongStatus(Round? round, Node node, StatusReport stReport)
+        {
+            if (round != null)
+            {
+                runner.SetNoResult(round, node);
+            }
+
+            await ResetNodeState(node);
+            string rStatus = round == null ? "null" : GetRoundStatusById(round.StatusValue).ToString();
+            return _409Status(stReport.PublicKey, stReport.Name, GetNodeStatusById(stReport.Status).ToString(), rStatus);
+        }
+        internal async Task<ObjectResult> AcceptFinished(Round? round, Node node, StatusReport stReport)
+        {
+            if (round == null)
+            {
+                return _500UndefinedRound();
+            }
+
+            if (stReport.Data.Length != 0)
+            {
+                runner.SetResult(round, node, stReport.Data);
+                await UpdateNodeState(node, (short)stReport.Status, round.Id);
+                await UpdateRoundState(round);
+                return Accepted(new StatusResponse(round.Id, stReport.Status));
+            }
+            else
+            {
+                runner.SetNoResult(round, node);
+                await UpdateNodeState(node, (short)stReport.Status, round.Id);
+                await UpdateRoundState(round);
+                return _400NoResult(round.Id, node.Name, node.PublicKey);
+            }
+        }
+        internal async Task<ObjectResult> AcceptFailed(Round? round, Node node, StatusReport stReport)
+        {
+            if (round == null)
+            {
+                return _500UndefinedRound();
+            }
+
+            runner.SetNoResult(round, node);
+            await UpdateNodeState(node, (short)stReport.Status, round.Id);
+            await UpdateRoundState(round);
+
+            return Accepted(new StatusResponse(round.Id, stReport.Status));
+        }
+        internal async Task ResetNodeState(Node node)
+        {
+            bool needsUpdate = false;
+            if (node.StatusValue != (short)NStatus.NotRegistered)
+            {
+                node.StatusValue = (short)NStatus.NotRegistered;
+                needsUpdate = true;
+            }
+
+            if (node.RoundId != null)
+            {
+                node.RoundId = null;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate)
+            {
+                dkgContext.Entry(node).State = EntityState.Modified;
+                await dkgContext.SaveChangesAsync();
+            }
+        }
+
+        internal async Task UpdateNodeState(Node node, short nStatus, int? roundId)
+        {
+            if (node.StatusValue != nStatus || node.RoundId != roundId)
+            {
+                node.StatusValue = nStatus;
+                node.RoundId = roundId;
+                dkgContext.Entry(node).State = EntityState.Modified;
+                await dkgContext.SaveChangesAsync();
+            }
         }
 
         // POST: api/Nodes/status
@@ -128,191 +281,132 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Reference>> Status(StatusReport statusReport)
         {
+            // А это мой любимый автомат Мили ... центр любой системы :)
+            Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>> actionMap = new Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>>()
+            {
+                { (null, NStatus.NotRegistered), Accept },
+                { (RStatus.NotStarted, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.Registration, NStatus.NotRegistered), Accept },
+                { (RStatus.CreatingDeals, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.ProcessingResponses, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.Finished, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.Cancelled, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.Failed, NStatus.NotRegistered), WrongStatus },
+                { (RStatus.Unknown, NStatus.NotRegistered), WrongStatus },
+
+                { (null, NStatus.WaitingRoundStart), WrongStatus },
+                { (RStatus.NotStarted, NStatus.WaitingRoundStart), WrongStatus },
+                { (RStatus.Registration, NStatus.WaitingRoundStart), Accept },
+                { (RStatus.CreatingDeals, NStatus.WaitingRoundStart), TrToRunningStepOne },
+                { (RStatus.ProcessingDeals, NStatus.WaitingRoundStart), TrToNotRegistered },
+                { (RStatus.ProcessingResponses, NStatus.WaitingRoundStart), TrToNotRegistered },
+                { (RStatus.Finished, NStatus.WaitingRoundStart), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.WaitingRoundStart), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.WaitingRoundStart), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.WaitingRoundStart), TrToNotRegistered },
+
+                { (null, NStatus.RunningStepOne), WrongStatus },
+                { (RStatus.NotStarted, NStatus.RunningStepOne), WrongStatus },
+                { (RStatus.Registration, NStatus.RunningStepOne), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.RunningStepOne), Accept },
+                { (RStatus.ProcessingDeals, NStatus.RunningStepOne), Accept },
+                { (RStatus.ProcessingResponses, NStatus.RunningStepOne), TrToNotRegistered },
+                { (RStatus.Finished, NStatus.RunningStepOne), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.RunningStepOne), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.RunningStepOne), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.RunningStepOne), TrToNotRegistered },
+
+                { (null, NStatus.WaitingStepTwo), WrongStatus },
+                { (RStatus.NotStarted, NStatus.WaitingStepTwo), WrongStatus },
+                { (RStatus.Registration, NStatus.WaitingStepTwo), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.WaitingStepTwo), TrToRunningStepTwoConditional },
+                { (RStatus.ProcessingDeals, NStatus.WaitingStepTwo), TrToRunningStepTwoConditional },
+                { (RStatus.ProcessingResponses, NStatus.WaitingStepTwo), TrToNotRegistered },
+                { (RStatus.Finished, NStatus.WaitingStepTwo), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.WaitingStepTwo), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.WaitingStepTwo), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.WaitingStepTwo), TrToNotRegistered },
+
+                { (null, NStatus.RunningStepTwo), WrongStatus },
+                { (RStatus.NotStarted, NStatus.RunningStepTwo), WrongStatus },
+                { (RStatus.Registration, NStatus.RunningStepTwo), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.RunningStepTwo), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.RunningStepTwo), Accept },
+                { (RStatus.ProcessingResponses, NStatus.RunningStepTwo), Accept },
+                { (RStatus.Finished, NStatus.RunningStepTwo), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.RunningStepTwo), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.RunningStepTwo), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.RunningStepTwo), TrToNotRegistered },
+
+                { (null, NStatus.WaitingStepThree), WrongStatus },
+                { (RStatus.NotStarted, NStatus.WaitingStepThree), WrongStatus },
+                { (RStatus.Registration, NStatus.WaitingStepThree), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.WaitingStepThree), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.WaitingStepThree), TrToRunningStepThreeConditional },
+                { (RStatus.ProcessingResponses, NStatus.WaitingStepThree), TrToRunningStepThreeConditional },
+                { (RStatus.Finished, NStatus.WaitingStepThree), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.WaitingStepThree), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.WaitingStepThree), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.WaitingStepThree), TrToNotRegistered },
+
+                { (null, NStatus.RunningStepThree), WrongStatus },
+                { (RStatus.NotStarted, NStatus.RunningStepThree), WrongStatus },
+                { (RStatus.Registration, NStatus.RunningStepThree), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.RunningStepThree), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.RunningStepThree), WrongStatus },
+                { (RStatus.ProcessingResponses, NStatus.RunningStepThree), Accept },
+                { (RStatus.Finished, NStatus.RunningStepThree), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.RunningStepThree), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.RunningStepThree), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.RunningStepThree), TrToNotRegistered },
+
+                { (null, NStatus.Finished), WrongStatus },
+                { (RStatus.NotStarted, NStatus.Finished), WrongStatus },
+                { (RStatus.Registration, NStatus.Finished), WrongStatus },
+                { (RStatus.CreatingDeals, NStatus.Finished), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.Finished), WrongStatus },
+                { (RStatus.ProcessingResponses, NStatus.Finished), AcceptFinished },
+                { (RStatus.Finished, NStatus.Finished), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.Finished), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.Finished), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.Finished), TrToNotRegistered },
+
+                { (null, NStatus.Failed), WrongStatus },
+                { (RStatus.NotStarted, NStatus.Failed), WrongStatus },
+                { (RStatus.Registration, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.CreatingDeals, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.ProcessingDeals, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.ProcessingResponses, NStatus.Failed), AcceptFailed },
+                { (RStatus.Finished, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.Failed), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.Failed), TrToNotRegistered },
+
+            };
+
             var node = await dkgContext.FindNodeByPublicKeyAsync(statusReport.PublicKey);
             if (node == null)
             {
                 return _404Node(statusReport.PublicKey, statusReport.Name);
             }
 
-            if (node.RoundId == null && statusReport.Status != NStatus.NotRegistered)
+            var round = statusReport.RoundId == 0 ? null : await dkgContext.Rounds.FirstOrDefaultAsync(r => r.Id == statusReport.RoundId);
+
+            RStatus? rStatus = null;
+            if (round != null) rStatus = round.Status;
+
+            if (actionMap.TryGetValue((rStatus, statusReport.Status), out var function))
             {
-                node.StatusValue = (short)NStatus.NotRegistered;
-                dkgContext.Entry(node).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
-
-                return Ok(new StatusResponse(0, NStatus.NotRegistered, []));
-            }
-
-            var round = await dkgContext.Rounds.FirstOrDefaultAsync(r => r.Id == statusReport.RoundId);
-
-            if (round == null)
-            {
-                if (statusReport.Status != NStatus.NotRegistered)
-                {
-                    return _404Round(statusReport.RoundId);
-                }
+                logger.LogDebug("State transition round [{id}] node [{name}] : ({rStatus}, {nStatus}) -> {f}",
+                                    (round != null ? round.Id.ToString() : "null"),
+                                    node.Name, rStatus, statusReport.Status, function.Method.Name);
+                return await function(round, node, statusReport);
             }
             else
             {
-                if (node.StatusValue != (short)statusReport.Status)
-                {
-                    node.StatusValue = (short)statusReport.Status;
-                    dkgContext.Entry(node).State = EntityState.Modified;
-                    await dkgContext.SaveChangesAsync();
-                }
-
-                switch (statusReport.Status)
-                {
-                    case NStatus.WaitingRoundStart:
-                        switch ((RStatus)round.Status)
-                        {
-                            case RStatus.Registration:
-                                break;
-                            case RStatus.CreatingDeals:
-                            case RStatus.ProcessingDeals:
-                            case RStatus.ProcessingResponses:
-                                string[] data = runner.GetStepOneData(round);
-                                if (data.Length == 0)
-                                {
-                                    return StatusCode(StatusCodes.Status409Conflict,
-                                      new
-                                      {
-                                          message = $"Round [{round.Id}] status is {round.Status}] but step one data is missing"
-                                      });
-                                }
-
-                                return Ok(new StatusResponse(round.Id, NStatus.RunningStepOne, data));
-                            case RStatus.Finished:
-                            case RStatus.Cancelled:
-                            case RStatus.Failed:
-                                return Ok(new StatusResponse(round.Id, NStatus.NotRegistered, []));
-                            case RStatus.NotStarted:
-                            case RStatus.Unknown:
-                                return _409Status(statusReport.PublicKey, statusReport.Name, 
-                                                  GetNodeStatusById(statusReport.Status).ToString(), 
-                                                  GetRoundStatusById(round.StatusValue).ToString());
-                            default:
-                                break;
-                        }
-                        break;
-                    case NStatus.WaitingStepTwo:
-                        switch ((RStatus)round.Status)
-                        {
-                            case RStatus.CreatingDeals:
-                            case RStatus.ProcessingDeals:
-                            case RStatus.ProcessingResponses:
-                                if (statusReport.Data.Length != 0)
-                                {
-                                    runner.SetStepTwoData(round, node, statusReport.Data);
-                                }
-                                if (runner.IsStepTwoDataReady(round))
-                                {
-                                    await UpdateRoundState(round);
-                                    return Ok(new StatusResponse(round.Id, NStatus.RunningStepTwo, runner.GetStepTwoData(round, node)));
-                                }
-                                break;
-                            case RStatus.Cancelled:
-                            case RStatus.Failed:
-                            case RStatus.Finished:
-                                return Ok(new StatusResponse(round.Id, NStatus.NotRegistered, []));
-                            case RStatus.NotStarted:
-                            case RStatus.Registration:
-                            case RStatus.Unknown:
-                                return _409Status(statusReport.PublicKey, statusReport.Name,
-                                                  GetNodeStatusById(statusReport.Status).ToString(),
-                                                  GetRoundStatusById(round.StatusValue).ToString());
-                            default:
-                                break;
-                        }
-                        break;
-                    case NStatus.WaitingStepThree:
-                        switch ((RStatus)round.Status)
-                        {
-                            case RStatus.CreatingDeals:
-                            case RStatus.ProcessingDeals:
-                            case RStatus.ProcessingResponses:
-                                if (statusReport.Data.Length != 0)
-                                {
-                                    runner.SetStepThreeData(round, node, statusReport.Data);
-                                }
-                                if (runner.IsStepThreeDataReady(round))
-                                {
-                                    await UpdateRoundState(round);
-                                    return Ok(new StatusResponse(round.Id, NStatus.RunningStepThree, runner.GetStepThreeData(round, node)));
-                                }
-                                break;
-                            case RStatus.Cancelled:
-                            case RStatus.Failed:
-                            case RStatus.Finished:
-                            case RStatus.NotStarted:
-                                return Ok(new StatusResponse(0, NStatus.NotRegistered, []));
-                            case RStatus.Registration:
-                            case RStatus.Unknown:
-                                return _409Status(statusReport.PublicKey, statusReport.Name,
-                                                  GetNodeStatusById(statusReport.Status).ToString(),
-                                                  GetRoundStatusById(round.StatusValue).ToString());
-                            default:
-                                break;
-                        }
-                        break;
-                    case NStatus.Finished:
-                        switch ((RStatus)round.Status)
-                        {
-                            case RStatus.CreatingDeals:
-                            case RStatus.ProcessingDeals:
-                            case RStatus.ProcessingResponses:
-                                if (statusReport.Data.Length != 0)
-                                {
-                                    runner.SetResult(round, node, statusReport.Data);
-                                    await UpdateRoundState(round);
-                                }
-                                break;
-                            case RStatus.Cancelled:
-                            case RStatus.Failed:
-                            case RStatus.Finished:
-                                return Ok(new StatusResponse(0, NStatus.NotRegistered, []));
-                            case RStatus.NotStarted:
-                            case RStatus.Registration:
-                            case RStatus.Unknown:
-                                return _409Status(statusReport.PublicKey, statusReport.Name,
-                                                  GetNodeStatusById(statusReport.Status).ToString(),
-                                                  GetRoundStatusById(round.StatusValue).ToString());
-                            default:
-                                break;
-                        }
-                        break;
-                    case NStatus.Failed:
-                        switch ((RStatus)round.Status)
-                        {
-                            case RStatus.CreatingDeals:
-                            case RStatus.ProcessingDeals:
-                            case RStatus.ProcessingResponses:
-                                if (statusReport.Data.Length != 0)
-                                {
-                                    runner.SetNoResult(round, node);
-                                }
-                                break;
-                            case RStatus.Cancelled:
-                            case RStatus.Failed:
-                            case RStatus.Finished:
-                                return Ok(new StatusResponse(0, NStatus.NotRegistered, []));
-                            case RStatus.NotStarted:
-                            case RStatus.Registration:
-                            case RStatus.Unknown:
-                                return _409Status(statusReport.PublicKey, statusReport.Name,
-                                                  GetNodeStatusById(statusReport.Status).ToString(),
-                                                  GetRoundStatusById(round.StatusValue).ToString());
-                            default:
-                                break;
-                        }
-                        break;
-                    default:
-                        break;
-                }
+                return _500UnknownStateTransition(rStatus == null ? "null" : GetRoundStatusById((short)rStatus).ToString(), GetNodeStatusById((short)node.Status).ToString());
             }
-
-            var response = new StatusResponse(round != null ? round.Id : 0, statusReport.Status);
-            return Accepted(response);
         }
 
         // RESET: api/nodes/reset/5
@@ -349,7 +443,7 @@ namespace dkgServiceNode.Controllers
             await dkgContext.SaveChangesAsync();
 
             return NoContent();
-        }
+       }
 
         internal async Task UpdateRoundState(Round round)
         {

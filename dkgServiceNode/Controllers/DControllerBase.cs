@@ -28,6 +28,8 @@ using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgCommon.Constants;
 using dkgServiceNode.Services.RoundRunner;
+using System.Security.Cryptography.X509Certificates;
+using System.Xml.Linq;
 
 namespace dkgServiceNode.Controllers
 {
@@ -40,6 +42,11 @@ namespace dkgServiceNode.Controllers
         {
             return StatusCode(StatusCodes.Status400BadRequest,
                               new ErrMessage { Msg = "Inconsistent request." });
+        }
+        protected ObjectResult _400NoResult(int roundId, string name, string publicKey)
+        {
+            return StatusCode(StatusCodes.Status400BadRequest,
+                              new { message = $"Round: {roundId} node [{name}:{publicKey}] finished with no result data" });
         }
         protected ObjectResult _403()
         {
@@ -94,6 +101,24 @@ namespace dkgServiceNode.Controllers
         {
             return StatusCode(StatusCodes.Status409Conflict,
                               new { message = $"Node [{name}:{publicKey}] reports status '{nStatus}' that does not fit round status {rStatus}" });
+        }
+        protected ObjectResult _500(string msg)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                              new ErrMessage { Msg = msg });
+        }
+        protected ObjectResult _500UndefinedRound()
+        {
+            return _500("Round is not defined (null)");
+        }
+        protected ObjectResult _500MisssingStepOneData(int id, string status)
+        {
+            return _500($"Round [{id}] status is [{status}] but step one data is missing");
+        }
+
+        protected ObjectResult _500UnknownStateTransition(string rState, string nState   )
+        {
+            return _500($"Unknown state transition [rState = {rState}, nState = {nState}]");
         }
         protected DControllerBase(IHttpContextAccessor httpContextAccessor, UserContext uContext)
         {
