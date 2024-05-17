@@ -124,6 +124,11 @@ namespace dkgServiceNode.Controllers
         internal async Task<ObjectResult> Accept(Round? round, Node node, StatusReport stReport)
         {
             await UpdateNodeState(node, (short)stReport.Status, round?.Id);
+            if (round != null)
+            {
+                await UpdateRoundState(round);
+            }
+
             var response = new StatusResponse(round != null ? round.Id : 0, stReport.Status);
             return Accepted(response);
         }
@@ -165,6 +170,8 @@ namespace dkgServiceNode.Controllers
             {
                 return _500UndefinedRound();
             }
+            
+            runner.SetStepTwoWaitingTime(round);
 
             if (stReport.Data.Length != 0)
             {
@@ -183,6 +190,9 @@ namespace dkgServiceNode.Controllers
             {
                 return _500UndefinedRound();
             }
+
+            runner.SetStepThreeWaitingTime(round);
+
             if (stReport.Data.Length != 0)
             {
                 runner.SetStepThreeData(round, node, stReport.Data);
@@ -212,6 +222,8 @@ namespace dkgServiceNode.Controllers
                 return _500UndefinedRound();
             }
 
+            runner.SetResultWaitingTime(round);
+
             if (stReport.Data.Length != 0)
             {
                 runner.SetResult(round, node, stReport.Data);
@@ -233,6 +245,8 @@ namespace dkgServiceNode.Controllers
             {
                 return _500UndefinedRound();
             }
+
+            runner.SetResultWaitingTime(round);
 
             runner.SetNoResult(round, node);
             await UpdateNodeState(node, (short)stReport.Status, round.Id);

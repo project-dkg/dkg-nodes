@@ -37,7 +37,8 @@ namespace dkgServiceNode.Services.RoundRunner
         public string[]? Responses { get; set; } = null;
         public IPoint? DistributedPublicKey { get; set; } = null;
         public PriShare? SecretShare { get; set; } = null;
-        public bool Finalized { get; set; } = false;
+        public bool Failed { get; set; } = false;
+        public bool Finished { get; set; } = false;
 
         private readonly ILogger Logger;
         private readonly int RoundId;
@@ -54,7 +55,8 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public void SetResult(string[] data)
         {
-            Finalized = true;
+            Finished = true;
+            Failed = false;
             try
             {
                 byte[] pkd = Convert.FromBase64String(data[0]);
@@ -73,7 +75,8 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public void SetNoResult()
         {
-            Finalized = true;
+            Finished = false;
+            Failed = true;
         }
         public static bool operator ==(ActiveNode a, Node b) => a.Key == GetKey(b);
         public static bool operator !=(ActiveNode a, Node b) => a.Key != GetKey(b);

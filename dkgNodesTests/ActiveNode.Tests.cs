@@ -71,7 +71,7 @@ namespace dkgNodesTests
             Node node = new Node { PublicKey = "publicKey" };
             ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
             activeNode.SetNoResult();
-            Assert.That(activeNode.Finalized, Is.True);
+            Assert.That(activeNode.Failed, Is.True);
         }
 
         [Test]

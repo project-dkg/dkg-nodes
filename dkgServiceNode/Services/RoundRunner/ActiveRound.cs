@@ -32,7 +32,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
 
 
-
 namespace dkgServiceNode.Services.RoundRunner
 {
     public class ActiveRound
@@ -45,6 +44,9 @@ namespace dkgServiceNode.Services.RoundRunner
         internal bool ForceProcessResponses { get; set; } = false;
         internal string[] StepOneData { get; set; } = [];
         internal string[] StepThreeData { get; set; } = [];
+        internal DateTime Step2StartWaitingTime { get; set; } = DateTime.MinValue;
+        internal DateTime Step3StartWaitingTime { get; set; } = DateTime.MinValue;
+        internal DateTime ResultStartWaitingTime { get; set; } = DateTime.MinValue;
 
         public ActiveRound(Round rnd, ILogger<ActiveRound> lgr)
         {
@@ -60,6 +62,9 @@ namespace dkgServiceNode.Services.RoundRunner
             ForceProcessResponses = false;
             StepOneData = [];
             StepThreeData = [];
+            Step2StartWaitingTime = DateTime.MinValue;
+            Step3StartWaitingTime = DateTime.MinValue;
+            ResultStartWaitingTime = DateTime.MinValue;
         }
         public int? GetResult()
         {
@@ -93,7 +98,6 @@ namespace dkgServiceNode.Services.RoundRunner
             Logger.LogDebug("ActiveRound [{Id}]: GetStepOneData", Id);
             return StepOneData;
         }
-
         public string[] GetStepTwoData(Node node)
         {
             string[] result = [];
@@ -119,7 +123,6 @@ namespace dkgServiceNode.Services.RoundRunner
             }
             return result;
         }
-
         public string[] GetStepThreeData(Node node)
         {
             Logger.LogDebug("ActiveRound [{Id}]: GetStepThreeData for node [{node}]", Id, node);
@@ -149,30 +152,30 @@ namespace dkgServiceNode.Services.RoundRunner
             }
             return StepThreeData;
         }
-
         public bool IsResultReady()
         {
-            bool result = false;
-            if (Nodes != null)
+            bool result = true;
+
+            if (Nodes != null && 
+                ( ResultStartWaitingTime == DateTime.MinValue || DateTime.Now - ResultStartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
             {
-                result = true;
-                foreach (var node in Nodes)
+                int failed = Nodes.Count(node => node.Failed);
+                int finished = Nodes.Count(node => node.Finished);
+
+                if (VssTools.MinimumT(Nodes.Length) > finished && finished + failed < Nodes.Length)
                 {
-                    if (!node.Finalized)
-                    {
-                        result = false;
-                        break;
-                    }
+                    result = false;
                 }
             }
             return result;
         }
         public bool IsStepTwoDataReady()
         {
-            bool result = ForceProcessDeals;
-            if (!ForceProcessDeals && Nodes != null)
+            bool result = true;
+
+            if (!ForceProcessDeals && Nodes != null && 
+                (Step2StartWaitingTime == DateTime.MinValue || DateTime.Now - Step2StartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
             {
-                result = true;
                 foreach (var node in Nodes)
                 {
                     if (node.Deals == null)
@@ -186,10 +189,11 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public bool IsStepThreeDataReady()
         {
-            bool result = ForceProcessResponses || StepThreeData.Length != 0;
-            if (!ForceProcessResponses && Nodes != null)
+            bool result = true;
+
+            if (!ForceProcessResponses && Nodes != null && 
+                (Step3StartWaitingTime == DateTime.MinValue || DateTime.Now - Step3StartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
             {
-                result = true;
                 foreach (var node in Nodes)
                 {
                     if (node.Responses == null)
@@ -222,6 +226,7 @@ namespace dkgServiceNode.Services.RoundRunner
             catch (Exception ex)
             {
                 Logger.LogError("ActiveRound [{Id}]: Run exception at RunRound\n{message}", Id, ex.Message);
+                Clear();
             }
         }
         public void SetNoResult(Node node)
@@ -232,13 +237,19 @@ namespace dkgServiceNode.Services.RoundRunner
                 activeNode.SetNoResult();
             }
         }
-
         public void SetResult(Node node, string[] data)
         {
             ActiveNode? activeNode = FindNode(node);
             if (activeNode is not null)
             {
                 activeNode.SetResult(data);
+            }
+        }
+        public void SetResultWaitingTime()
+        {
+            if (ResultStartWaitingTime == DateTime.MinValue)
+            {
+                ResultStartWaitingTime = DateTime.Now;
             }
         }
         public void SetStepOneData()
@@ -253,10 +264,23 @@ namespace dkgServiceNode.Services.RoundRunner
                 }
             }
         }
-
         public void SetStepTwoData(Node node, string[] data) => SetStepData(node, data, (node, data) => { node.Deals = data; }, "SetStepTwoData");
+        public void SetStepTwoWaitingTime()
+        {
+            if (Step2StartWaitingTime == DateTime.MinValue)
+            {
+                Step2StartWaitingTime = DateTime.Now;
+            }
+        }
         public void SetStepThreeData(Node node, string[] data) => SetStepData(node, data, (node, data) => { node.Responses = data; }, "SetStepThreeData");
 
+        public void SetStepThreeWaitingTime()
+        {
+            if (Step3StartWaitingTime == DateTime.MinValue)
+            {
+                Step3StartWaitingTime = DateTime.Now;
+            }
+        }
         private ActiveNode? FindNode(Node node)
         {
             ActiveNode? result = null;
@@ -290,10 +314,10 @@ namespace dkgServiceNode.Services.RoundRunner
             }
             return result;
         }
-
         private void SetStepData(Node node, string[] data, Action<ActiveNode, string[]> setDataAction, string name)
         {
             Logger.LogDebug("ActiveRound [{Id}]: {name} for node [{node}]", Id, name, node);
+
             ActiveNode? activeNode = FindNode(node);
             if (activeNode is not null)
             {

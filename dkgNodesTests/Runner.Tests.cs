@@ -122,7 +122,7 @@ namespace dkgNodesTests
 
             _runner.SetNoResult(round, node);
             var activeRound = _runner.ActiveRounds.First();
-            Assert.That(activeRound.Nodes?.First().Finalized, Is.True);
+            Assert.That(activeRound.Nodes?.First().Failed, Is.True);
         }
 
         [Test]
