@@ -28,5 +28,7 @@ namespace dkgServiceNode.Models
     public class RoundSettings
     {
         public required int MaxNodes { get; set; }
+        public required int Timeout { get; set; }
+
     }
 }

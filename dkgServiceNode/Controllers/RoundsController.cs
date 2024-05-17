@@ -126,7 +126,8 @@ namespace dkgServiceNode.Controllers
 
             Round round = new()
             {
-                MaxNodes = roundSettings.MaxNodes
+                MaxNodes = roundSettings.MaxNodes,
+                Timeout = roundSettings.Timeout
             };
 
             dkgContext.Rounds.Add(round);

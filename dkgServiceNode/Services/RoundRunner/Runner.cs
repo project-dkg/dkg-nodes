@@ -26,6 +26,7 @@
 using dkgServiceNode.Models;
 
 using System.Runtime.CompilerServices;
+using System.Text;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
 
 namespace dkgServiceNode.Services.RoundRunner
@@ -110,10 +111,16 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public void SetResult(Round round, Node node, string[] data) =>
             SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetResult(node, data));
+        public void SetResultWaitingTime(Round round) =>
+            SetStepDataWaitingTime(round, (roundToRun) => roundToRun.SetResultWaitingTime());
         public void SetStepTwoData(Round round, Node node, string[] data) =>
             SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetStepTwoData(node, data));
+        public void SetStepTwoWaitingTime(Round round) =>
+            SetStepDataWaitingTime(round, (roundToRun) => roundToRun.SetStepTwoWaitingTime());
         public void SetStepThreeData(Round round, Node node, string[] data) =>
             SetStepData(round, node, data, (roundToRun, node, data) => roundToRun.SetStepThreeData(node, data));
+        public void SetStepThreeWaitingTime(Round round) =>
+            SetStepDataWaitingTime(round, (roundToRun) => roundToRun.SetStepThreeWaitingTime());
         public bool IsResultReady(Round round) =>
             IsStepDataReady(round, roundToRun => roundToRun.IsResultReady());
         public bool IsStepTwoDataReady(Round round) => 
@@ -146,7 +153,7 @@ namespace dkgServiceNode.Services.RoundRunner
             lock (lockObject)
             {
                 ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
-                if (roundToRun != null)
+                if (roundToRun != null && roundToRun.Nodes != null)
                 {
                     res = isDataReadyFunc(roundToRun);
                 }
@@ -166,6 +173,18 @@ namespace dkgServiceNode.Services.RoundRunner
                 }
             }
             return res;
+        }
+
+        internal void SetStepDataWaitingTime(Round round, Action<ActiveRound> setStepDataWaitingimeFunc)
+        {
+            lock (lockObject)
+            {
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    setStepDataWaitingimeFunc(roundToRun);
+                }
+            }
         }
 
         internal void RemoveRound(Round round)

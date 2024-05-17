@@ -45,6 +45,9 @@ namespace dkgServiceNode.Models
         [Column("max_nodes")]
         public int MaxNodes { get; set; } = 256;
 
+        [Column("timeout")]
+        public int Timeout { get; set; } = 120;
+
         [NotMapped]
         public int NodeCount { get; set; } = 0;
 
