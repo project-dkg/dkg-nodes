@@ -172,6 +172,7 @@ namespace dkgServiceNode.Controllers
             }
             
             runner.SetStepTwoWaitingTime(round);
+            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
@@ -192,6 +193,7 @@ namespace dkgServiceNode.Controllers
             }
 
             runner.SetStepThreeWaitingTime(round);
+            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
