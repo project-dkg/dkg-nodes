@@ -39,7 +39,7 @@ docker run --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NOD
 
 We provide a simple GUI to control ```dkg service node``` in a [separate project](https://github.com/maxirmx/dkg-frontend). 
 
-## Starting servoce node with front-end in a docker container
+## Starting service node with front-end in a docker container
 ```
 version: '3.4'
 
