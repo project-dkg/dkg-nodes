@@ -23,7 +23,6 @@ builder.Services.Configure<AppSecret>(configuration.GetSection("AppSecret"));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 var connectionString = configuration.GetConnectionString("DefaultConnection");
 DbEnsure.Ensure(connectionString ?? "");
 

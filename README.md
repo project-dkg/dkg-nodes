@@ -24,7 +24,7 @@ docker run --env=DKG_SERVICE_NODE_URL=<Service node URL> --env=DKG_NODE_NAME=<Na
            --env=DKG_NODE_GUID=<GUID> DKG_NODE_POLLING_INTERVAL=<Polling interval> \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           --workdir=/app --runtime=runc -d ghcr.io/maxirmx/dkg-node:0.4.3
+           -d ghcr.io/maxirmx/dkg-node:0.5.1
 ```
 __Example__
 
@@ -33,7 +33,7 @@ docker run --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NOD
            --env=DKG_NODE_GUID=ADC13255-AEDB-49F8-869E-153D8A2F0FAE \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           --workdir=/app --runtime=runc -d ghcr.io/maxirmx/dkg-node:0.4.3
+           -d ghcr.io/maxirmx/dkg-node:0.5.1
 ```
 ## Service node front end
 

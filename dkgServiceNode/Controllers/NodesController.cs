@@ -176,14 +176,14 @@ namespace dkgServiceNode.Controllers
 
             if (stReport.Data.Length != 0)
             {
-                runner.SetStepTwoData(round, node, stReport.Data);
+                runner.SetStepTwoData(round!, node, stReport.Data);
             }
-            if (runner.IsStepTwoDataReady(round))
+            if (runner.IsStepTwoDataReady(round!))
             {
-                await UpdateRoundState(round);
-                return Ok(new StatusResponse(round.Id, NStatus.RunningStepTwo, runner.GetStepTwoData(round, node)));
+                await UpdateRoundState(round!);
+                return Ok(new StatusResponse(round!.Id, NStatus.RunningStepTwo, runner.GetStepTwoData(round, node)));
             }
-            return Accepted(new StatusResponse(round.Id, stReport.Status));
+            return Accepted(new StatusResponse(round!.Id, stReport.Status));
         }
         internal async Task<ObjectResult> TrToRunningStepThreeConditional(Round? round, Node node, StatusReport stReport)
         {
@@ -197,14 +197,14 @@ namespace dkgServiceNode.Controllers
 
             if (stReport.Data.Length != 0)
             {
-                runner.SetStepThreeData(round, node, stReport.Data);
+                runner.SetStepThreeData(round!, node, stReport.Data);
             }
-            if (runner.IsStepThreeDataReady(round))
+            if (runner.IsStepThreeDataReady(round!))
             {
-                await UpdateRoundState(round);
-                return Ok(new StatusResponse(round.Id, NStatus.RunningStepThree, runner.GetStepThreeData(round, node)));
+                await UpdateRoundState(round!);
+                return Ok(new StatusResponse(round!.Id, NStatus.RunningStepThree, runner.GetStepThreeData(round, node)));
             }
-            return Accepted(new StatusResponse(round.Id, stReport.Status));
+            return Accepted(new StatusResponse(round!.Id, stReport.Status));
         }
         internal async Task<ObjectResult> WrongStatus(Round? round, Node node, StatusReport stReport)
         {

@@ -23,8 +23,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using Microsoft.Extensions.Logging;
 using Npgsql;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace dkgServiceNode.Data
 {
@@ -238,21 +238,32 @@ namespace dkgServiceNode.Data
         public static void Ensure(string connectionString)
         {
 
-            using (var connection = new NpgsqlConnection(connectionString))
+            using var connection = new NpgsqlConnection(connectionString);
+            while (true)
             {
-                connection.Open();
-                Ensure_0_1_0(connection);
-                PuVersionUpdate("0.2.0", connection);
-                PuVersionUpdate("0.2.3", connection);
-                PuVersionUpdate("0.2.4", connection);
-                EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
-                EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
-                PuVersionUpdate("0.4.1", connection);
-                PuVersionUpdate("0.4.2", connection);
-                EnsureVersion("0.4.3", sqlScript_0_4_3, connection);
-                EnsureVersion("0.5.0", sqlScript_0_5_0, connection);
-                PuVersionUpdate("0.5.1", connection);
+                try
+                {
+                    connection.Open();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to create database connection: {ex.Message}");
+                    Thread.Sleep(3000);
+                }
             }
+
+            Ensure_0_1_0(connection);
+            PuVersionUpdate("0.2.0", connection);
+            PuVersionUpdate("0.2.3", connection);
+            PuVersionUpdate("0.2.4", connection);
+            EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
+            EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
+            PuVersionUpdate("0.4.1", connection);
+            PuVersionUpdate("0.4.2", connection);
+            EnsureVersion("0.4.3", sqlScript_0_4_3, connection);
+            EnsureVersion("0.5.0", sqlScript_0_5_0, connection);
+            PuVersionUpdate("0.5.1", connection);
         }
     }
 

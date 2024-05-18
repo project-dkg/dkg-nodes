@@ -5,75 +5,22 @@ services:
     container_name: dkg_service_node
     image: ghcr.io/maxirmx/dkg-service-node:latest
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
-      - ASPNETCORE_Kestrel__Certificates__Default__Password=
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
     ports:
       - "8080:8080"
       - "8081:8081"
     volumes:
       - /etc/dkg:/etc/dkg
-#      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-#      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
     depends_on:
       - dkgservice_db
 
- dkgnode1:
-    container_name: dkg_node_1
-    image: ghcr.io/maxirmx/dkg-node:latest
-    environment:
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_NAME=First node
-      - DKG_NODE_POLLING_INTERVAL=3500
-      - DKG_NODE_GUID=f244f103-90c7-6bf1-f32d-8a8561b79aef
-    depends_on:
-      - dkgservicenode
-
-  dkgnode2:
-    container_name: dkg_node_2
-    image: ghcr.io/maxirmx/dkg-node:latest
-    environment:
-      - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
-      - DKG_NODE_NAME=Second node
-      - DKG_NODE_GUID=f2bb9203-5c9d-c7d2-71ea-157651b2dad1
-    depends_on:
-      - dkgservicenode
-
-  dkgnode3:
-    container_name: dkg_node_3
-    image: ghcr.io/maxirmx/dkg-node:latest
-    environment:
-      - DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080
-      - DKG_NODE_SERVER_NAME=Third node
-      - DKG_NODE_GUID=7ad7be03-3d00-3ba9-56fb-2f808047519c
-    depends_on:
-      - dkgservicenode
-
-  dkgnode4:
-    container_name: dkg_node_4
-    image: ghcr.io/maxirmx/dkg-node:latest
-    environment:
-      - DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080
-      - DKG_NODE_SERVER_NAME=Fourth node
-      - DKG_NODE_GUID=b4389c03-136b-1540-27c2-dc5e3b8124eb
-    depends_on:
-      - dkgservicenode
-
-  dkgnode5:
-    container_name: dkg_node_5
-    image: ghcr.io/maxirmx/dkg-node:latest
-    environment:
-      - DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080
-      - DKG_NODE_SERVER_NAME=Fifth node
-      - DKG_NODE_GUID=90981502-f478-927d-ebdf-17426a80d4f7
-    depends_on:
-      - dkgservicenode
-
   dkgservice_db:
     container_name: dkgservice_db
-    image: postgres:16
+    image: postgres:16.1
     restart: unless-stopped
     environment:
       - POSTGRES_USER=postgres
@@ -81,6 +28,18 @@ services:
       - POSTGRES_DB=dkgservice
     volumes:
       - pgdata:/var/lib/postgresql
+
+  dkgfrontend:
+    container_name: dkg_frontend
+    image: ghcr.io/maxirmx/dkg-frontend:latest
+    environment:
+      - NGINX_SSL_CERTIFICATE_PATH=/etc/nginx/certificate/s.crt
+      - NGINX_SSL_CERTIFICATE_KEY_PATH=/etc/nginx/certificate/s.key
+    ports:
+      - "8088:80"
+      - "8443:443"
+    volumes:
+      - /etc/nginx/certificate:/etc/nginx/certificate
 
 volumes:
   pgdata: {}
