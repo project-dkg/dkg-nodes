@@ -39,6 +39,9 @@ services:
       - "8088:80"
       - "8443:443"
     volumes:
+# Certificate and key for Nginx are expected at
+# /etc/nginx/certificate/s.crt
+# /etc/nginx/certificate/s.key
       - /etc/nginx/certificate:/etc/nginx/certificate
 
 volumes:
