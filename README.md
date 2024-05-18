@@ -24,7 +24,7 @@ docker run --env=DKG_SERVICE_NODE_URL=<Service node URL> --env=DKG_NODE_NAME=<Na
            --env=DKG_NODE_GUID=<GUID> DKG_NODE_POLLING_INTERVAL=<Polling interval> \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           -d ghcr.io/maxirmx/dkg-node:0.5.1
+           -d ghcr.io/maxirmx/dkg-node:0.5.2
 ```
 __Example__
 
@@ -33,11 +33,75 @@ docker run --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NOD
            --env=DKG_NODE_GUID=ADC13255-AEDB-49F8-869E-153D8A2F0FAE \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           -d ghcr.io/maxirmx/dkg-node:0.5.1
+           -d ghcr.io/maxirmx/dkg-node:0.5.2
 ```
 ## Service node front end
 
 We provide a simple GUI to control ```dkg service node``` in a [separate project](https://github.com/maxirmx/dkg-frontend). 
+
+## Starting servoce node with front-end in a docker container
+```
+version: '3.4'
+
+services:
+  dkgservicenode:
+    container_name: dkg_service_node
+    image: ghcr.io/maxirmx/dkg-service-node:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/dkg/s.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - /etc/dkg:/etc/dkg
+    depends_on:
+      - dkgservice_db
+
+  dkgservice_db:
+    container_name: dkgservice_db
+    image: postgres:16.1
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dkgservice
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+  dkgfrontend:
+    container_name: dkg_frontend
+    image: ghcr.io/maxirmx/dkg-frontend:latest
+    environment:
+      - NGINX_SSL_CERTIFICATE_PATH=/etc/nginx/certificate/s.crt
+      - NGINX_SSL_CERTIFICATE_KEY_PATH=/etc/nginx/certificate/s.key
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+# Certificate and key for Nginx are expected at
+# /etc/nginx/certificate/s.crt
+# /etc/nginx/certificate/s.key
+      - /etc/nginx/certificate:/etc/nginx/certificate
+
+volumes:
+  pgdata: {}
+
+```
+
+Note that service node setup requires two SSL certificates
+
+For Nginx (front end application)
+Certificate public and private keys are expected in fixed locations in front-end container - ```/etc/nginx/certificate/s.crt``` and ```/etc/nginx/certificate/s.key```
+
+For Kestrel (service node application)
+PKCS#12 (.pfx) file at configurable location defined by ```ASPNETCORE_Kestrel__Certificates__Default__Path``` environment variable
+Password for PKCS#12 file set at ```ASPNETCORE_Kestrel__Certificates__Default__Password``` environment variable 
+ 
+
 
 ## Project financing
 Initial development of this project was financed by [NarayanaSupramati](https://www.github.com/NarayanaSupramati)
