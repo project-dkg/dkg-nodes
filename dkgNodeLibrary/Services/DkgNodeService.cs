@@ -218,7 +218,7 @@ namespace dkgNode.Services
                             Name, PublicKeys.Length, Round);
             Status = WaitingStepTwo;
 
-            if (dieOnStep2) return;
+            if (dieOnStep2) Thread.Sleep(10000);
             statusResponse = await ReportStatus(httpClient, encodedDeals);
             if (!ShallContinue([WaitingStepTwo, RunningStepTwo], stoppingToken)) return;
 

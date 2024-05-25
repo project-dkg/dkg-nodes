@@ -25,6 +25,7 @@
 
 using dkg.group;
 using dkg.poly;
+using dkgCommon.Constants;
 using dkgServiceNode.Models;
 
 namespace dkgServiceNode.Services.RoundRunner
@@ -39,6 +40,7 @@ namespace dkgServiceNode.Services.RoundRunner
         public PriShare? SecretShare { get; set; } = null;
         public bool Failed { get; set; } = false;
         public bool Finished { get; set; } = false;
+        public bool TimedOut { get; set; } = false;
 
         private readonly ILogger Logger;
         private readonly int RoundId;
@@ -57,6 +59,7 @@ namespace dkgServiceNode.Services.RoundRunner
         {
             Finished = true;
             Failed = false;
+            TimedOut = false;
             try
             {
                 byte[] pkd = Convert.FromBase64String(data[0]);
@@ -75,8 +78,15 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public void SetNoResult()
         {
-            Finished = false;
-            Failed = true;
+             Finished = false;
+             Failed = true;
+             TimedOut = false;
+        }
+        public void SetTimedOut()
+        {
+             Finished = false;
+             Failed = false;
+             TimedOut = true;
         }
         public static bool operator ==(ActiveNode a, Node b) => a.Key == GetKey(b);
         public static bool operator !=(ActiveNode a, Node b) => a.Key != GetKey(b);
