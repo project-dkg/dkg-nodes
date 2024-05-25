@@ -103,10 +103,7 @@ namespace dkgServiceNode.Services.RoundRunner
             lock (lockObject)
             {
                 ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
-                if (roundToRun != null)
-                {
-                    roundToRun.SetNoResult(node);
-                }
+                roundToRun?.SetNoResult(node);
             }
         }
         public void SetResult(Round round, Node node, string[] data) =>

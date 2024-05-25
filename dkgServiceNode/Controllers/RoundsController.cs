@@ -87,6 +87,7 @@ namespace dkgServiceNode.Controllers
             {
                 round.NodeCount = NodeCountResult.GetCount(nodeCounts, round.Id, null) + 
                                   NodeCountResult.GetCount(nodeCountsH, round.Id, null);
+                int nodeCountWaitingRoundStart = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingRoundStart);
                 round.NodeCountStepOne = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepOne);
                 round.NodeCountWStepTwo = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingStepTwo);
                 round.NodeCountStepTwo = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepTwo);
@@ -97,6 +98,10 @@ namespace dkgServiceNode.Controllers
                                         NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Failed);
                 round.NodeCountFinished = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.Finished) +
                                           NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Finished);
+                round.NodeCountTimedOut = round.NodeCount - round.NodeCountStepOne - round.NodeCountWStepTwo -
+                                          round.NodeCountStepTwo - round.NodeCountWStepThree - round.NodeCountStepThree -
+                                          round.NodeCountStepFour - round.NodeCountFailed - round.NodeCountFinished - 
+                                          nodeCountWaitingRoundStart;
             }
 
             return rounds;
@@ -127,7 +132,9 @@ namespace dkgServiceNode.Controllers
             Round round = new()
             {
                 MaxNodes = roundSettings.MaxNodes,
-                Timeout = roundSettings.Timeout
+                Timeout2 = roundSettings.Timeout2,
+                Timeout3 = roundSettings.Timeout3,
+                TimeoutR = roundSettings.TimeoutR
             };
 
             dkgContext.Rounds.Add(round);

@@ -45,8 +45,14 @@ namespace dkgServiceNode.Models
         [Column("max_nodes")]
         public int MaxNodes { get; set; } = 256;
 
-        [Column("timeout")]
-        public int Timeout { get; set; } = 120;
+        [Column("timeout2")]
+        public int Timeout2 { get; set; } = 120;
+
+        [Column("timeout3")]
+        public int Timeout3 { get; set; } = 120;
+
+        [Column("timeoutr")]
+        public int TimeoutR { get; set; } = 120;
 
         [NotMapped]
         public int NodeCount { get; set; } = 0;
@@ -71,6 +77,9 @@ namespace dkgServiceNode.Models
 
         [NotMapped]
         public int NodeCountFailed { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountTimedOut { get; set; } = 0;
 
         [Column("result")]
         public int? Result { get; set; } = null;

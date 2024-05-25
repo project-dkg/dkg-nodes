@@ -130,7 +130,7 @@ namespace dkgCommon.Constants
             WaitingStepThree,
             RunningStepThree,
             Finished,
-            Failed
+            Failed,
         ];
         public static NodeStatus GetNodeStatusById(short id)
         {

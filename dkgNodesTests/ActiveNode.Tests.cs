@@ -92,6 +92,79 @@ namespace dkgNodesTests
             ActiveNode activeNode2 = new ActiveNode(2, node2, _mockLogger.Object);
             Assert.That(activeNode1.Equals(activeNode2), Is.False);
         }
+
+        [Test]
+        public void TestFailedIsFalseByDefault()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            Assert.That(activeNode.Failed, Is.False);
+        }
+
+        [Test]
+        public void TestSetNoResultSetsFailedToTrue()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            activeNode.SetNoResult();
+            Assert.That(activeNode.Failed, Is.True);
+        }
+
+        [Test]
+        public void TestSetResultSetsFailedToFalse()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            string[] data = { "AtDGHAvdzEBXkF9nrlWVyupD6AeTF2zHc+5EGExa13TB", "AQAAAGMygfx9vJSf4XEPUYIByz8rRU7cehXHxylasMN/1486" };
+            activeNode.SetResult(data);
+            Assert.That(activeNode.Failed, Is.False);
+        }
+
+        [Test]
+        public void TestSetTimedOutSetsFailedToFalse()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            activeNode.SetTimedOut();
+            Assert.That(activeNode.Failed, Is.False);
+        }
+
+        [Test]
+        public void TestTimedOutIsFalseByDefault()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            Assert.That(activeNode.TimedOut, Is.False);
+        }
+
+        [Test]
+        public void TestSetTimedOutSetsTimedOutToTrue()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            activeNode.SetTimedOut();
+            Assert.That(activeNode.TimedOut, Is.True);
+        }
+
+        [Test]
+        public void TestSetResultSetsTimedOutToFalse()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            string[] data = { "AtDGHAvdzEBXkF9nrlWVyupD6AeTF2zHc+5EGExa13TB", "AQAAAGMygfx9vJSf4XEPUYIByz8rRU7cehXHxylasMN/1486" };
+            activeNode.SetResult(data);
+            Assert.That(activeNode.TimedOut, Is.False);
+        }
+
+        [Test]
+        public void TestSetNoResultSetsTimedOutToFalse()
+        {
+            Node node = new Node { PublicKey = "publicKey" };
+            ActiveNode activeNode = new ActiveNode(1, node, _mockLogger.Object);
+            activeNode.SetNoResult();
+            Assert.That(activeNode.TimedOut, Is.False);
+        }
+
     }
 
 }

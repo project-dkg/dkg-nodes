@@ -152,17 +152,20 @@ namespace dkgServiceNode.Services.RoundRunner
             }
             return StepThreeData;
         }
+
         public bool IsResultReady()
         {
             bool result = true;
 
-            if (Nodes != null && 
-                ( ResultStartWaitingTime == DateTime.MinValue || DateTime.Now - ResultStartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
+            if (Nodes != null)
             {
                 int failed = Nodes.Count(node => node.Failed);
                 int finished = Nodes.Count(node => node.Finished);
+                int timedOut = Nodes.Count(node => node.TimedOut);
 
-                if (VssTools.MinimumT(Nodes.Length) > finished && finished + failed < Nodes.Length)
+                if ((ResultStartWaitingTime == DateTime.MinValue || DateTime.Now - ResultStartWaitingTime < TimeSpan.FromSeconds(Round.TimeoutR)) &&
+                    VssTools.MinimumT(Nodes.Length) > finished &&
+                    finished + failed + timedOut < Nodes.Length)
                 {
                     result = false;
                 }
@@ -172,16 +175,24 @@ namespace dkgServiceNode.Services.RoundRunner
         public bool IsStepTwoDataReady()
         {
             bool result = true;
+            bool force = ForceProcessDeals || 
+                (Step2StartWaitingTime != DateTime.MinValue && DateTime.Now - Step2StartWaitingTime >= TimeSpan.FromSeconds(Round.Timeout2));
 
-            if (!ForceProcessDeals && Nodes != null && 
-                (Step2StartWaitingTime == DateTime.MinValue || DateTime.Now - Step2StartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
+            if (Nodes != null)
             {
                 foreach (var node in Nodes)
                 {
-                    if (node.Deals == null)
+                    if (node.Deals == null && !node.Failed)
                     {
-                        result = false;
-                        break;
+                        if (!force)
+                        {
+                            result = false;
+                            break;
+                        }
+                        else
+                        {
+                            node.SetTimedOut();
+                        }
                     }
                 }
             }
@@ -190,16 +201,24 @@ namespace dkgServiceNode.Services.RoundRunner
         public bool IsStepThreeDataReady()
         {
             bool result = true;
+            bool force = ForceProcessResponses ||
+                    (Step3StartWaitingTime != DateTime.MinValue && DateTime.Now - Step3StartWaitingTime >= TimeSpan.FromSeconds(Round.Timeout3));
 
-            if (!ForceProcessResponses && Nodes != null && 
-                (Step3StartWaitingTime == DateTime.MinValue || DateTime.Now - Step3StartWaitingTime < TimeSpan.FromSeconds(Round.Timeout)))
+            if (Nodes != null)
             {
                 foreach (var node in Nodes)
                 {
-                    if (node.Responses == null)
+                    if (node.Responses == null && !node.Failed && !node.TimedOut)
                     {
-                        result = false;
-                        break;
+                        if (!force)
+                        {
+                            result = false;
+                            break;
+                        }
+                        else
+                        {
+                            node.SetTimedOut();
+                        }
                     }
                 }
             }
@@ -232,18 +251,12 @@ namespace dkgServiceNode.Services.RoundRunner
         public void SetNoResult(Node node)
         {
             ActiveNode? activeNode = FindNode(node);
-            if (activeNode is not null)
-            {
-                activeNode.SetNoResult();
-            }
+            activeNode?.SetNoResult();
         }
         public void SetResult(Node node, string[] data)
         {
             ActiveNode? activeNode = FindNode(node);
-            if (activeNode is not null)
-            {
-                activeNode.SetResult(data);
-            }
+            activeNode?.SetResult(data);
         }
         public void SetResultWaitingTime()
         {

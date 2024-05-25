@@ -32,6 +32,7 @@ using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net.NetworkInformation;
 using static dkgCommon.Constants.NodeStatusConstants;
 using static dkgServiceNode.Constants.RoundStatusConstants;
 
@@ -398,7 +399,6 @@ namespace dkgServiceNode.Controllers
                 { (RStatus.Cancelled, NStatus.Failed), TrToNotRegistered },
                 { (RStatus.Failed, NStatus.Failed), TrToNotRegistered },
                 { (RStatus.Unknown, NStatus.Failed), TrToNotRegistered },
-
             };
 
             var node = await dkgContext.FindNodeByPublicKeyAsync(statusReport.PublicKey);
