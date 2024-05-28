@@ -218,7 +218,7 @@ namespace dkgNode.Services
                             Name, PublicKeys.Length, Round);
             Status = WaitingStepTwo;
 
-            if (dieOnStep2) Thread.Sleep(10000);
+            if (dieOnStep2) Thread.Sleep(4000);
             statusResponse = await ReportStatus(httpClient, encodedDeals);
             if (!ShallContinue([WaitingStepTwo, RunningStepTwo], stoppingToken)) return;
 
@@ -237,7 +237,7 @@ namespace dkgNode.Services
                              Name, PublicKeys.Length, Round);
             Status = WaitingStepThree;
 
-            if (dieOnStep3) return;
+            if (dieOnStep2) Thread.Sleep(4000);
             statusResponse = await ReportStatus(httpClient, encodedResponses);
             if (!ShallContinue([WaitingStepThree, RunningStepThree], stoppingToken)) return;
 

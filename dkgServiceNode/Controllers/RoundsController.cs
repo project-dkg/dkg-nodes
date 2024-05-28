@@ -98,10 +98,17 @@ namespace dkgServiceNode.Controllers
                                         NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Failed);
                 round.NodeCountFinished = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.Finished) +
                                           NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Finished);
-                round.NodeCountTimedOut = round.NodeCount - round.NodeCountStepOne - round.NodeCountWStepTwo -
-                                          round.NodeCountStepTwo - round.NodeCountWStepThree - round.NodeCountStepThree -
-                                          round.NodeCountStepFour - round.NodeCountFailed - round.NodeCountFinished - 
-                                          nodeCountWaitingRoundStart;
+                round.NodeCountTimedOut = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.TimedOut) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.TimedOut);
+
+                int eaCount =             NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepOne) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.WaitingStepTwo) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepTwo) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.WaitingStepThree) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepThree) +
+                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepFour);
+                if (round.Status == RStatus.Cancelled) round.NodeCountFailed += eaCount;
+                else round.NodeCountTimedOut += eaCount;
             }
 
             return rounds;
