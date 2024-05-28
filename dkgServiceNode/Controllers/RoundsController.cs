@@ -180,6 +180,11 @@ namespace dkgServiceNode.Controllers
                         reNodes = rNodes.Skip(round.MaxNodes).ToList();
                     }
                     runner.RunRound(round, fiNodes);
+                    foreach (Node node in reNodes ?? [])
+                    {
+                        await ResetNodeState(dkgContext, node);
+                    }
+
                     break;
                 case (short)RStatus.ProcessingDeals:
                     runner.ProcessDeals(round);
@@ -201,38 +206,7 @@ namespace dkgServiceNode.Controllers
                     break;
             }
 
-            dkgContext.Entry(round).State = EntityState.Modified;
-            try
-            {
-                await dkgContext.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await dkgContext.RoundExistsAsync(id))
-                {
-                    return _404Round(id);
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            foreach (var node in reNodes)
-            {
-                node.RoundId = null;
-                node.Status = NStatus.NotRegistered;
-                dkgContext.Entry(node).State = EntityState.Modified;
-            }
-            try
-            {
-                await dkgContext.SaveChangesAsync();
-            }
-            catch 
-            {
-            }
-
-            return NoContent();
+            return await UpdateRoundState(dkgContext, round);
         }
 
         // POST: api/rounds/cancel/5
@@ -253,6 +227,12 @@ namespace dkgServiceNode.Controllers
             round.CreatedOn = round.CreatedOn.ToUniversalTime();
             round.Status = RoundStatusConstants.Cancelled;
 
+            runner.CancelRound(round);
+            return await UpdateRoundState(dkgContext, round);
+        }
+
+        internal async Task<ActionResult<Round>> UpdateRoundState(DkgContext dkgContext, Round round)
+        {
             dkgContext.Entry(round).State = EntityState.Modified;
             try
             {
@@ -260,16 +240,15 @@ namespace dkgServiceNode.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (! await dkgContext.RoundExistsAsync(id))
+                if (!await dkgContext.RoundExistsAsync(round.Id))
                 {
-                    return _404Round(id);
+                    return _404Round(round.Id);
                 }
                 else
                 {
                     throw;
                 }
             }
-            runner.CancelRound(round);
             return NoContent();
         }
     }

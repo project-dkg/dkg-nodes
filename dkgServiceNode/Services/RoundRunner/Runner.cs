@@ -41,6 +41,8 @@ namespace dkgServiceNode.Services.RoundRunner
         {
             Logger = logger;
         }
+        public bool CheckNode(Round round, Node node) => CheckNodeCondition(round, node, (roundToRun, node) => roundToRun.CheckNode(node));
+        public bool CheckTimedOutNode(Round round, Node node) => CheckNodeCondition(round, node, (roundToRun, node) => roundToRun.CheckTimedOutNode(node));
         public void StartRound(Round round)
         {
             lock (lockObject)
@@ -133,6 +135,20 @@ namespace dkgServiceNode.Services.RoundRunner
 
 
         // Private methods
+        internal bool CheckNodeCondition(Round round, Node node, Func<ActiveRound, Node, bool> condition)
+        {
+            bool res = false;
+            lock (lockObject)
+            {
+                ActiveRound? roundToRun = ActiveRounds.FirstOrDefault(r => r.Id == round.Id);
+                if (roundToRun != null)
+                {
+                    res = condition(roundToRun, node);
+                }
+            }
+            return res;
+        }
+
         internal void SetStepData(Round round, Node node, string[] data, Action<ActiveRound, Node, string[]> setDataAction)
         {
             lock (lockObject)

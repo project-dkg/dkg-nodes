@@ -30,6 +30,7 @@ using dkgCommon.Constants;
 using dkgServiceNode.Services.RoundRunner;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace dkgServiceNode.Controllers
 {
@@ -116,7 +117,7 @@ namespace dkgServiceNode.Controllers
             return _500($"Round [{id}] status is [{status}] but step one data is missing");
         }
 
-        protected ObjectResult _500UnknownStateTransition(string rState, string nState   )
+        protected ObjectResult _500UnknownStateTransition(string rState, string nState)
         {
             return _500($"Unknown state transition [rState = {rState}, nState = {nState}]");
         }
@@ -129,6 +130,39 @@ namespace dkgServiceNode.Controllers
             {
                 var uid = htc.Items["UserId"];
                 if (uid != null) curUserId = (int)uid;
+            }
+        }
+
+        protected async Task ResetNodeState(DkgContext dkgContext, Node node)
+        {
+            bool needsUpdate = false;
+            if (node.StatusValue != (short)NStatus.NotRegistered)
+            {
+                node.StatusValue = (short)NStatus.NotRegistered;
+                needsUpdate = true;
+            }
+
+            if (node.RoundId != null)
+            {
+                node.RoundId = null;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate)
+            {
+                dkgContext.Entry(node).State = EntityState.Modified;
+                await dkgContext.SaveChangesAsync();
+            }
+        }
+
+        protected async Task UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
+        {
+            if (node.StatusValue != nStatus || node.RoundId != roundId)
+            {
+                node.StatusValue = nStatus;
+                node.RoundId = roundId;
+                dkgContext.Entry(node).State = EntityState.Modified;
+                await dkgContext.SaveChangesAsync();
             }
         }
     }

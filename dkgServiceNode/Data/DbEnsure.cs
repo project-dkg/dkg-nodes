@@ -189,6 +189,22 @@ namespace dkgServiceNode.Data
 
             COMMIT;
             ";
+
+        readonly static string sqlScript_0_6_2 = @"
+            START TRANSACTION;
+
+            ALTER TABLE ""rounds"" ALTER COLUMN ""timeout2"" SET DEFAULT 30;
+            ALTER TABLE ""rounds"" ALTER COLUMN ""timeout3"" SET DEFAULT 30;
+
+            INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"")
+                SELECT 'Admin', 'admin@example.com', '$2a$11$YygO9mUKjDioWY0CPj35LeCGY4SRnVHNdT2cFdVAGTSRwSpYHhytu', TRUE, TRUE
+                WHERE NOT EXISTS(SELECT 1 FROM ""users"" WHERE ""email"" = 'admin@example.com');
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.6.2', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -279,6 +295,7 @@ namespace dkgServiceNode.Data
             PuVersionUpdate("0.5.2", connection);
             EnsureVersion("0.6.0", sqlScript_0_6_0, connection);
             PuVersionUpdate("0.6.1", connection);
+            EnsureVersion("0.6.2", sqlScript_0_6_2, connection);
         }
     }
 

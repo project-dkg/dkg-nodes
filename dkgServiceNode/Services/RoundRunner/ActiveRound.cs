@@ -66,6 +66,8 @@ namespace dkgServiceNode.Services.RoundRunner
             Step3StartWaitingTime = DateTime.MinValue;
             ResultStartWaitingTime = DateTime.MinValue;
         }
+        public bool CheckNode(Node node) => CheckNodeCondition(node, (activeNode, node) => activeNode == node);
+        public bool CheckTimedOutNode(Node node) => CheckNodeCondition(node, (activeNode, node) => activeNode == node && activeNode.TimedOut);
         public int? GetResult()
         {
             int? result = null;
@@ -294,6 +296,24 @@ namespace dkgServiceNode.Services.RoundRunner
                 Step3StartWaitingTime = DateTime.Now;
             }
         }
+
+        public bool CheckNodeCondition(Node node, Func<ActiveNode, Node, bool> condition)
+        {
+            bool res = false;
+            if (Nodes != null)
+            {
+                foreach (var activeNode in Nodes)
+                {
+                    if (condition(activeNode, node))
+                    {
+                        res = true;
+                        break;
+                    }
+                }
+            }
+            return res;
+        }
+
         private ActiveNode? FindNode(Node node)
         {
             ActiveNode? result = null;

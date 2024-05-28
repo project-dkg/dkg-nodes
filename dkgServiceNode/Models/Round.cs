@@ -46,10 +46,10 @@ namespace dkgServiceNode.Models
         public int MaxNodes { get; set; } = 256;
 
         [Column("timeout2")]
-        public int Timeout2 { get; set; } = 120;
+        public int Timeout2 { get; set; } = 30;
 
         [Column("timeout3")]
-        public int Timeout3 { get; set; } = 120;
+        public int Timeout3 { get; set; } = 30;
 
         [Column("timeoutr")]
         public int TimeoutR { get; set; } = 120;

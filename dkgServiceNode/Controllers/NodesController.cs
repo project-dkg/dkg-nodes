@@ -124,7 +124,7 @@ namespace dkgServiceNode.Controllers
         // Acknowledges that the status report has been received
         internal async Task<ObjectResult> Accept(Round? round, Node node, StatusReport stReport)
         {
-            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
+            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
             if (round != null)
             {
                 await UpdateRoundState(round);
@@ -141,7 +141,7 @@ namespace dkgServiceNode.Controllers
                 runner.SetNoResult(round, node);
             }
 
-            await ResetNodeState(node);
+            await ResetNodeState(dkgContext, node);
             var response = new StatusResponse(0, NStatus.NotRegistered);
             if (stReport.Status != NStatus.NotRegistered || stReport.RoundId != 0)
             {
@@ -150,11 +150,21 @@ namespace dkgServiceNode.Controllers
             return Accepted(response);
         }
 
-        internal async Task<ObjectResult> TrToRunningStepOne(Round? round, Node _node, StatusReport _stReport)
+        internal async Task<ObjectResult> TrToRunningStepOne(Round? round, Node node, StatusReport stReport)
         {
             if (round == null)
             {
                 return _500UndefinedRound();
+            }
+
+            if (!runner.CheckNode(round, node))
+            {
+                await ResetNodeState(dkgContext, node);
+                var response = new StatusResponse(0, NStatus.NotRegistered);
+                if (stReport.Status != NStatus.NotRegistered || stReport.RoundId != 0)
+                {
+                    return Ok(response);
+                }
             }
 
             await Task.Delay(0);
@@ -171,9 +181,19 @@ namespace dkgServiceNode.Controllers
             {
                 return _500UndefinedRound();
             }
-            
+
+            if (runner.CheckTimedOutNode(round, node))
+            {
+                await UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
+                var response = new StatusResponse(round.Id, NStatus.TimedOut);
+                if (stReport.Status != NStatus.TimedOut)
+                {
+                    return Ok(response);
+                }
+            }
+
             runner.SetStepTwoWaitingTime(round);
-            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
+            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
@@ -193,8 +213,18 @@ namespace dkgServiceNode.Controllers
                 return _500UndefinedRound();
             }
 
+            if (runner.CheckTimedOutNode(round, node))
+            {
+                await UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
+                var response = new StatusResponse(round.Id, NStatus.TimedOut);
+                if (stReport.Status != NStatus.TimedOut)
+                {
+                    return Ok(response);
+                }
+            }
+
             runner.SetStepThreeWaitingTime(round);
-            await UpdateNodeState(node, (short)stReport.Status, round?.Id);
+            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
@@ -214,7 +244,7 @@ namespace dkgServiceNode.Controllers
                 runner.SetNoResult(round, node);
             }
 
-            await ResetNodeState(node);
+            await ResetNodeState(dkgContext, node);
             string rStatus = round == null ? "null" : GetRoundStatusById(round.StatusValue).ToString();
             return _409Status(stReport.PublicKey, stReport.Name, GetNodeStatusById(stReport.Status).ToString(), rStatus);
         }
@@ -230,14 +260,14 @@ namespace dkgServiceNode.Controllers
             if (stReport.Data.Length != 0)
             {
                 runner.SetResult(round, node, stReport.Data);
-                await UpdateNodeState(node, (short)stReport.Status, round.Id);
+                await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
                 await UpdateRoundState(round);
                 return Accepted(new StatusResponse(round.Id, stReport.Status));
             }
             else
             {
                 runner.SetNoResult(round, node);
-                await UpdateNodeState(node, (short)stReport.Status, round.Id);
+                await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
                 await UpdateRoundState(round);
                 return _400NoResult(round.Id, node.Name, node.PublicKey);
             }
@@ -252,42 +282,10 @@ namespace dkgServiceNode.Controllers
             runner.SetResultWaitingTime(round);
 
             runner.SetNoResult(round, node);
-            await UpdateNodeState(node, (short)stReport.Status, round.Id);
+            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
             await UpdateRoundState(round);
 
             return Accepted(new StatusResponse(round.Id, stReport.Status));
-        }
-        internal async Task ResetNodeState(Node node)
-        {
-            bool needsUpdate = false;
-            if (node.StatusValue != (short)NStatus.NotRegistered)
-            {
-                node.StatusValue = (short)NStatus.NotRegistered;
-                needsUpdate = true;
-            }
-
-            if (node.RoundId != null)
-            {
-                node.RoundId = null;
-                needsUpdate = true;
-            }
-
-            if (needsUpdate)
-            {
-                dkgContext.Entry(node).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
-            }
-        }
-
-        internal async Task UpdateNodeState(Node node, short nStatus, int? roundId)
-        {
-            if (node.StatusValue != nStatus || node.RoundId != roundId)
-            {
-                node.StatusValue = nStatus;
-                node.RoundId = roundId;
-                dkgContext.Entry(node).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
-            }
         }
 
         // POST: api/Nodes/status
@@ -399,6 +397,18 @@ namespace dkgServiceNode.Controllers
                 { (RStatus.Cancelled, NStatus.Failed), TrToNotRegistered },
                 { (RStatus.Failed, NStatus.Failed), TrToNotRegistered },
                 { (RStatus.Unknown, NStatus.Failed), TrToNotRegistered },
+
+                { (null, NStatus.TimedOut), WrongStatus },
+                { (RStatus.NotStarted, NStatus.TimedOut), WrongStatus },
+                { (RStatus.Registration, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.CreatingDeals, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.ProcessingDeals, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.ProcessingResponses, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.Finished, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.Cancelled, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.Failed, NStatus.TimedOut), TrToNotRegistered },
+                { (RStatus.Unknown, NStatus.TimedOut), TrToNotRegistered },
+
             };
 
             var node = await dkgContext.FindNodeByPublicKeyAsync(statusReport.PublicKey);

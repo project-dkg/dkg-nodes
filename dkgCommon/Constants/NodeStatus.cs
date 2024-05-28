@@ -38,6 +38,7 @@ namespace dkgCommon.Constants
         RunningStepFour = 27,
         Finished = 30,
         Failed = 40,
+        TimedOut = 41,
         Unknown = 255
     }
     public sealed class NodeStatus
@@ -121,6 +122,12 @@ namespace dkgCommon.Constants
             Name = "Failed [no round result]",
         };
 
+        public static readonly NodeStatus TimedOut = new()
+        {
+            NodeStatusId = NStatus.TimedOut,
+            Name = "Timed out [no round result]",
+        };
+
         public static readonly NodeStatus[] NodeStatusArray = [
             NotRegistered,
             WaitingRoundStart,
@@ -131,6 +138,7 @@ namespace dkgCommon.Constants
             RunningStepThree,
             Finished,
             Failed,
+            TimedOut,
         ];
         public static NodeStatus GetNodeStatusById(short id)
         {
