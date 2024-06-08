@@ -100,15 +100,18 @@ namespace dkgServiceNode.Controllers
             if (xNode == null)
             {
                 node.RoundId = roundId;
+                node.Random = (int?)node;
                 if (roundId == null) node.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Nodes.Add(node);
                 await dkgContext.SaveChangesAsync();
+                xNode = await dkgContext.FindNodeByGuidAsync(node.Gd);
             }
             else
             {
                 xNode.Name = node.Name;
                 xNode.RoundId = roundId;
                 xNode.PublicKey = node.PublicKey;
+                xNode.Random = (int?)xNode;
                 if (roundId == null) xNode.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Entry(xNode).State = EntityState.Modified;
                 await dkgContext.SaveChangesAsync();

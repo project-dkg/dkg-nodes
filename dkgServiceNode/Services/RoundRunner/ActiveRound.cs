@@ -166,7 +166,7 @@ namespace dkgServiceNode.Services.RoundRunner
                 int timedOut = Nodes.Count(node => node.TimedOut);
 
                 if ((ResultStartWaitingTime == DateTime.MinValue || DateTime.Now - ResultStartWaitingTime < TimeSpan.FromSeconds(Round.TimeoutR)) &&
-                    VssTools.MinimumT(Nodes.Length) > finished &&
+                    VssTools.MinimumT(Nodes.Length) >= finished &&
                     finished + failed + timedOut < Nodes.Length)
                 {
                     result = false;

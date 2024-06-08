@@ -155,6 +155,36 @@ namespace dkgServiceNode.Controllers
             }
         }
 
+        protected async Task ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
+        {
+            bool needsUpdate = false;
+
+            foreach (var node in nodes)
+            {
+                if (node.StatusValue != (short)NStatus.NotRegistered)
+                {
+                    node.StatusValue = (short)NStatus.NotRegistered;
+                    needsUpdate = true;
+                }
+
+                if (node.RoundId != null)
+                {
+                    node.RoundId = null;
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate)
+                {
+                    dkgContext.Entry(node).State = EntityState.Modified;
+                }
+            }
+
+            if (needsUpdate)
+            {
+                await dkgContext.SaveChangesAsync();
+            }
+        }
+
         protected async Task UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
         {
             if (node.StatusValue != nStatus || node.RoundId != roundId)
