@@ -56,6 +56,12 @@ namespace dkgServiceNode.Models
         [JsonPropertyName("GUID")]
         public Guid Gd { get; set; }
 
+        [Column("random")]
+        public int? Random { get; set; }
+
+        [NotMapped]
+        public int? PrevRandom { get; set; }
+
         [ForeignKey("RoundId")]
         public Round? Round{ get; set; }
 

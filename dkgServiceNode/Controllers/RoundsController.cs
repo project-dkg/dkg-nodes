@@ -33,6 +33,7 @@ using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace dkgServiceNode.Controllers
 {
@@ -171,29 +172,13 @@ namespace dkgServiceNode.Controllers
             round.CreatedOn = round.CreatedOn.ToUniversalTime();
             round.Status = round.NextStatus;
 
-            var rNodes = await dkgContext.Nodes.Where(n => n.RoundId == round.Id).ToListAsync();
-            List<Node> fiNodes = rNodes;
-            List<Node> reNodes = [];
-
             switch (round.StatusValue)
             {
                 case (short)RStatus.Registration:
                     runner.StartRound(round);
                     break;
                 case (short)RStatus.CreatingDeals:
-                    if (round.MaxNodes < rNodes.Count)
-                    {
-                        int lastRR = await dkgContext.LastRoundResult() ?? new Random().Next();
-                        rNodes.Sort(new NodeComparer(lastRR));
-                        fiNodes = rNodes.Take(round.MaxNodes).ToList();
-                        reNodes = rNodes.Skip(round.MaxNodes).ToList();
-                    }
-                    runner.RunRound(round, fiNodes);
-                    foreach (Node node in reNodes)
-                    {
-                        await ResetNodeState(dkgContext, node);
-                    }
-
+                    await TryRunRound(round);
                     break;
                 case (short)RStatus.ProcessingDeals:
                     runner.ProcessDeals(round);
@@ -240,6 +225,49 @@ namespace dkgServiceNode.Controllers
             return await UpdateRoundState(dkgContext, round);
         }
 
+        internal List<Node> GetNodesWithRandomForRound(List<Node> nodes, int roundId)
+        {
+            return nodes
+                .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == roundId && nrh.NodeRandom != null))
+                .ToList();
+        }
+
+        internal async Task TryRunRound(Round round)
+        {
+            List<Node> rNodes = await dkgContext.Nodes
+                .Include(n => n.NodesRoundHistory)
+                .Where(n => n.RoundId == round.Id || n.RoundId == round.Id - 1)
+                .ToListAsync();
+
+            List<Node> fiNodes = rNodes
+                .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == round.Id - 1 && nrh.NodeRandom != null))
+                .ToList();
+
+            if (fiNodes.Count < 3)
+            {
+                await ResetNodeStates(dkgContext, rNodes);
+                round.Result = null;
+                round.StatusValue = (short)RStatus.Failed;
+            }
+            else
+            {
+                List<Node> reNodes = rNodes.Except(fiNodes).ToList();
+                await ResetNodeStates(dkgContext, reNodes);
+
+                List<Node> fi2Nodes = fiNodes;
+                reNodes = [];
+                    
+                if (round.MaxNodes < fiNodes.Count)
+                {
+                    int lastRR = await dkgContext.LastRoundResult() ?? new Random().Next();
+                    fiNodes.Sort(new NodeComparer(lastRR, round.Id - 1));
+                    fi2Nodes = fiNodes.Take(round.MaxNodes).ToList();
+                    reNodes = fiNodes.Skip(round.MaxNodes).ToList();
+                }
+                runner.RunRound(round, fi2Nodes);
+                await ResetNodeStates(dkgContext, reNodes);
+            }
+        }
         internal async Task<ActionResult<Round>> UpdateRoundState(DkgContext dkgContext, Round round)
         {
             dkgContext.Entry(round).State = EntityState.Modified;

@@ -30,14 +30,23 @@ namespace dkgServiceNode.Services.NodeComparer
     public class NodeComparer : IComparer<Node>
     {
         private readonly int ZPoint;
-        public NodeComparer(int zPoint)
+        private readonly int RoundId;
+
+        public NodeComparer(int zPoint, int roundId)
         {
             ZPoint = zPoint;
+            RoundId = roundId;
+        }
+
+        private int? GetInt(Node? x)
+        {
+            var nodeRoundHistory = x?.NodesRoundHistory.FirstOrDefault(nrh => nrh.RoundId == RoundId);
+            return nodeRoundHistory?.NodeRandom;
         }
         public int Compare(Node? x, Node? y)
         {
-            int? a = x ?? null;
-            int? b = y ?? null;
+            int? a = GetInt(x);
+            int? b = GetInt(y);
 
             if (a == null)
             {

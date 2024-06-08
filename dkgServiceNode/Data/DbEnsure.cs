@@ -187,6 +187,7 @@ namespace dkgServiceNode.Data
             START TRANSACTION;
 
             ALTER TABLE ""nodes_round_history"" ADD COLUMN ""node_random"" INTEGER;
+            ALTER TABLE ""nodes"" ADD COLUMN ""random"" INTEGER;
 
             CREATE INDEX ""idx_nodes_round_history_node_id"" ON ""nodes_round_history"" (""node_id"");
             
@@ -201,8 +202,8 @@ namespace dkgServiceNode.Data
                         WHERE node_id = OLD.id AND round_id = OLD.round_id;
                     ELSE
                         -- Insert a new record
-                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status)
-                        VALUES (OLD.round_id, OLD.id, OLD.status);
+                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status, node_random)
+                        VALUES (OLD.round_id, OLD.id, OLD.status, OLD.random);
                     END IF;
                 END IF;
                 RETURN NEW;
