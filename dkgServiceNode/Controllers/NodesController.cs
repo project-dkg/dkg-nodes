@@ -103,6 +103,7 @@ namespace dkgServiceNode.Controllers
                 if (roundId == null) node.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Nodes.Add(node);
                 await dkgContext.SaveChangesAsync();
+                xNode = await dkgContext.FindNodeByGuidAsync(node.Gd);
             }
             else
             {
@@ -112,6 +113,23 @@ namespace dkgServiceNode.Controllers
                 if (roundId == null) xNode.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Entry(xNode).State = EntityState.Modified;
                 await dkgContext.SaveChangesAsync();
+            }
+
+            if (roundId != null & xNode != null)
+            {
+                var nhr = await dkgContext.FindNodeRoundHistoryAsync(node.Id, (int)roundId!);
+                if (nhr == null)
+                {
+                    nhr = new NodesRoundHistory
+                    {
+                        NodeId = xNode!.Id,
+                        RoundId = (int)roundId,
+                        NodeFinalStatusValue = xNode.StatusValue,
+                        NodeRandom = (int?)xNode
+                    };
+                    dkgContext.NodesRoundHistory.Add(nhr);
+                    await dkgContext.SaveChangesAsync();
+                }
             }
 
             roundId ??= 0;

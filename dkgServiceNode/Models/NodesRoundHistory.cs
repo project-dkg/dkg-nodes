@@ -40,23 +40,24 @@ namespace dkgServiceNode.Models
 
         [Required]
         [Column("round_id")]
-        public required int RoundId { get; set; }
+        public int RoundId { get; set; }
 
-        [Required]
         [ForeignKey("RoundId")]
-        public required Round Round { get; set; }
+        public Round Round { get; set; }
 
         [Required]
         [Column("node_id")]
-        public required int NodeId { get; set; }
+        public int NodeId { get; set; }
 
-        [Required]
         [ForeignKey("NodeId")]
-        public required Node Node { get; set; }
+        public Node Node { get; set; }
 
         [Required]
         [Column("node_final_status")]
-        public required short NodeFinalStatusValue { get; set; } = 0;
+        public short NodeFinalStatusValue { get; set; } = 0;
+
+        [Column("node_random")]
+        public int? NodeRandom { get; set; }
 
         [NotMapped]
         public NodeStatus NodeFinalStatus

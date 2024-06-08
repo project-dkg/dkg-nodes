@@ -30,6 +30,7 @@ namespace dkgNode
                 if (Service.GetStatus() == RunningStepOne)
                 {
                     await Service.RunDkg(httpClient, statusResponse.Data, stoppingToken);
+                    Service.UpdateKeys();
                 }
                 else
                 {

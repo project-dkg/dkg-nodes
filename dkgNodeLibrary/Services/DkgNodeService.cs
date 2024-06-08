@@ -64,8 +64,8 @@ namespace dkgNode.Services
 
         // ...
         internal Secp256k1Group G { get; }
-        internal IScalar PrivateKey { get; }  // Приватный ключ этого узла  
-        internal IPoint PublicKey { get; }    // Публичный ключ этого узла
+        internal IScalar PrivateKey { get; set; }  // Приватный ключ этого узла  
+        internal IPoint PublicKey { get; set; }    // Публичный ключ этого узла
 
         // Пороговое значение для верификации ключа, то есть сколько нужно валидных commitment'ов
         // Алгоритм Шамира допускает минимальное значение = N/2+1, где N - количество участников
@@ -103,12 +103,16 @@ namespace dkgNode.Services
             logger.LogInformation("'{Name}': creating", Name);
 
             G = new Secp256k1Group();
-            PrivateKey = G.Scalar();
-            PublicKey = G.Base().Mul(PrivateKey);
 
-            Config.EncodePublicKey(PublicKey.GetBytes());
+            UpdateKeys();
         }
 
+        public void UpdateKeys()
+        {
+            PrivateKey = G.Scalar();
+            PublicKey = G.Base().Mul(PrivateKey);
+            Config.EncodePublicKey(PublicKey.GetBytes());
+        }
         public async Task Register(HttpClient httpClient)
         {
             int? roundId = null;

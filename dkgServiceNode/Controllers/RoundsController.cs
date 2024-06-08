@@ -85,8 +85,10 @@ namespace dkgServiceNode.Controllers
 
             foreach (var round in rounds)
             {
-                round.NodeCount = NodeCountResult.GetCount(nodeCounts, round.Id, null) + 
-                                  NodeCountResult.GetCount(nodeCountsH, round.Id, null);
+                round.NodeCount = NodeCountResult.GetCount(nodeCounts, round.Id, null)  + 
+                                  NodeCountResult.GetCount(nodeCountsH, round.Id, null) -
+                                  NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.NotRegistered);
+
                 int nodeCountWaitingRoundStart = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingRoundStart);
                 round.NodeCountStepOne = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepOne);
                 round.NodeCountWStepTwo = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingStepTwo);

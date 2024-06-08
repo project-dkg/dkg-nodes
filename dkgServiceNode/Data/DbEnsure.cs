@@ -23,7 +23,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace dkgServiceNode.Data
@@ -96,7 +95,7 @@ namespace dkgServiceNode.Data
                 COMMIT;
                 ";
 
-        readonly static string sqlScript_0_4_0 = @"
+        readonly static string sqlScript_0_4_3 = @"
             START TRANSACTION;
 
             CREATE EXTENSION IF NOT EXISTS ""uuid-ossp"";
@@ -151,17 +150,6 @@ namespace dkgServiceNode.Data
 
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.4.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_4_3 = @"
-            START TRANSACTION;
-
-            DROP INDEX IF EXISTS ""idx_nodes_public_key"";
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
             ('0.4.3', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
             COMMIT;
@@ -177,24 +165,13 @@ namespace dkgServiceNode.Data
 
             COMMIT;
             ";
-        readonly static string sqlScript_0_6_0 = @"
-            START TRANSACTION;
-
-            ALTER TABLE ""rounds"" RENAME COLUMN ""timeout"" TO ""timeout2"";
-            ALTER TABLE ""rounds"" ADD COLUMN ""timeout3"" INT NOT NULL DEFAULT 120;
-            ALTER TABLE ""rounds"" ADD COLUMN ""timeoutr"" INT NOT NULL DEFAULT 120;
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.6.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
         readonly static string sqlScript_0_6_2 = @"
             START TRANSACTION;
 
+            ALTER TABLE ""rounds"" RENAME COLUMN ""timeout"" TO ""timeout2"";
             ALTER TABLE ""rounds"" ALTER COLUMN ""timeout2"" SET DEFAULT 30;
-            ALTER TABLE ""rounds"" ALTER COLUMN ""timeout3"" SET DEFAULT 30;
+            ALTER TABLE ""rounds"" ADD COLUMN ""timeout3"" INT NOT NULL DEFAULT 30;
+            ALTER TABLE ""rounds"" ADD COLUMN ""timeoutr"" INT NOT NULL DEFAULT 120;
 
             INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"")
                 SELECT 'Admin', 'admin@example.com', '$2a$11$YygO9mUKjDioWY0CPj35LeCGY4SRnVHNdT2cFdVAGTSRwSpYHhytu', TRUE, TRUE
@@ -205,6 +182,39 @@ namespace dkgServiceNode.Data
 
             COMMIT;
             ";
+
+        readonly static string sqlScript_0_7_0 = @"
+            START TRANSACTION;
+
+            ALTER TABLE ""nodes_round_history"" ADD COLUMN ""node_random"" INTEGER;
+
+            CREATE INDEX ""idx_nodes_round_history_node_id"" ON ""nodes_round_history"" (""node_id"");
+            
+            CREATE OR REPLACE FUNCTION update_nodes_round_history() RETURNS TRIGGER AS $$
+              BEGIN
+                IF OLD.round_id IS NOT NULL AND NEW.round_id IS NULL THEN
+                    -- Check if a record already exists in nodes_round_history
+                    IF EXISTS (SELECT 1 FROM nodes_round_history WHERE node_id = OLD.id AND round_id = OLD.round_id) THEN
+                        -- Update the existing record
+                        UPDATE nodes_round_history 
+                        SET node_final_status = OLD.status
+                        WHERE node_id = OLD.id AND round_id = OLD.round_id;
+                    ELSE
+                        -- Insert a new record
+                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status)
+                        VALUES (OLD.round_id, OLD.id, OLD.status);
+                    END IF;
+                END IF;
+                RETURN NEW;
+              END;
+            $$ LANGUAGE plpgsql;
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.7.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
+
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -282,21 +292,11 @@ namespace dkgServiceNode.Data
             }
 
             Ensure_0_1_0(connection);
-            PuVersionUpdate("0.2.0", connection);
-            PuVersionUpdate("0.2.3", connection);
-            PuVersionUpdate("0.2.4", connection);
             EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
-            EnsureVersion("0.4.0", sqlScript_0_4_0, connection);
-            PuVersionUpdate("0.4.1", connection);
-            PuVersionUpdate("0.4.2", connection);
             EnsureVersion("0.4.3", sqlScript_0_4_3, connection);
             EnsureVersion("0.5.0", sqlScript_0_5_0, connection);
-            PuVersionUpdate("0.5.1", connection);
-            PuVersionUpdate("0.5.2", connection);
-            EnsureVersion("0.6.0", sqlScript_0_6_0, connection);
-            PuVersionUpdate("0.6.1", connection);
             EnsureVersion("0.6.2", sqlScript_0_6_2, connection);
-            PuVersionUpdate("0.6.3", connection);
+            EnsureVersion("0.7.0", sqlScript_0_7_0, connection);
         }
     }
 

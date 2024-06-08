@@ -82,6 +82,12 @@ namespace dkgServiceNode.Models
                 try
                 {
                     byte[] decodedBytes = Convert.FromBase64String(node.PublicKey);
+                    decodedBytes[0] = 0;
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        Array.Resize(ref decodedBytes, 4);
+                        decodedBytes = decodedBytes.Reverse().ToArray();
+                    }
                     node.IntValue = BitConverter.ToInt32(decodedBytes, 0);
                 }
                 catch
