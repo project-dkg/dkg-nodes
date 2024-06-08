@@ -187,7 +187,7 @@ namespace dkgServiceNode.Controllers
                         reNodes = rNodes.Skip(round.MaxNodes).ToList();
                     }
                     runner.RunRound(round, fiNodes);
-                    foreach (Node node in reNodes ?? [])
+                    foreach (Node node in reNodes)
                     {
                         await ResetNodeState(dkgContext, node);
                     }
