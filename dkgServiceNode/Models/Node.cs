@@ -24,10 +24,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using dkgCommon.Constants;
-using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Serialization;
 
 namespace dkgServiceNode.Models
@@ -75,32 +73,27 @@ namespace dkgServiceNode.Models
         [JsonIgnore]
         public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
 
-        [NotMapped]
-        [JsonIgnore]
-        internal int? IntValue { get; set; } = null;
-
         public override string ToString() => Name;
 
-        public static implicit operator int?(Node? node)
+        public void CalculateRandom()
         {
-            if (node != null && node.IntValue == null && node.PublicKey.Length != 0)
+            int? IntValue = null;
+            try
             {
-                try
+                byte[] decodedBytes = Convert.FromBase64String(PublicKey);
+                decodedBytes[0] = 0;
+                if (BitConverter.IsLittleEndian)
                 {
-                    byte[] decodedBytes = Convert.FromBase64String(node.PublicKey);
-                    decodedBytes[0] = 0;
-                    if (BitConverter.IsLittleEndian)
-                    {
-                        Array.Resize(ref decodedBytes, 4);
-                        decodedBytes = decodedBytes.Reverse().ToArray();
-                    }
-                    node.IntValue = BitConverter.ToInt32(decodedBytes, 0);
+                    Array.Resize(ref decodedBytes, 4);
+                    decodedBytes = decodedBytes.Reverse().ToArray();
                 }
-                catch
-                {
-                }
+                IntValue = BitConverter.ToInt32(decodedBytes, 0);
             }
-            return node?.IntValue;
+            catch 
+            {
+
+            }
+            Random = IntValue;
         }
     }
 }
