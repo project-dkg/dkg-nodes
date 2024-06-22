@@ -100,7 +100,7 @@ namespace dkgServiceNode.Controllers
             if (xNode == null)
             {
                 node.RoundId = roundId;
-                node.Random = (int?)node;
+                node.CalculateRandom();
                 if (roundId == null) node.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Nodes.Add(node);
                 await dkgContext.SaveChangesAsync();
@@ -111,7 +111,7 @@ namespace dkgServiceNode.Controllers
                 xNode.Name = node.Name;
                 xNode.RoundId = roundId;
                 xNode.PublicKey = node.PublicKey;
-                xNode.Random = (int?)xNode;
+                xNode.CalculateRandom();
                 if (roundId == null) xNode.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Entry(xNode).State = EntityState.Modified;
                 await dkgContext.SaveChangesAsync();
