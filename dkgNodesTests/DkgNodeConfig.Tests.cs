@@ -34,13 +34,13 @@ namespace dkgNodesTests
         [Test]
         public void TestNameReturnsNiceNameIfSet()
         {
-            DkgNodeConfig config = new DkgNodeConfig { NiceName = "Test Node" };
+            DkgNodeConfig config = new() { NiceName = "Test Node" };
             Assert.That(config.Name, Is.EqualTo("Test Node"));
         }
         [Test]
         public void TestDefaultConstructorSetsDefaultValues()
         {
-            DkgNodeConfig config = new DkgNodeConfig();
+            DkgNodeConfig config = new();
             Assert.Multiple(() =>
             {
                 Assert.That(config.NiceName, Is.Null);
@@ -50,16 +50,16 @@ namespace dkgNodesTests
         }
 
         [Test]
-        public void TestNameReturnsGuidIfNiceNameNotSet()
+        public void TestNameReturnsAddressIfNiceNameNotSet()
         {
-            DkgNodeConfig config = new DkgNodeConfig();
-            Assert.That(config.Name, Is.EqualTo(config.Gd.ToString()));
+            DkgNodeConfig config = new();
+            Assert.That(config.Name, Is.EqualTo(config.Address));
         }
 
         [Test]
         public void TestGetPublicKeyReturnsPublicKey()
         {
-            DkgNodeConfig config = new DkgNodeConfig();
+            DkgNodeConfig config = new();
             byte[] publicKey = Encoding.ASCII.GetBytes("1234567890123456"); // 16 bytes
             config.EncodePublicKey(publicKey);
             Assert.That(config.GetPublicKey(), Is.EqualTo(Convert.ToBase64String(publicKey)));
@@ -68,7 +68,7 @@ namespace dkgNodesTests
         [Test]
         public void TestCopyConstructorCopiesValues()
         {
-            DkgNodeConfig original = new DkgNodeConfig
+            DkgNodeConfig original = new()
             {
                 NiceName = "Test Node",
                 PublicKey = "publicKey",
@@ -76,7 +76,7 @@ namespace dkgNodesTests
                 PollingInterval = 5000
             };
 
-            DkgNodeConfig copy = new DkgNodeConfig(original);
+            DkgNodeConfig copy = new(original);
 
             Assert.Multiple(() =>
             {
@@ -84,29 +84,19 @@ namespace dkgNodesTests
                 Assert.That(copy.PublicKey, Is.EqualTo(original.PublicKey));
                 Assert.That(copy.ServiceNodeUrl, Is.EqualTo(original.ServiceNodeUrl));
                 Assert.That(copy.PollingInterval, Is.EqualTo(original.PollingInterval));
-                Assert.That(copy.Gd, Is.EqualTo(original.Gd));
+                Assert.That(copy.Address, Is.EqualTo(original.Address));
             });
         }
 
         [Test]
         public void TestDefaultValues()
         {
-            DkgNodeConfig config = new DkgNodeConfig();
+            DkgNodeConfig config = new();
             Assert.Multiple(() =>
             {
                 Assert.That(config.PollingInterval, Is.EqualTo(3000));
                 Assert.That(config.ServiceNodeUrl, Is.EqualTo("https://localhost:8081"));
             });
         }
-
-
-        [Test]
-        public void TestGuidIsUniqueForDifferentInstances()
-        {
-            DkgNodeConfig config1 = new DkgNodeConfig();
-            DkgNodeConfig config2 = new DkgNodeConfig();
-            Assert.That(config1.Gd, Is.Not.EqualTo(config2.Gd));
-        }
-
     }
 }

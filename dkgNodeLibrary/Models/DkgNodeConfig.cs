@@ -23,6 +23,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using Microsoft.Extensions.Logging;
+using Solnet.Wallet.Bip39;
+using Solnet.Wallet;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
@@ -41,8 +44,7 @@ namespace dkgNode.Models
         [JsonIgnore]
         public string ServiceNodeUrl { get; set; }
 
-        [JsonPropertyName("GUID")]
-        public Guid Gd { get; set; }
+        public string Address { get; set; }
 
         [JsonPropertyName("PublicKey")]
         public string? SerializedPublicKey
@@ -61,13 +63,13 @@ namespace dkgNode.Models
         [JsonPropertyName("Name")]
         public string Name
         {
-            get { return NiceName ?? Gd.ToString(); }
+            get { return NiceName ?? Address; }
         }
         public DkgNodeConfig()
         {
             NiceName = null;
             PublicKey = null;
-            Gd = Guid.NewGuid();
+            Address = string.Empty;
             PollingInterval = 3000;
             ServiceNodeUrl = "https://localhost:8081";
         }
@@ -75,10 +77,23 @@ namespace dkgNode.Models
         {
             NiceName = other.NiceName;
             PublicKey = other.PublicKey;
-            Gd = other.Gd;
+            Address = other.Address;
             PollingInterval = other.PollingInterval;
             ServiceNodeUrl = other.ServiceNodeUrl;
         }
+
+        public static (string, string) GenerateNewAddress()
+        {
+            var mnemonic = new Mnemonic(WordList.English, WordCount.Twelve);
+            var wallet = new Wallet(mnemonic);
+            Account account = wallet.Account;
+
+            // The public key of the account is the Solana address
+            string solanaAddress = account.PublicKey.Key;
+
+            return (solanaAddress, mnemonic.ToString());
+        }
+
     }
 }
 

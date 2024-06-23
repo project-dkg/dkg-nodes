@@ -29,7 +29,7 @@ namespace dkgServiceNode.Data
 {
     public static class DbEnsure
     {
-        readonly static string sqlScript_0_1_0 = @"
+        readonly static string sqlScript_0_8_0 = @"
             START TRANSACTION;
 
             DROP TABLE IF EXISTS ""users"";
@@ -47,150 +47,50 @@ namespace dkgServiceNode.Data
 
             INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
             ('maxirmx', 'maxirmx@sw.consulting', '$2a$11$s27FRc4jeV9F44dUCsA4hOx6JTtrdSVq1rYLmesa3anbaa937lrfW', TRUE, TRUE);
-
-            DROP INDEX IF EXISTS ""idx_nodes_host_port"";
-            DROP TABLE IF EXISTS ""nodes"";
+            INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"") VALUES
+            ('Admin', 'admin@example.com', '$2a$11$YygO9mUKjDioWY0CPj35LeCGY4SRnVHNdT2cFdVAGTSRwSpYHhytu', TRUE, TRUE);
 
             DROP TABLE IF EXISTS ""rounds"";
 
             CREATE TABLE ""rounds"" (
               ""id""              SERIAL PRIMARY KEY,
               ""status""          SMALLINT NOT NULL DEFAULT 0,
-              ""node_count""      INT NOT NULL DEFAULT 0,
               ""result""          INT,
+              ""max_nodes""       INT NOT NULL DEFAULT 256,
+              ""timeout2""        INT NOT NULL DEFAULT 30,
+              ""timeout3""        INT NOT NULL DEFAULT 30,
+              ""timeoutr""        INT NOT NULL DEFAULT 120,
               ""created""         TIMESTAMP NOT NULL DEFAULT now(),
               ""modified""        TIMESTAMP NOT NULL DEFAULT now()
             );
 
+            DROP TABLE IF EXISTS ""nodes"";
+
             CREATE TABLE ""nodes"" (
               ""id""              SERIAL PRIMARY KEY,
-              ""host""            VARCHAR(64) NOT NULL DEFAULT 'localhost',
-              ""port""            INT NOT NULL DEFAULT 0,
+              ""address""         VARCHAR(128) NOT NULL, 
               ""name""            VARCHAR(64) NOT NULL DEFAULT '--',
               ""public_key""      VARCHAR(128) NOT NULL DEFAULT '',
+              ""status""          SMALLINT NOT NULL DEFAULT 0,
+              ""random""          INTEGER,
               ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
             );
 
-            CREATE INDEX ""idx_nodes_host_port"" ON ""nodes"" (""host"", ""port"");
+            CREATE UNIQUE INDEX ""idx_nodes_address"" ON ""nodes"" (""address"");
 
-            DROP TABLE IF EXISTS ""versions"";
-
-            CREATE TABLE ""versions"" (
-              ""id""      SERIAL PRIMARY KEY,
-              ""version"" VARCHAR(16) NOT NULL,
-              ""date""    DATE NOT NULL DEFAULT now()
-            );
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.1.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_3_0 = @"
-                START TRANSACTION;
-                ALTER TABLE ""nodes"" ADD COLUMN ""status"" SMALLINT NOT NULL DEFAULT 0;
-                INSERT INTO ""versions"" (""version"", ""date"") VALUES
-                ('0.3.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-                COMMIT;
-                ";
-
-        readonly static string sqlScript_0_4_3 = @"
-            START TRANSACTION;
-
-            CREATE EXTENSION IF NOT EXISTS ""uuid-ossp"";
-
-            DROP INDEX IF EXISTS ""idx_nodes_host_port"";
-            DROP INDEX IF EXISTS ""idx_nodes_public_key"";
-
-            ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""host"";
-            ALTER TABLE ""nodes"" DROP COLUMN IF EXISTS ""port"";
-
-            ALTER TABLE ""nodes"" ADD COLUMN ""guid"" UUID;
-            UPDATE ""nodes"" SET ""guid"" = uuid_generate_v4();
-            ALTER TABLE ""nodes"" ALTER COLUMN ""guid"" SET NOT NULL;
-
-            CREATE UNIQUE INDEX ""idx_nodes_guid"" ON ""nodes"" (""guid"");           
+            DROP TABLE IF EXISTS ""nodes_round_history"";
 
             CREATE TABLE ""nodes_round_history"" (
               ""id""                 SERIAL PRIMARY KEY,
               ""round_id""           INTEGER NOT NULL REFERENCES ""rounds"" (""id"") ON DELETE CASCADE,
               ""node_id""            INTEGER NOT NULL REFERENCES ""nodes"" (""id"") ON DELETE CASCADE,
-              ""node_final_status""  SMALLINT NOT NULL DEFAULT 0
+              ""node_final_status""  SMALLINT NOT NULL DEFAULT 0,
+              ""node_random""        INTEGER
             );
 
             CREATE INDEX ""idx_nodes_round_history_round_id"" ON ""nodes_round_history"" (""round_id"");
-
-            ALTER TABLE ""rounds"" DROP COLUMN ""node_count"";
-            ALTER TABLE ""rounds"" ADD COLUMN ""max_nodes"" INT NOT NULL DEFAULT 256;
-
-            CREATE OR REPLACE FUNCTION update_nodes_round_history() RETURNS TRIGGER AS $$
-            BEGIN
-                IF OLD.round_id IS NOT NULL AND NEW.round_id IS NULL THEN
-                    -- Check if a record already exists in nodes_round_history
-                    IF EXISTS (SELECT 1 FROM nodes_round_history WHERE node_id = OLD.id AND round_id = OLD.round_id) THEN
-                        -- Update the existing record
-                        UPDATE nodes_round_history 
-                        SET node_final_status = OLD.status
-                        WHERE node_id = OLD.id AND round_id = OLD.round_id;
-                    ELSE
-                        -- Insert a new record
-                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status)
-                        VALUES (OLD.round_id, OLD.id, OLD.status);
-                    END IF;
-                END IF;
-                RETURN NEW;
-             END;
-             $$ LANGUAGE plpgsql;
-
-             CREATE TRIGGER nodes_before_update_trigger
-             BEFORE UPDATE ON nodes
-             FOR EACH ROW
-             EXECUTE PROCEDURE update_nodes_round_history();
-
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.4.3', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_5_0 = @"
-            START TRANSACTION;
-
-            ALTER TABLE ""rounds"" ADD COLUMN ""timeout"" INT NOT NULL DEFAULT 120;
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.5.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-        readonly static string sqlScript_0_6_2 = @"
-            START TRANSACTION;
-
-            ALTER TABLE ""rounds"" RENAME COLUMN ""timeout"" TO ""timeout2"";
-            ALTER TABLE ""rounds"" ALTER COLUMN ""timeout2"" SET DEFAULT 30;
-            ALTER TABLE ""rounds"" ADD COLUMN ""timeout3"" INT NOT NULL DEFAULT 30;
-            ALTER TABLE ""rounds"" ADD COLUMN ""timeoutr"" INT NOT NULL DEFAULT 120;
-
-            INSERT INTO ""users"" (""name"", ""email"", ""password"", ""is_enabled"", ""is_admin"")
-                SELECT 'Admin', 'admin@example.com', '$2a$11$YygO9mUKjDioWY0CPj35LeCGY4SRnVHNdT2cFdVAGTSRwSpYHhytu', TRUE, TRUE
-                WHERE NOT EXISTS(SELECT 1 FROM ""users"" WHERE ""email"" = 'admin@example.com');
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.6.2', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_7_0 = @"
-            START TRANSACTION;
-
-            ALTER TABLE ""nodes_round_history"" ADD COLUMN ""node_random"" INTEGER;
-            ALTER TABLE ""nodes"" ADD COLUMN ""random"" INTEGER;
-
             CREATE INDEX ""idx_nodes_round_history_node_id"" ON ""nodes_round_history"" (""node_id"");
-            
+
             CREATE OR REPLACE FUNCTION update_nodes_round_history() RETURNS TRIGGER AS $$
               BEGIN
                 IF OLD.round_id IS NOT NULL AND NEW.round_id IS NULL THEN
@@ -210,8 +110,21 @@ namespace dkgServiceNode.Data
               END;
             $$ LANGUAGE plpgsql;
 
+             CREATE TRIGGER nodes_before_update_trigger
+             BEFORE UPDATE ON nodes
+             FOR EACH ROW
+             EXECUTE PROCEDURE update_nodes_round_history();
+
+            DROP TABLE IF EXISTS ""versions"";
+
+            CREATE TABLE ""versions"" (
+              ""id""      SERIAL PRIMARY KEY,
+              ""version"" VARCHAR(16) NOT NULL,
+              ""date""    DATE NOT NULL DEFAULT now()
+            );
+
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.7.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            ('0.8.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
             COMMIT;
             ";
@@ -237,7 +150,7 @@ namespace dkgServiceNode.Data
             return (rows != null && (long)rows != 0);
         }
 
-        public static void Ensure_0_1_0(NpgsqlConnection connection)
+        public static void Ensure_0_8_0(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
@@ -246,14 +159,14 @@ namespace dkgServiceNode.Data
 
             if (rows != null && (long)rows != 0)
             {
-                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.1.0';";
+                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.8.0';";
                 command = new NpgsqlCommand(sql, connection);
                 rows = command.ExecuteScalar();
             }
 
             if (rows == null || (long)rows == 0)
             {
-                var scriptCommand = new NpgsqlCommand(sqlScript_0_1_0, connection);
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_8_0, connection);
                 int r = scriptCommand.ExecuteNonQuery();
             }
         }
@@ -292,13 +205,7 @@ namespace dkgServiceNode.Data
                 }
             }
 
-            Ensure_0_1_0(connection);
-            EnsureVersion("0.3.0", sqlScript_0_3_0, connection);
-            EnsureVersion("0.4.3", sqlScript_0_4_3, connection);
-            EnsureVersion("0.5.0", sqlScript_0_5_0, connection);
-            EnsureVersion("0.6.2", sqlScript_0_6_2, connection);
-            EnsureVersion("0.7.0", sqlScript_0_7_0, connection);
-            PuVersionUpdate("0.8.0", connection);
+            Ensure_0_8_0(connection);
         }
     }
 

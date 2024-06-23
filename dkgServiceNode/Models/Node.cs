@@ -50,9 +50,8 @@ namespace dkgServiceNode.Models
         [Column("status")]
         public short StatusValue { get; set; } = 0;
 
-        [Column("guid")]
-        [JsonPropertyName("GUID")]
-        public Guid Gd { get; set; }
+        [Column("address")]
+        public string Address { get; set; } = string.Empty;
 
         [Column("random")]
         public int? Random { get; set; }

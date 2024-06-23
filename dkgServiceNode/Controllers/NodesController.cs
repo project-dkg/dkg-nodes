@@ -96,7 +96,7 @@ namespace dkgServiceNode.Controllers
                 roundId = round.Id;
             }
 
-            var xNode = await dkgContext.FindNodeByGuidAsync(node.Gd);
+            var xNode = await dkgContext.FindNodeByAddressAsync(node.Address);
             if (xNode == null)
             {
                 node.RoundId = roundId;
@@ -104,7 +104,7 @@ namespace dkgServiceNode.Controllers
                 if (roundId == null) node.StatusValue = (short)NStatus.NotRegistered;
                 dkgContext.Nodes.Add(node);
                 await dkgContext.SaveChangesAsync();
-                xNode = await dkgContext.FindNodeByGuidAsync(node.Gd);
+                xNode = await dkgContext.FindNodeByAddressAsync(node.Address);
             }
             else
             {
@@ -300,7 +300,8 @@ namespace dkgServiceNode.Controllers
         public async Task<ActionResult<Reference>> Status(StatusReport statusReport)
         {
             // А это мой любимый автомат Мили ... центр любой системы :)
-            Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>> actionMap = new Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>>()
+            Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>> actionMap = 
+                new Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>>()
             {
                 { (null, NStatus.NotRegistered), Accept },
                 { (RStatus.NotStarted, NStatus.NotRegistered), WrongStatus },
