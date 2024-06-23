@@ -225,7 +225,7 @@ namespace dkgServiceNode.Controllers
             return await UpdateRoundState(dkgContext, round);
         }
 
-        internal List<Node> GetNodesWithRandomForRound(List<Node> nodes, int roundId)
+        internal static List<Node> GetNodesWithRandomForRound(List<Node> nodes, int roundId)
         {
             return nodes
                 .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == roundId && nrh.NodeRandom != null))

@@ -25,7 +25,9 @@
 
 using dkgNode.Models;
 using dkgNode.Services;
-
+using Microsoft.Extensions.Logging;
+using Solnet.Wallet;
+using Solnet.Wallet.Bip39;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService(serviceProvider =>
@@ -45,18 +47,16 @@ builder.Services.AddHostedService(serviceProvider =>
         }
     }
 
-    Guid guid = Guid.NewGuid(); 
-    string? gd = Environment.GetEnvironmentVariable("DKG_NODE_GUID");
-    if (gd != null)
+    string? address = Environment.GetEnvironmentVariable("DKG_NODE_SOLANA_ADDRESS");
+    if (address is null)
     {
-        try
-        {
-            guid = new(gd);
-        }
-        catch
-        {
-            logger.LogWarning("DKG_NODE_GUID must be a balid GUID, got {gd}", gd);
-        }
+        string? mnemonic;
+        (address, mnemonic) = DkgNodeConfig.GenerateNewAddress();
+        logger.LogWarning("**** Creating solana wallet, please use it for testing only ****\nSolana Address: {solanaAddress}\nMnemonic: {mnemonic}", address, mnemonic);
+    }
+    else
+    {
+        logger.LogInformation("Using Solana Address: {solanaAddress}", address);
     }
 
     var config = new DkgNodeConfig()
@@ -64,7 +64,7 @@ builder.Services.AddHostedService(serviceProvider =>
         NiceName = Environment.GetEnvironmentVariable("DKG_NODE_NAME"),
         PollingInterval = pollingInterval,
         ServiceNodeUrl = Environment.GetEnvironmentVariable("DKG_SERVICE_NODE_URL") ?? "https://localhost:8081",
-        Gd = guid
+        Address = address
     };
 
     string? dieOnStep2 = Environment.GetEnvironmentVariable("DKG_NODE_DIE_ON_STEP_TWO");

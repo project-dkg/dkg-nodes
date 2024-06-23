@@ -51,7 +51,7 @@ namespace dkgNodesTests
         {
             var round = new Round { Id = 1 };
             _runner.StartRound(round);
-            Assert.That(_runner.ActiveRounds.Count, Is.EqualTo(1));
+            Assert.That(_runner.ActiveRounds, Has.Count.EqualTo(1));
             Assert.That(_runner.ActiveRounds.First().Id, Is.EqualTo(round.Id));
         }
 
@@ -59,7 +59,7 @@ namespace dkgNodesTests
         public void TestRunRoundRunsRound()
         {
             var round = new Round { Id = 1 };
-            var nodes = new List<Node> { new Node { PublicKey = "publicKey" } };
+            var nodes = new List<Node> { new () { PublicKey = "publicKey" } };
             _runner.StartRound(round);
             _runner.RunRound(round, nodes);
             var activeRound = _runner.ActiveRounds.First();
@@ -80,7 +80,7 @@ namespace dkgNodesTests
             var round = new Round { Id = 1 };
             _runner.StartRound(round);
             _runner.FinishRound(round);
-            Assert.That(_runner.ActiveRounds.Count, Is.EqualTo(0));
+            Assert.That(_runner.ActiveRounds, Is.Empty);
         }
 
         [Test]
@@ -89,7 +89,7 @@ namespace dkgNodesTests
             var round = new Round { Id = 1 };
             _runner.StartRound(round);
             _runner.CancelRound(round);
-            Assert.That(_runner.ActiveRounds.Count, Is.EqualTo(0));
+            Assert.That(_runner.ActiveRounds, Is.Empty);
         }
         [Test]
         public void TestProcessDealsCallsProcessDealsOnActiveRound()
@@ -108,7 +108,7 @@ namespace dkgNodesTests
             _runner.StartRound(round);
             _runner.ProcessResponses(round);
             var activeRound = _runner.ActiveRounds.First();
-            Assert.IsTrue(activeRound.IsStepThreeDataReady());
+            Assert.That(activeRound.IsStepThreeDataReady(), Is.True);
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace dkgNodesTests
         {
             var round = new Round { Id = 1 };
             var node = new Node { PublicKey = "publicKey" };
-            string[] data = { "AtDGHAvdzEBXkF9nrlWVyupD6AeTF2zHc+5EGExa13TB", "AQAAAGMygfx9vJSf4XEPUYIByz8rRU7cehXHxylasMN/1486" };
+            string[] data = ["AtDGHAvdzEBXkF9nrlWVyupD6AeTF2zHc+5EGExa13TB", "AQAAAGMygfx9vJSf4XEPUYIByz8rRU7cehXHxylasMN/1486"];
             _runner.StartRound(round);
 
             var nodes = new List<Node> { node };

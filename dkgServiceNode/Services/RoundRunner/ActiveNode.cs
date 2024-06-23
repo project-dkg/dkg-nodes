@@ -106,7 +106,7 @@ namespace dkgServiceNode.Services.RoundRunner
         }
         public override string ToString()
         {
-            return Node.Gd.ToString();
+            return Node.Address;
         }
     }
 }

@@ -56,9 +56,9 @@ namespace dkgServiceNode.Data
         {
             return await Nodes.FirstOrDefaultAsync(node => node.PublicKey == publicKey);
         }
-        public async Task<Node?> FindNodeByGuidAsync(Guid guid)
+        public async Task<Node?> FindNodeByAddressAsync(string address)
         {
-            return await Nodes.FirstOrDefaultAsync(node => node.Gd == guid);
+            return await Nodes.FirstOrDefaultAsync(node => node.Address == address);
         }
         public async Task<NodesRoundHistory?> FindNodeRoundHistoryAsync(int nodeId, int roundId)
         {

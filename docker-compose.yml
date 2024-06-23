@@ -25,7 +25,8 @@ services:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=First node
       - DKG_NODE_POLLING_INTERVAL=3500
-      - DKG_NODE_GUID=f244f103-90c7-6bf1-f32d-8a8561b79aef
+        # bonus pretty melt journey project siren harsh pioneer spin holiday chase harvest
+      - DKG_NODE_SOLANA_ADDRESS=4KFR297L24YnX9A232mQpprhCaJ4Y5CA57JFXCCHrjqS
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -38,7 +39,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Second node
-      - DKG_NODE_GUID=f2bb9203-5c9d-c7d2-71ea-157651b2dad1
+        # wild dizzy good quantum purpose crazy evidence oak give pass describe wild
+      - DKG_NODE_SOLANA_ADDRESS=AKoAnVhRtm7c35UMWZUVzktdD7Tq1nZpRVminmHwFER6
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -51,7 +53,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Third node
-      - DKG_NODE_GUID=7ad7be03-3d00-3ba9-56fb-2f808047519c
+        # tail analyst dream tornado simple brown mad same small wagon mammal fun
+      - DKG_NODE_SOLANA_ADDRESS=EgcYjVC6wBoUx4gUspYDjiKCfV9WqfV5iTk3A9iuKi41
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -64,7 +67,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Fourth node
-      - DKG_NODE_GUID=b4389c03-136b-1540-27c2-dc5e3b8124eb
+        # ramp marble that cactus fee field shadow brand just father light sport
+      - DKG_NODE_SOLANA_ADDRESS=8iVGKCdSkzyrnLKzeGnbJYSfQsdV2NsdyzQkTDq3YvfV
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -77,7 +81,6 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Fifth node
-      - DKG_NODE_GUID=90981502-f478-927d-ebdf-17426a80d4f7
       - DKG_NODE_DIE_ON_STEP_TWO=Yes
     build:
       context: .
