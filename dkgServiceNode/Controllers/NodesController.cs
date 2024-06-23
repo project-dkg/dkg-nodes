@@ -108,13 +108,40 @@ namespace dkgServiceNode.Controllers
             }
             else
             {
-                xNode.Name = node.Name;
-                xNode.RoundId = roundId;
-                xNode.PublicKey = node.PublicKey;
-                xNode.CalculateRandom();
-                if (roundId == null) xNode.StatusValue = (short)NStatus.NotRegistered;
-                dkgContext.Entry(xNode).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
+                bool modified = false;
+                if (xNode.Name != node.Name)
+                {
+                    xNode.Name = node.Name;
+                    modified = true;
+                }
+                
+                if (xNode.RoundId != roundId)
+                {
+                    xNode.RoundId = roundId;
+                    modified = true;
+                }
+
+                if (xNode.PublicKey != node.PublicKey)
+                {
+                    xNode.PublicKey = node.PublicKey;
+                    xNode.CalculateRandom();
+                    modified = true;
+                }
+
+                if (roundId == null)
+                {
+                    if (xNode.StatusValue != (short)NStatus.NotRegistered)
+                    {
+                        xNode.StatusValue = (short)NStatus.NotRegistered;
+                        modified = true;
+                    }
+                }
+
+                if (modified)
+                {
+                    dkgContext.Entry(xNode).State = EntityState.Modified;
+                    await dkgContext.SaveChangesAsync();
+                }
             }
 
             roundId ??= 0;

@@ -28,6 +28,8 @@ using dkg.group;
 using dkg.poly;
 using dkg.vss;
 
+using dkgServiceNode.Services.CRandom;
+
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
 
@@ -36,6 +38,8 @@ namespace dkgServiceNode.Services.RoundRunner
 {
     public class ActiveRound
     {
+        internal Secp256k1Group G { get; } = new();
+
         internal ActiveNode[]? Nodes { get; set; } = null;
         internal Round Round { get; set; }
         public int Id { get { return Round.Id; } }
@@ -84,7 +88,8 @@ namespace dkgServiceNode.Services.RoundRunner
                         }
                     }
                     IScalar secretKey = PriPoly.RecoverSecret(new Secp256k1Group(), [.. shares], VssTools.MinimumT(Nodes.Length));
-                    result = BitConverter.ToInt32(secretKey.GetBytes(), 0);
+                    IPoint publicKey = G.Base().Mul(secretKey);
+                    result = CR.Calculate(publicKey.GetBytes());
                 }
                 catch (Exception ex)
                 {

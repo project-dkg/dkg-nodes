@@ -23,61 +23,40 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgCommon.Constants;
-using dkgServiceNode.Services.CRandom;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
-namespace dkgServiceNode.Models
+namespace dkgServiceNode.Services.CRandom;
+
+public static class CR
 {
-    [Table("nodes")]
-    public class Node
+    public static int? Calculate(string publicKey)
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Column("name")]
-        public string Name { get; set; } = "--";
-
-        [Column("public_key")]
-        public string PublicKey { get; set; } = string.Empty;
-
-        [Column("round_id")]
-        public int? RoundId { get; set; }
-
-        [Column("status")]
-        public short StatusValue { get; set; } = 0;
-
-        [Column("address")]
-        public string Address { get; set; } = string.Empty;
-
-        [Column("random")]
-        public int? Random { get; set; }
-
-        [NotMapped]
-        public int? PrevRandom { get; set; }
-
-        [ForeignKey("RoundId")]
-        public Round? Round{ get; set; }
-
-        [NotMapped]
-        public NodeStatus Status
+        int? IntValue = null;
+        try
         {
-            get { return NodeStatusConstants.GetNodeStatusById(StatusValue); }
-            set { StatusValue = (short)value.NodeStatusId; }
+            byte[] decodedBytes = Convert.FromBase64String(publicKey);
+            decodedBytes[0] = 0;
+            IntValue = Calculate(decodedBytes);
         }
-
-        [JsonIgnore]
-        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
-
-        public override string ToString() => Name;
-
-        public void CalculateRandom()
-        {
-            Random = CR.Calculate(PublicKey);
-        }
+        catch { }
+        return IntValue;
     }
+
+    public static int? Calculate(byte[] decodedBytes)
+    {
+        int? IntValue = null;
+        try
+        {
+            decodedBytes[0] = 0;
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Resize(ref decodedBytes, 4);
+                decodedBytes = decodedBytes.Reverse().ToArray();
+            }
+            IntValue = BitConverter.ToInt32(decodedBytes, 0);
+        }
+        catch { }
+        return IntValue;
+    }
+
 }
+
