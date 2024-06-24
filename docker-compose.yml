@@ -24,9 +24,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=First node
-      - DKG_NODE_POLLING_INTERVAL=3500
-        # bonus pretty melt journey project siren harsh pioneer spin holiday chase harvest
-      - DKG_NODE_SOLANA_ADDRESS=4KFR297L24YnX9A232mQpprhCaJ4Y5CA57JFXCCHrjqS
+        # "decrease high inject kitchen alone train income charge hint gauge deal parrot"
+      - DKG_SOLANA_KEYSTORE=eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNDg3NWUwYzFhNmQ5YjY4MDdiYTY2NmY1YTFjYWE2NzgzMDEzZTFmYjUzODRhY2YwZDgzNTI1MWM3MjRlNGEwZGY3MGRjYzcwMTk4ZjA2NjI4MTI3ZDY5OGIzZTdlOTk2MWJmYTg2ZDg2OTg1OGEwMGVhODgzOTM5MjFlNDlkZmFiZjFkN2U1NGNhMjViNWEyMWRmNjVhYjQ2NWQ1YTg5NDc5NjA0Y2ExMjNmZjc0NTgiLCJjaXBoZXJwYXJhbXMiOnsiaXYiOiI5OWY4ZWE2NjU2OWNmNTI1YjE2NGE0MWM4YmIzZGMwYyJ9LCJrZGYiOiJzY3J5cHQiLCJtYWMiOiJmNDdiNjExMDZlMmNiMGNiM2IwZDNiYzQ3OThkMGY2YmIxOTExYmNmYWU1YTNkYTQwM2EwZDc5Yjg2ZTQxYTc4Iiwia2RmcGFyYW1zIjp7Im4iOjI2MjE0NCwiciI6MSwicCI6OCwiZGtsZW4iOjMyLCJzYWx0IjoiMTBmMTc5MGIyZjIwOGM3NTIyZGY1NTMxYTU0MTViYjdhMjNmYmIzMjE0MmY1NzQ3Y2FlM2Y4MDA0NGM0NzQ4OCJ9fSwiaWQiOiIwZjE2M2E2MC1jNjdmLTQxNGYtYjY1OC0xMDAyMjk1MTA0NTkiLCJhZGRyZXNzIjoiNWkzdkJwcDZuMkdSZHdGcnhVNmJ4U3lTWG41S2dyNDIyMkE0eGM1SzcyYUwiLCJ2ZXJzaW9uIjozfQ==
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -39,8 +38,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Second node
-        # wild dizzy good quantum purpose crazy evidence oak give pass describe wild
-      - DKG_NODE_SOLANA_ADDRESS=AKoAnVhRtm7c35UMWZUVzktdD7Tq1nZpRVminmHwFER6
+        # salon glove crisp couple bounce wool cube super casino warm census edit
+      - DKG_SOLANA_KEYSTORE=eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNDUwNDBjMGExZTkyMGU1ZmU0MDJlYzMyN2JkYjM4ZThjYzg3YWE3NGJmY2Q2OWFhYTM5M2UyZGIxNzRmOGM0OTU4ZDQ4OTlmY2Q4M2I4NjJjYmVmMjRlYThjNmMxM2IzZDEzOGVmNDhjY2EwYmM4ZTc5MmVlMDM2Y2I4ZTM1YjI0ODgyNDRlMDMzNWQ4ZmE4NjEyNTFjMTU4NDk4Yzk4MGY1NDM4OWYwYmRkNTAwODgiLCJjaXBoZXJwYXJhbXMiOnsiaXYiOiJmMmE0YjQ3NWY0MzZkOGY2MmRjOGNhODlmN2RlNjY0NCJ9LCJrZGYiOiJzY3J5cHQiLCJtYWMiOiI2YjAzMzZhYmQ4OTM3YjVmMTZkYzY2ZTg2MDlhZTM0NjgxNmU0MWI0NzExNmQ2OTNkNjQ4NWJkNGZiMTYxZDdkIiwia2RmcGFyYW1zIjp7Im4iOjI2MjE0NCwiciI6MSwicCI6OCwiZGtsZW4iOjMyLCJzYWx0IjoiZTljNGYzZmZlZmEzMDMwNDYxNzdlNGQ4YzQxMDdhY2Y3NTZkYTQ5NjdiYTNjZGJlOGZkMDRmYzA2YTY5OTk0ZSJ9fSwiaWQiOiI4YTgwYTkyYi01YTczLTQwMDEtODdjNC01ODViNTkzYWFhM2MiLCJhZGRyZXNzIjoiM3FVNGl4VFdQZXlrZFBGaXJ6bWJ1TThWM2tYblpINmd6WnhSanhVNUJxTTUiLCJ2ZXJzaW9uIjozfQ==
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -53,8 +52,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Third node
-        # tail analyst dream tornado simple brown mad same small wagon mammal fun
-      - DKG_NODE_SOLANA_ADDRESS=EgcYjVC6wBoUx4gUspYDjiKCfV9WqfV5iTk3A9iuKi41
+        # fruit kitten anchor reduce ticket drink sentence worth better orchard moral direct
+      - DKG_SOLANA_KEYSTORE=eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNmQxZmNiMzNjYTQ3Njg4ZWRiZDUwMTJiZmE0NGM5ZGQ1Mzk1NGE5OTI1ZjZjNzFkZTQ2NGFmOGEwYWZhNTE3N2M0ZDIzNTc3YWUxYTMxN2YyMzk1ODc5MzAwMWI5ZmVlNjVkZGRmZTI3NDljM2MzOGNhYTI1MzVhZDJhYTk5MmYwMjA4MzE3ZjVmMGRjODg1YjcyMjZkMWE4MmRlZWUzNmMyODZhNGJmM2RjMmEzIiwiY2lwaGVycGFyYW1zIjp7Iml2IjoiYmI4YmIxODdlNzk4OTQ3MDMzNGMwZWUzMTk4MDkyOTkifSwia2RmIjoic2NyeXB0IiwibWFjIjoiMDIzMmUyZDU0ODgxOWQyMjBlOTNjZGZjZDUyYWYyOWQwYzQ4ZTNmNDRmYTY5YzYzOWIwYTk1MDk3NmI2MmM1MSIsImtkZnBhcmFtcyI6eyJuIjoyNjIxNDQsInIiOjEsInAiOjgsImRrbGVuIjozMiwic2FsdCI6ImY2ODZkOGQwZmYwM2ZkMWU0NzE4MjJhN2RjZmU2MmU2ZmZlZjc1ODUzNDNkZjZhMDhmYTAwNDY1YWQ0OWU4ZmYifX0sImlkIjoiM2ZkZDJkODYtMzJjOC00NGNlLWJiYjgtM2Q0NWJiOWNjYjcwIiwiYWRkcmVzcyI6IjhTd3ROeG5hWnhHRGk1VVo0VlhudG9HQWNCTHlnb3ZCV0I0cktta25jQUhCIiwidmVyc2lvbiI6M30=
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -67,8 +66,8 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Fourth node
-        # ramp marble that cactus fee field shadow brand just father light sport
-      - DKG_NODE_SOLANA_ADDRESS=8iVGKCdSkzyrnLKzeGnbJYSfQsdV2NsdyzQkTDq3YvfV
+        # ribbon pistol ranch icon scorpion later fruit lab affair wheel credit camp
+      - DKG_SOLANA_KEYSTORE=eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNGY0MmUxYWMxMGM5ODc5YjhlZDRiZTE0Zjk5YzE4ODljODA4MjY0Y2QzZjM2MjY0NWZkMTQ3ZjU5NGZmODU2MDIyYzU2NTRkNGI0OTQyOWI0YWRkMWY0MDU1M2RlNzRhYmM4MjU4NWFmMDA4NmIxMDMxZjMxOWJmYWM2YzQ3YWZjNmQ5MWY4ODZiZWY5ZTIyMmVmMTk2NjgwZTIyYTU3Yjk0NTI3ZDgyMTE1ZGM3N2UiLCJjaXBoZXJwYXJhbXMiOnsiaXYiOiI4ODY4MjE5OTBlMzc2ZThjOTlmNWUwYTQ2YmYzZjRlYyJ9LCJrZGYiOiJzY3J5cHQiLCJtYWMiOiIzYjBlMjc1MDczNTU4NDlkYWRmYTc0MDg3OWM3Mzg2NjZjODM1NGYzMmY1YjI2ODMyNWIyNThkZjYyNjRjNWQ3Iiwia2RmcGFyYW1zIjp7Im4iOjI2MjE0NCwiciI6MSwicCI6OCwiZGtsZW4iOjMyLCJzYWx0IjoiODlkMDAzMTZiODMzZTk5ZjU4OTI0NGMwZDNhYTY4MTgxMTkwMmNlMDJiNGFlMThiNzRkODc4MzdhMDkxMjBlZSJ9fSwiaWQiOiJkMzZlM2YyMy05YTEzLTQ3Y2QtODgwYy0xODNiNmMwNjUzYWUiLCJhZGRyZXNzIjoiQmVCTVYzemlrRUp4UFpFaUxBb2syQm5CUHZGUUNhdXphS1hHdjE5OW9XSmkiLCJ2ZXJzaW9uIjozfQ==
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -81,7 +80,9 @@ services:
     environment:
       - DKG_SERVICE_NODE_URL=http://dkg_service_node:8080
       - DKG_NODE_NAME=Fifth node
-      - DKG_NODE_DIE_ON_STEP_TWO=Yes
+      # DKG_NODE_DIE_ON_STEP_TWO=Yes
+        #  pave recipe charge leave response join peasant timber resemble motion own crop
+      - DKG_SOLANA_KEYSTORE=eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNzUyMWU2MTYzZTQ0NDNlMWIxYTg1NzI3NGIxMTM5YmY2OWYwZGJmYmIzOWJlNTQwODE2ZDcwOGQwMzYyNTU1YTZiMjQzZjBmNGUyNDJkMGRmOGI1YWIwNzI0NWE5ZDgyZWYzMzc5NjA4NDFmN2Q2MzcwNjAxNDJlNzBkOWUzMzNlZWU3ZGI5MGY0Yzk1ZDYxZGI3Mzg0MDJjOWMwNGJmOGE1OTlkMWRiNDc1YjBlZTAiLCJjaXBoZXJwYXJhbXMiOnsiaXYiOiI0M2I0MmNmNzk5M2RmMWQzYzhiMTQ3N2ZhMzFhN2FhZSJ9LCJrZGYiOiJzY3J5cHQiLCJtYWMiOiJkMjU3NThiYWIwNGRkZWM4ZWIwYTE0MjFmMDUzZWEyODgxM2Q0ZGNmOGRkYmJmNGYzNGQ3NThlODgxYWEwZTYzIiwia2RmcGFyYW1zIjp7Im4iOjI2MjE0NCwiciI6MSwicCI6OCwiZGtsZW4iOjMyLCJzYWx0IjoiNTE3NDgxMGZjM2JlYmZjZDJmYzM1MDVlZGJlZjgwMTI5YjcwYjk1OTAxNDFlNDdiODFhMzIzOTZjYThhYzE3MyJ9fSwiaWQiOiIzYTMyMWMyMy1hYTg3LTQ1NjAtYmRkZC01YzZmMTE2NWYxMDQiLCJhZGRyZXNzIjoiQkFwakg0RG9HNUV3VkFlQlprbmFFM0xFR0RFa0tnY3U1TVhOeWpSazJBM3ciLCJ2ZXJzaW9uIjozfQ==
     build:
       context: .
       dockerfile: dkgNode/Dockerfile
@@ -97,7 +98,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=dkgservice
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresqlc
 
   adminer:
     container_name: adminer

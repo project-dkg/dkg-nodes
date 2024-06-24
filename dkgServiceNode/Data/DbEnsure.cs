@@ -150,12 +150,14 @@ namespace dkgServiceNode.Data
             return (rows != null && (long)rows != 0);
         }
 
-        public static void Ensure_0_8_0(NpgsqlConnection connection)
+        public static int Ensure_0_8_0(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
             var command = new NpgsqlCommand(sql, connection);
             var rows = command.ExecuteScalar();
+
+            int r = 0;
 
             if (rows != null && (long)rows != 0)
             {
@@ -167,8 +169,10 @@ namespace dkgServiceNode.Data
             if (rows == null || (long)rows == 0)
             {
                 var scriptCommand = new NpgsqlCommand(sqlScript_0_8_0, connection);
-                int r = scriptCommand.ExecuteNonQuery();
+                r = scriptCommand.ExecuteNonQuery();
             }
+
+            return r;
         }
         private static void PuVersionUpdate(string v, NpgsqlConnection connection)
         {
