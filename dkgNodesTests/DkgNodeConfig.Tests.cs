@@ -62,7 +62,7 @@ namespace dkgNodesTests
             DkgNodeConfig config = new();
             byte[] publicKey = Encoding.ASCII.GetBytes("1234567890123456"); // 16 bytes
             config.EncodePublicKey(publicKey);
-            Assert.That(config.GetPublicKey(), Is.EqualTo(Convert.ToBase64String(publicKey)));
+            Assert.That(config.PublicKey, Is.EqualTo(Convert.ToBase64String(publicKey)));
         }
 
         [Test]

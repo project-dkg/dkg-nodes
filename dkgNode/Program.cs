@@ -25,6 +25,7 @@
 
 using dkgNode.Models;
 using dkgNode.Services;
+using Solnet.Wallet;
 using System.Text.Json;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -67,18 +68,18 @@ builder.Services.AddHostedService(serviceProvider =>
     {
         KeyStoreService.UpdateAppsettingsJson(newKeyStore, logger);
     }
-
     var config = new DkgNodeConfig()
     {
         NiceName = niceName,
         PollingInterval = pollingInterval,
         ServiceNodeUrl = serviceNodeUrl,
-        Address = solanaAddress
+        Address = solanaAddress,
+        SolanaAccount = new Account(solanaPrivateKey, solanaAddress)
     };
 
     // These are for testing purposes only
     // Use environment variables, appsettings.json won't work
-    string? dieOnStep2 = configuration.GetValue<string?>("DKG_NODE_DIE_ON_STEP_TWO");
+    string ? dieOnStep2 = configuration.GetValue<string?>("DKG_NODE_DIE_ON_STEP_TWO");
     string? dieOnStep3 = configuration.GetValue<string?>("DKG_NODE_DIE_ON_STEP_THREE");
 
     return new dkgNode.DkgNodeWorker(config, logger, dieOnStep2 != null, dieOnStep3 != null);

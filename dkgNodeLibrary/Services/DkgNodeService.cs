@@ -112,6 +112,7 @@ namespace dkgNode.Services
             PrivateKey = G.Scalar();
             PublicKey = G.Base().Mul(PrivateKey);
             Config.EncodePublicKey(PublicKey.GetBytes());
+            Config.SelfSign();
         }
         public async Task Register(HttpClient httpClient)
         {
@@ -317,7 +318,7 @@ namespace dkgNode.Services
             var statusResponse = new StatusResponse((int)(Round == null ? 0 : Round), Failed);
             string r = $"[status '{NodeStatusConstants.GetNodeStatusById(Status).Name}', round '{(Round == null ? 0: Round)}']";
 
-            var report = new StatusReport(Config.GetPublicKey()!, Name, Round ?? 0, Status);
+            var report = new StatusReport(Config.PublicKey!, Name, Round ?? 0, Status);
             if (data != null)
             {
                 report.Data = data;
