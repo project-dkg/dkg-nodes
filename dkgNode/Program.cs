@@ -74,7 +74,7 @@ builder.Services.AddHostedService(serviceProvider =>
         PollingInterval = pollingInterval,
         ServiceNodeUrl = serviceNodeUrl,
         Address = solanaAddress,
-        SolanaAccount = new Account(solanaPrivateKey, solanaAddress)
+        PrivateKey = solanaPrivateKey
     };
 
     // These are for testing purposes only

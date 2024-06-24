@@ -53,14 +53,9 @@ namespace dkgNode.Models
         public string? Signature { get; set; }
         public void SelfSign()
         {
-            if (SolanaAccount is null)
-            {
-                throw new Exception("Solana account is not initialized");
-            }
-
             string msg = $"{Address}{PublicKey}{Name}";
             byte[] msgBytes = Encoding.UTF8.GetBytes(msg);
-            byte[] SignatureBytes = SolanaAccount.Sign(msgBytes);
+            byte[] SignatureBytes = new PrivateKey(PrivateKey).Sign(msgBytes);
             Signature = Convert.ToBase64String(SignatureBytes);
         }
 
@@ -70,7 +65,7 @@ namespace dkgNode.Models
             get { return NiceName ?? Address; }
         }
         [JsonIgnore]
-        public Account SolanaAccount { get; set; }
+        public string PrivateKey { get; set; }
         public DkgNodeConfig()
         {
             NiceName = null;
@@ -78,7 +73,7 @@ namespace dkgNode.Models
             Address = string.Empty;
             PollingInterval = 3000;
             ServiceNodeUrl = "https://localhost:8081";
-            SolanaAccount = new();
+            PrivateKey = string.Empty;
         }
         public DkgNodeConfig(DkgNodeConfig other)
         {
@@ -87,7 +82,7 @@ namespace dkgNode.Models
             Address = other.Address;
             PollingInterval = other.PollingInterval;
             ServiceNodeUrl = other.ServiceNodeUrl;
-            SolanaAccount = other.SolanaAccount;
+            PrivateKey = other.PrivateKey;
         }
     }
 }
