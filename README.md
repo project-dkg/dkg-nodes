@@ -35,6 +35,22 @@ docker run --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NOD
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
            -d ghcr.io/maxirmx/dkg-node:0.5.2
 ```
+## Using appsettings.json to provide dkg node configuration
+
+Dkg node configuration can be specified in appsettings.json file that has priority over environment variables
+Node parameters shall be specified in Node section, for example:
+
+```
+  "Node": {
+     "Name": "Dkg node",
+     "KeyStore": "eyJjcnlwdG8iOnsiY2lwaGVyIjoiYWVzLTEyOC1jdHIiLCJjaXBoZXJ0ZXh0IjoiNDg3NWUwYzFhNmQ5YjY4MDdiYTY2NmY1YTFjYWE2NzgzMDEzZTFmYjUzODRhY2YwZDgzNTI1MWM3MjRlNGEwZGY3MGRjYzcwMTk4ZjA2NjI4MTI3ZDY5OGIzZTdlOTk2MWJmYTg2ZDg2OTg1OGEwMGVhODgzOTM5MjFlNDlkZmFiZjFkN2U1NGNhMjViNWEyMWRmNjVhYjQ2NWQ1YTg5NDc5NjA0Y2ExMjNmZjc0NTgiLCJjaXBoZXJwYXJhbXMiOnsiaXYiOiI5OWY4ZWE2NjU2OWNmNTI1YjE2NGE0MWM4YmIzZGMwYyJ9LCJrZGYiOiJzY3J5cHQiLCJtYWMiOiJmNDdiNjExMDZlMmNiMGNiM2IwZDNiYzQ3OThkMGY2YmIxOTExYmNmYWU1YTNkYTQwM2EwZDc5Yjg2ZTQxYTc4Iiwia2RmcGFyYW1zIjp7Im4iOjI2MjE0NCwiciI6MSwicCI6OCwiZGtsZW4iOjMyLCJzYWx0IjoiMTBmMTc5MGIyZjIwOGM3NTIyZGY1NTMxYTU0MTViYjdhMjNmYmIzMjE0MmY1NzQ3Y2FlM2Y4MDA0NGM0NzQ4OCJ9fSwiaWQiOiIwZjE2M2E2MC1jNjdmLTQxNGYtYjY1OC0xMDAyMjk1MTA0NTkiLCJhZGRyZXNzIjoiNWkzdkJwcDZuMkdSZHdGcnhVNmJ4U3lTWG41S2dyNDIyMkE0eGM1SzcyYUwiLCJ2ZXJzaW9uIjozfQ==",
+     "KeyStorePwd": "password",
+     "ServiceNodeUrl": "https://localhost:8081",
+     "PollingInterval": 5000
+  }
+
+```
+
 ## Service node front end
 
 We provide a simple GUI to control ```dkg service node``` in a [separate project](https://github.com/maxirmx/dkg-frontend). 
