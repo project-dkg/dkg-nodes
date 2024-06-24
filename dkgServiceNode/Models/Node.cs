@@ -60,6 +60,9 @@ namespace dkgServiceNode.Models
         [NotMapped]
         public int? PrevRandom { get; set; }
 
+        [NotMapped]
+        public string Signature { get; set; } = string.Empty;
+
         [ForeignKey("RoundId")]
         public Round? Round{ get; set; }
 

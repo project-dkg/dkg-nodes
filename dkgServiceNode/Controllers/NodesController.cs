@@ -326,9 +326,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Reference>> Status(StatusReport statusReport)
         {
-            // А это мой любимый автомат Мили ... центр любой системы :)
-            Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>> actionMap = 
-                new Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>>()
+            var actionMap = new Dictionary<(RStatus?, NStatus), Func<Round?, Node, StatusReport, Task<ObjectResult>>>()
             {
                 { (null, NStatus.NotRegistered), Accept },
                 { (RStatus.NotStarted, NStatus.NotRegistered), WrongStatus },

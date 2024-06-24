@@ -81,19 +81,6 @@ namespace dkgNode.Models
             PollingInterval = other.PollingInterval;
             ServiceNodeUrl = other.ServiceNodeUrl;
         }
-
-        public static (string, string) GenerateNewAddress()
-        {
-            var mnemonic = new Mnemonic(WordList.English, WordCount.Twelve);
-            var wallet = new Wallet(mnemonic);
-            Account account = wallet.Account;
-
-            // The public key of the account is the Solana address
-            string solanaAddress = account.PublicKey.Key;
-
-            return (solanaAddress, mnemonic.ToString());
-        }
-
     }
 }
 
