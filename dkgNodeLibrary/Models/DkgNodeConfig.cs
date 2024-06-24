@@ -23,8 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.Extensions.Logging;
-using Solnet.Wallet.Bip39;
+using System.Text;
 using Solnet.Wallet;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -45,19 +44,24 @@ namespace dkgNode.Models
         public string ServiceNodeUrl { get; set; }
 
         public string Address { get; set; }
-
-        [JsonPropertyName("PublicKey")]
-        public string? SerializedPublicKey
-        {
-            get { return PublicKey; }
-        }
-        [JsonIgnore]
-        internal string? PublicKey { get; set; }
-
-        public string? GetPublicKey() => PublicKey;
+        public string? PublicKey { get; set; }
         public void EncodePublicKey(byte[] value)
         {
             PublicKey = Convert.ToBase64String(value);
+        }
+
+        public string? Signature { get; set; }
+        public void SelfSign()
+        {
+            if (SolanaAccount is null)
+            {
+                throw new Exception("Solana account is not initialized");
+            }
+
+            string msg = $"{Address}{PublicKey}{Name}";
+            byte[] msgBytes = Encoding.UTF8.GetBytes(msg);
+            byte[] SignatureBytes = SolanaAccount.Sign(msgBytes);
+            Signature = Convert.ToBase64String(SignatureBytes);
         }
 
         [JsonPropertyName("Name")]
@@ -65,6 +69,8 @@ namespace dkgNode.Models
         {
             get { return NiceName ?? Address; }
         }
+        [JsonIgnore]
+        public Account SolanaAccount { get; set; }
         public DkgNodeConfig()
         {
             NiceName = null;
@@ -72,6 +78,7 @@ namespace dkgNode.Models
             Address = string.Empty;
             PollingInterval = 3000;
             ServiceNodeUrl = "https://localhost:8081";
+            SolanaAccount = new();
         }
         public DkgNodeConfig(DkgNodeConfig other)
         {
@@ -80,6 +87,7 @@ namespace dkgNode.Models
             Address = other.Address;
             PollingInterval = other.PollingInterval;
             ServiceNodeUrl = other.ServiceNodeUrl;
+            SolanaAccount = other.SolanaAccount;
         }
     }
 }

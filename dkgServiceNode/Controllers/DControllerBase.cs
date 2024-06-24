@@ -59,7 +59,11 @@ namespace dkgServiceNode.Controllers
             return StatusCode(StatusCodes.Status403Forbidden,
                               new { message = "This user cannot be deleted or modified." });
         }
-
+        protected ObjectResult _403InvalidSignature()
+        {
+            return StatusCode(StatusCodes.Status403Forbidden,
+                              new { message = "Failed to verify node signature" });
+        }
         protected ObjectResult _404(int id, string item)
         {
             return StatusCode(StatusCodes.Status404NotFound,

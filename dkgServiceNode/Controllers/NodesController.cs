@@ -32,10 +32,12 @@ using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Net.NetworkInformation;
+using System.Text;
 using static dkgCommon.Constants.NodeStatusConstants;
 using static dkgServiceNode.Constants.RoundStatusConstants;
 
+using Solnet.Wallet;
+using System.Xml.Linq;
 
 namespace dkgServiceNode.Controllers
 {
@@ -86,8 +88,30 @@ namespace dkgServiceNode.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Reference))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Reference>> RegisterNode(Node node)
         {
+            bool verified = false;
+
+            try
+            {
+                verified = new PublicKey(node.Address)
+                    .Verify(
+                        Encoding.UTF8.GetBytes($"{node.Address}{node.PublicKey}{node.Name}"),
+                        Convert.FromBase64String(node.Signature)
+                    );
+                logger.LogInformation("Failed to verify node [{name}] signature", node.Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogInformation("Failed to verify node [{name}] signature: {ex.Message}", node.Name, ex.Message);
+            }
+
+            if (!verified)
+            {
+                return _403InvalidSignature();
+            }
+
             int? roundId = null;
             List<Round> rounds = await dkgContext.Rounds.Where(r => r.StatusValue == (short)RStatus.Registration).ToListAsync();
             if (rounds.Count != 0)
