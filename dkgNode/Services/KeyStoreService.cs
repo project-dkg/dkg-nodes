@@ -64,7 +64,7 @@ namespace dkgNode.Services
                     else
                     {
                         keyStoreDataBytes = secretKeyStoreService.DecryptKeyStoreFromJson(keyStorePwd, keyStoreString);
-                        solanaPrivateKey = Encoding.UTF8.GetString(keyStoreDataBytes);
+                        solanaPrivateKey = Solnet.Wallet.Utilities.Encoders.Base58.EncodeData(keyStoreDataBytes);
                         logger.LogInformation("Using Solana Address: {solanaAddress}", solanaAddress);
                     }
                 }
@@ -89,8 +89,7 @@ namespace dkgNode.Services
                     solanaAddress,
                 solanaPrivateKey);
 
-                keyStoreDataBytes = Encoding.UTF8.GetBytes(solanaPrivateKey);
-                keyStoreString = secretKeyStoreService.EncryptAndGenerateDefaultKeyStoreAsJson("", keyStoreDataBytes, solanaAddress);
+                keyStoreString = secretKeyStoreService.EncryptAndGenerateDefaultKeyStoreAsJson("", account.PrivateKey.KeyBytes, solanaAddress);
                 keyStoreDataBytes = Encoding.UTF8.GetBytes(keyStoreString);
                 keyStoreString = Convert.ToBase64String(keyStoreDataBytes);
                 newKeyStore = keyStoreString;
