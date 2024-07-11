@@ -10,6 +10,22 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="dkgWebNode.styles.css" rel="stylesheet" />
+
+    <script>
+        function getFromLocalStorage(key) {
+            return localStorage.getItem(key);
+        }
+
+        function saveToLocalStorage(key, value) {
+            localStorage.setItem(key, value);
+        }
+        window.addEventListener("beforeunload", function (event) {
+            // Call method to save data to local storage
+            DotNet.invokeMethodAsync('dkgWebNode', 'SaveDataOnShutdown')
+                  .catch(error => console.error(error));
+        });
+    </script>
+
 </head>
 
 <body>
