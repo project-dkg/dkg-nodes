@@ -1,20 +1,21 @@
 ﻿@page "/"
 
+@inject DkgWebNodeService DkgWebNodeService
+@inject KeystoreService KeystoreService
+@implements IDisposable
+
 <PageTitle>Dkg Web Node</PageTitle>
 
 
-@inject dkgWebNode.Services.DkgWebNodeService dkgWebNodeService
-
-@if (dkgWebNodeService.IsAuthorized())
+@if (DkgWebNodeService.HasKeys())
 {
     <h1>Operations</h1>
     <span>Welcome to your new app.</span>
 
 }
-else if (dkgWebNodeService.HasKeystore())
+else if (_keystoreExists)
 {
-    <h1>Login</h1>
-    <span>Welcome to your new app.</span>
+    <AccountLogin />
 }
 else
 {
@@ -22,4 +23,29 @@ else
 }
 
 
+@code {
+    private bool _keystoreExists = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        DkgWebNodeService.OnChange += StateHasChanged;
+        _keystoreExists = await KeystoreService.Exists();
+        KeystoreService.OnClear += HandleKeystoreCleared;
+    }
+
+    private async void HandleKeystoreCleared()
+    {
+        var oldKeystoreExists = _keystoreExists;
+        _keystoreExists = await KeystoreService.Exists();
+        if (_keystoreExists != oldKeystoreExists) 
+        {
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        DkgWebNodeService.OnChange -= StateHasChanged;
+        KeystoreService.OnClear -= HandleKeystoreCleared;
+    }
+}   

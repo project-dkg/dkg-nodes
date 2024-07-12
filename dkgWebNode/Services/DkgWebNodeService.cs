@@ -5,18 +5,13 @@ namespace dkgWebNode.Services
     public class DkgWebNodeService
     {
         private readonly IJSRuntime _jsRuntime;
-        private readonly string _keyStoreKey = "KeyStore";
-        private string? _keyStore = null;
+        private string? _publicKey = null;
+        private string? _privateKey = null;
+        private string? _address() => _publicKey;
 
         public DkgWebNodeService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
-        }
-
-        public async Task Initialize()
-        {
-            await LogToConsoleAsync("Initializing DkgWebNodeService ...");
-            _keyStore = await GetValueFromLocalStorageAsync(_keyStoreKey);
         }
 
         internal async Task LogToConsoleAsync(string message)
@@ -24,27 +19,21 @@ namespace dkgWebNode.Services
             await _jsRuntime.InvokeVoidAsync("console.log", message);
         }
 
-        private async Task<string?> GetValueFromLocalStorageAsync(string key)
+        public void SetKeys(string publicKey, string privateKey)
         {
-            return await _jsRuntime.InvokeAsync<string?>("getFromLocalStorage", key);
+            _privateKey = privateKey;
+            _publicKey = publicKey;
+            NotifyStateChanged();
         }
-
-        public async Task SaveDataOnShutdown()
+        public void ClearKeys()
         {
-            if (_keyStore is not null)
-            {
-                await _jsRuntime.InvokeVoidAsync("saveToLocalStorage", _keyStoreKey, _keyStore);
-            }
+            _privateKey = null;
+            _publicKey = null;
+            NotifyStateChanged();
         }
-
-        public async Task<bool> ImportKeystore(string keystore, string password)
+        public bool HasKeys()
         {
-            _keyStore = keystore;
-            return true;
-        }
-        public bool HasKeystore()
-        {
-            return _keyStore is not null;
+            return _publicKey is not null && _privateKey is not null;
         }
 
         public bool IsAuthorized()
@@ -52,5 +41,7 @@ namespace dkgWebNode.Services
             return false;
         }
 
+        public event Action? OnChange;
+        private void NotifyStateChanged() => OnChange?.Invoke();
     }
 }

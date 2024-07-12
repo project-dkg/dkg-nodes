@@ -16,19 +16,21 @@
         function getFromLocalStorage(key) {
             return localStorage.getItem(key);
         }
-
         function saveToLocalStorage(key, value) {
             localStorage.setItem(key, value);
         }
-            function triggerFileInputClick(id) {
+        function clearLocalStorage(key, value) {
+            localStorage.removeItem(key);
+        }
+        function triggerFileInputClick(id) {
                 document.getElementById(id).click();
         }
-        window.addEventListener("beforeunload", function (event) {
-            // Call method to save data to local storage
-            DotNet.invokeMethodAsync('dkgWebNode', 'SaveDataOnShutdown')
-                .catch(error => console.error(error));
-        });
     </script>
+
+    <!-- Disable caching -->
+    <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
 
 </head>
 

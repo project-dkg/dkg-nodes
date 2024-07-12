@@ -1,0 +1,105 @@
+﻿@using MudBlazor
+
+@inject KeystoreService KeystoreService
+@inject DkgWebNodeService DkgWebNodeService
+
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h3">Welcome to Dkg Web Node!</MudText>
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h5">Before you can use it please unlock your account</MudText>
+
+<MudCard>
+    <MudCardContent>
+        <MudText Typo="Typo.h5">Unlock Solana Account</MudText>
+        <MudPaper Class="d-flex" Elevation="0">
+            <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined" Disabled="@_isUnlockingAccount" />      
+            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Warning" OnClick="RemoveKeystore" Disabled="@_isUnlockingAccount">Remove Keystore</MudButton>
+        </MudPaper>
+        <MudTextField Class="mb-2" @bind-Value="_passwordLogin" Label="Password" Variant="Variant.Outlined" InputType="@_passwordLoginInput"
+                      Adornment="Adornment.End" AdornmentIcon="@_passwordLoginInputIcon" OnAdornmentClick="ButtonShowPasswordLoginClick"
+                      AdornmentAriaLabel="Show Password" Disabled="@_isUnlockingAccount" />
+        <MudPaper Class="d-flex" Elevation="0">
+            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAccount" Disabled="@_isUnlockingAccount">Unlock Account</MudButton>
+            @if (_isUnlockingAccount)
+            {
+                <MudProgressCircular Indeterminate="true" />
+            }
+         </MudPaper>
+    </MudCardContent>
+</MudCard>
+
+<MudDialog @bind-Visible="_showConfirmationDialog" Title="Are you sure?" CloseButton="true" CloseButtonColor="Color.Default">
+    <DialogContent>
+        <MudText>Do you want to remove the keystore from this system?</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="ClearKeystore">Yes</MudButton>
+        <MudButton Color="Color.Default" OnClick="CancelClearKeystore">No</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showErrorMessage" Title="Error" CloseButton="true" CloseButtonColor="Color.Default">
+    <DialogContent>
+        <MudText>Failed to decode keystore possibly because of incorrect password. Please try again</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="HideErrorMessage">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _isUnlockingAccount = false;
+    private string _passwordLogin = "";
+    private string _address = "";
+    private bool _showPasswordLogin = false;
+    private InputType _passwordLoginInput => _showPasswordLogin ? InputType.Text : InputType.Password;
+    private string _passwordLoginInputIcon => _showPasswordLogin ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    private bool _showConfirmationDialog = false;
+    private bool _showErrorMessage = false;
+
+    private void ButtonShowPasswordLoginClick()
+    {
+        _showPasswordLogin = !_showPasswordLogin;
+    }
+
+    private async void UnlockAccount()
+    {
+        var (privateKey, publicKey) = await KeystoreService.Load(_passwordLogin);
+        if (privateKey is not null && publicKey is not null)
+        {
+            DkgWebNodeService.SetKeys(publicKey, privateKey);
+        }
+        else
+        {
+            _showErrorMessage = true;     
+        }
+    }
+
+    private void ClearKeystore()
+    {
+        KeystoreService.Clear();
+        DkgWebNodeService.ClearKeys();
+        _showConfirmationDialog = false;
+    }
+
+    private void CancelClearKeystore()
+    {
+        _showConfirmationDialog = false;
+    }
+
+    private void RemoveKeystore()
+    {
+        _showConfirmationDialog = true;
+    }
+
+    private void HideErrorMessage()
+    {
+        _showErrorMessage = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        _address = await KeystoreService.LoadAddress() ?? "Invalid address in the keystore";
+        
+    }
+}
