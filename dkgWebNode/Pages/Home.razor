@@ -1,7 +1,25 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dkg Web Node</PageTitle>
 
-<h1>Hello, world!</h1>
 
-Welcome to your new app.
+@inject dkgWebNode.Services.DkgWebNodeService dkgWebNodeService
+
+@if (dkgWebNodeService.IsAuthorized())
+{
+    <h1>Operations</h1>
+    <span>Welcome to your new app.</span>
+
+}
+else if (dkgWebNodeService.HasKeystore())
+{
+    <h1>Login</h1>
+    <span>Welcome to your new app.</span>
+}
+else
+{
+ <AccountSetup />
+}
+
+
+

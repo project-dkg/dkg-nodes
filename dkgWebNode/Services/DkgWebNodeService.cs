@@ -19,7 +19,7 @@ namespace dkgWebNode.Services
             _keyStore = await GetValueFromLocalStorageAsync(_keyStoreKey);
         }
 
-        public async Task LogToConsoleAsync(string message)
+        internal async Task LogToConsoleAsync(string message)
         {
             await _jsRuntime.InvokeVoidAsync("console.log", message);
         }
@@ -35,6 +35,21 @@ namespace dkgWebNode.Services
             {
                 await _jsRuntime.InvokeVoidAsync("saveToLocalStorage", _keyStoreKey, _keyStore);
             }
+        }
+
+        public async Task<bool> ImportKeystore(string keystore, string password)
+        {
+            _keyStore = keystore;
+            return true;
+        }
+        public bool HasKeystore()
+        {
+            return _keyStore is not null;
+        }
+
+        public bool IsAuthorized()
+        {
+            return false;
         }
 
     }

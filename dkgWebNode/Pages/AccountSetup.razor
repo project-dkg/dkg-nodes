@@ -1,0 +1,90 @@
+﻿@using System.Text
+@using MudBlazor
+
+@inject IJSRuntime JSRuntime
+@inject dkgWebNode.Services.DkgWebNodeService dkgWebNodeService
+
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h3">Welcome to Dkg Web Node!</MudText>
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h5">Before you can use it<br />please either create a new Solana account or<br />import your existing account.</MudText>
+<MudGrid>
+    <MudItem xs="12">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h5">Create Solana Account</MudText>
+                <MudTextField Class="mb-2" @bind-Value="_mnemonic" Label="Mnemonic" Variant="Variant.Outlined" Lines="3" AutoGrow
+                              Adornment="Adornment.End" AdornmentIcon="@GenerateIcon" OnAdornmentClick="ButtonShowclick"
+                              AdornmentAriaLabel="Generate Mnemonic" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12">
+        <MudCard>
+            <MudCardContent>
+                <MudText Class="mb-2" Typo=" Typo.h5">Import Solana Account</MudText>
+                <input type="file" id="fileInput" style="display:none" @onchange="HandleFileSelected" />
+                <MudTextField Class="mb-2" @bind-Value="_keystoreData" Label="Keystore Data" Variant="Variant.Outlined" Lines="6" AutoGrow
+                              Adornment="Adornment.End" OnAdornmentClick="() => ClickFileInput()" AdornmentIcon="@LoadIcon" 
+                              AdornmentAriaLabel="Load key store from file"/>
+                <MudTextField Class="mb-2" @bind-Value="_password" Label="Password" Variant="Variant.Outlined" InputType="@PasswordInput" 
+                              Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonShowclick" 
+                              AdornmentAriaLabel="Show Password" /> 
+                <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="ImportKeystore">Import</MudButton>     
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private string _keystoreData = "";
+    private string _password = "";
+    private string _mnemonic = "";
+    private ElementReference _fileInput;
+
+    private string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+    private const string LoadIcon = Icons.Material.Filled.Download;
+    private const string GenerateIcon = Icons.Material.Filled.VpnKey;
+
+    private bool PasswordVisible = false;
+    private InputType PasswordInput = InputType.Password;
+
+
+    void ButtonShowclick()
+    {
+        @if (PasswordVisible)
+        {
+            PasswordVisible = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            PasswordVisible = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+    private async void ClickFileInput()
+    {
+        await JSRuntime.InvokeVoidAsync("triggerFileInputClick", "fileInput");
+    }
+
+    private async Task HandleFileSelected(ChangeEventArgs e)
+    {
+        var file = e.Value as IBrowserFile;
+        if (file != null)
+        {
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream().ReadAsync(buffer);
+            _keystoreData = Encoding.UTF8.GetString(buffer);
+            StateHasChanged(); // Refresh UI with the loaded keystore data
+        }
+    }
+
+    private async Task ImportKeystore()
+    {
+        await dkgWebNodeService.ImportKeystore(_keystoreData, _password);
+        // Additional logic after importing the keystore, if necessary
+    }
+}
+
