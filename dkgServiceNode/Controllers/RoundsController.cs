@@ -25,7 +25,6 @@
 
 using dkgCommon.Constants;
 using dkgCommon.Models;
-using dkgServiceNode.Constants;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.NodeComparer;

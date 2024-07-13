@@ -106,7 +106,7 @@ namespace dkgNode.Services
             Config = config;
             Logger = logger;
 
-            logger.LogInformation("'{Name}': creating", Name);
+            logger.LogInformation("'{Name}' created.", Name);
 
             G = new Secp256k1Group();
 
@@ -321,7 +321,8 @@ namespace dkgNode.Services
 
         public async Task<StatusResponse> ReportStatus(HttpClient httpClient, string[]? data)
         {
-            var statusResponse = new StatusResponse((int)(Round == null ? 0 : Round), Failed);
+            int roundId = (int)(Round == null ? 0 : Round);
+            var statusResponse = new StatusResponse(roundId, Failed);
             string r = $"[status '{NodeStatusConstants.GetNodeStatusById(Status).Name}', round '{(Round == null ? 0: Round)}']";
 
             var report = new StatusReport(Config.PublicKey!, Name, Round ?? 0, Status);

@@ -118,7 +118,7 @@ namespace dkgWebNode.Services
             NotifyStateChanged();
         }
 
-        public void RunDkg()
+        public async void RunDkg()
         {
             _cancellationTokenSource = new CancellationTokenSource();
             DkgNodeConfig nodeConfig = GetNodeConfig();
@@ -126,9 +126,7 @@ namespace dkgWebNode.Services
 
             _dkgNodeService = new DkgNodeService(nodeConfig, _logger);
             _dkgNodeService.OnDkgChange += OnDkgStateChanged;
-            var task = RunDkgUntilCancelled(_cancellationTokenSource.Token);
-            NotifyDkgStateChanged();
-            task.Wait();
+            await RunDkgUntilCancelled(_cancellationTokenSource.Token);
             _dkgNodeService.OnDkgChange -= OnDkgStateChanged;
             _dkgNodeService = null;
             NotifyDkgStateChanged();
@@ -148,7 +146,6 @@ namespace dkgWebNode.Services
             return new DkgState()
             {
                 NodeState = _dkgNodeService?.GetStatus().ToString() ?? "Stopped",
-                RoundState = "Unknown",
                 RoundId = _dkgNodeService?.GetRound()?.ToString() ?? "N/A",
             };
         }
@@ -179,11 +176,11 @@ namespace dkgWebNode.Services
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Operation was cancelled.");
+                _logger.LogInformation("Dkg Web Node was stopped.");
             }
             catch(Exception ex)
             {
-                _logger.LogInformation("Error {msg}", ex.Message);
+                _logger.LogInformation("Dkg Web Node was terminated by error '{msg}'.", ex.Message);
             }
             finally
             {

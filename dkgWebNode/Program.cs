@@ -21,8 +21,11 @@ namespace dkgWebNode
             builder.Services.AddSingleton<DkgWebNodeService>();
             builder.Services.AddSingleton<KeystoreService>();
 
+            builder.Logging.SetMinimumLevel(LogLevel.Debug);
+            builder.Logging.AddFilter("Microsoft", LogLevel.Information); 
+            builder.Logging.AddFilter("System", LogLevel.Information); 
+            
             var host = builder.Build();
-
             await host.RunAsync();
         }
     }

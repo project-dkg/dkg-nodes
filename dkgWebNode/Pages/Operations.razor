@@ -47,17 +47,9 @@
                 <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
                     <MudText>@_roundNumber</MudText>
                 </MudItem>
-
-                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
-                    <MudText>Round State:</MudText>
-                </MudItem>
-                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
-                    <MudText>@_roundState</MudText>
-                </MudItem>
-
             </MudGrid>
-            <MudSwitch @bind-Value="_running" Color="Color.Success" UncheckedColor="Color.Error" Class="flex-column justify-end"
-                       Size="Size.Large" Label=@(_running ? "Running" : "Stopped") OnChange="@HandleSwitchChanged()" />
+            <MudSwitch T=bool Color="Color.Success" UncheckedColor="Color.Error" Class="flex-column justify-end"
+                       Size="Size.Large" Label=@(_running ? "Running" : "Stopped") ValueChanged="@HandleSwitchChanged" />
         </MudPaper>
     </MudCardContent>
 </MudCard>
@@ -80,22 +72,22 @@
     private string _name = "Node name";
     private string _state = "Node state";
     private string _roundNumber = "Round number";
-    private string _roundState = "Round state";
 
     private bool _running = false;
 
-    private async Task HandleSwitchChanged()
+    private async Task HandleSwitchChanged(bool value)
     {
-        //     await OnNodeStateUpdate();
-        //     if (_running)
-        //    {
-        //         DkgWebNodeService.RunDkg();
-        //    }
-        //     else
-        //     {
-        //        DkgWebNodeService.CancelDkg();
-        //    }
-        //   await OnNodeStateUpdate();
+        _running = value;
+        if (_running)
+        {
+            DkgWebNodeService.RunDkg();
+        }
+        else
+        {
+            DkgWebNodeService.CancelDkg();
+        }
+        OnNodeStateUpdate();
+        await Task.Yield();
     }
 
     private async Task ConfigureNode()
@@ -137,7 +129,6 @@
         DkgState state = DkgWebNodeService.GetDkgState();
         _state = state.NodeState;
         _roundNumber = state.RoundId;
-        _roundState = state.RoundState;
 
         StateHasChanged();
     }
@@ -149,7 +140,7 @@
         if (result is not null && !result.Canceled)
         {
             _running = false;
-            await HandleSwitchChanged();
+            await HandleSwitchChanged(false);
             KeystoreService.Clear();
             DkgWebNodeService.ClearKeys();
         }
