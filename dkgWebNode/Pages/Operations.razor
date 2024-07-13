@@ -1,11 +1,14 @@
 ﻿@using MudBlazor
 @using BlazorDownloadFile
 @using dkgNode.Models
+@using dkgWebNode.Models;
 
 @inject IDialogService DialogService
 @inject KeystoreService KeystoreService
 @inject DkgWebNodeService DkgWebNodeService
 @inject IBlazorDownloadFileService BlazorDownloadFileService
+
+@implements IDisposable
 
 
 <MudText Align="Align.Center" Class="mb-4" Typo=" Typo.h3">Dkg Web Node Operations Center</MudText>
@@ -62,7 +65,7 @@
 
 <MudCard Class="mt-4">
     <MudCardHeader>
-        <MudText Typo="Typo.h4" Class="mb-4">Keystore Management</MudText>
+        <MudText Typo="Typo.h4" Class="mb-4">Node Management</MudText>
     </MudCardHeader>
     <MudCardContent>
         <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="ConfigureNode">Configure Node</MudButton>
@@ -83,7 +86,16 @@
 
     private async Task HandleSwitchChanged()
     {
-        await OnNodeStateUpdate();
+        //     await OnNodeStateUpdate();
+        //     if (_running)
+        //    {
+        //         DkgWebNodeService.RunDkg();
+        //    }
+        //     else
+        //     {
+        //        DkgWebNodeService.CancelDkg();
+        //    }
+        //   await OnNodeStateUpdate();
     }
 
     private async Task ConfigureNode()
@@ -101,35 +113,33 @@
         {
             DkgWebNodeService.SetNodeConfig(cfg);
             await DkgWebNodeService.SaveNodeConfig();
+            OnNodeStateUpdate();
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await OnNodeStateUpdate();
+        OnNodeStateUpdate();
+        DkgWebNodeService.OnDkgChange += OnNodeStateUpdate;
     }
 
-    private async Task OnNodeStateUpdate()
+    public void Dispose()
+    {
+        DkgWebNodeService.OnDkgChange -= OnNodeStateUpdate;
+    }
+
+    private void OnNodeStateUpdate()
     {
         DkgNodeConfig cfg = DkgWebNodeService.GetNodeConfig();
         _address = cfg.Address;
         _name = cfg.Name;
 
+        DkgState state = DkgWebNodeService.GetDkgState();
+        _state = state.NodeState;
+        _roundNumber = state.RoundId;
+        _roundState = state.RoundState;
 
-        if (_running)
-        {
-            _state = "Running";
-            _roundNumber = "Applicable";
-            _roundState = "Applicable";
-        }
-        else
-        {
-            _state = "Not running";
-            _roundNumber = "N/A";
-            _roundState = "N/A";
-        }
-
-        await Task.Yield();
+        StateHasChanged();
     }
 
     private async Task RemoveKeystore()
@@ -138,6 +148,8 @@
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {
+            _running = false;
+            await HandleSwitchChanged();
             KeystoreService.Clear();
             DkgWebNodeService.ClearKeys();
         }

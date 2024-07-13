@@ -1,22 +1,19 @@
 ﻿using Microsoft.JSInterop;
 using Solnet.KeyStore;
 using System.Text;
-using MudBlazor;
-using Solnet.Wallet;
-using Org.BouncyCastle.Security.Certificates;
 using Microsoft.Extensions.Logging;
-using Solnet.KeyStore.Model;
-using Solnet.KeyStore.Services;
 using System.Text.Json;
 using Solnet.Wallet.Utilities;
+using Solnet.Wallet;
 
 namespace dkgWebNode.Services
 {
-    public class KeystoreService(IJSRuntime jsRuntime)
+    public class KeystoreService(IJSRuntime jsRuntime, ILogger<KeystoreService> logger)
     {
         private readonly IJSRuntime _jsRuntime = jsRuntime;
         private readonly string _keyStoreKey = "KeyStore";
         private readonly SecretKeyStoreService _secretKeyStoreService = new();
+        private readonly ILogger<KeystoreService> _logger = logger;
 
         public async Task<string?> GetJsonString()
         {
@@ -65,6 +62,7 @@ namespace dkgWebNode.Services
                 {
                 }
             }
+            _logger.LogDebug("Loaded keystore with private key '{key}', address '{address}'", solanaPrivateKey, solanaAddress);
             return (solanaPrivateKey, solanaAddress);
         }
 

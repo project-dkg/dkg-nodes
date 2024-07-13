@@ -1,5 +1,10 @@
 ﻿using dkgNode.Models;
+using dkgNode.Services;
 using Microsoft.JSInterop;
+using dkgWebNode.Models;
+using static dkgCommon.Constants.NStatus;
+using Microsoft.Extensions.Logging;
+using Solnet.Wallet;
 
 namespace dkgWebNode.Services
 {
@@ -22,8 +27,14 @@ namespace dkgWebNode.Services
         private string? _serviceNodeUrl = null;
         private int _pollingInterval = 3000;
 
+        private CancellationTokenSource _cancellationTokenSource = new();
+
+        private DkgNodeService? _dkgNodeService = null;
+
         public event Action? OnChange;
+        public event Action? OnDkgChange;
         private void NotifyStateChanged() => OnChange?.Invoke();
+        private void NotifyDkgStateChanged() => OnDkgChange?.Invoke();
         public void SetKeys(string privateKey, string publicKey)
         {
             _privateKey = privateKey;
@@ -53,7 +64,7 @@ namespace dkgWebNode.Services
             int tmpInt = tmpString is not null ? int.Parse(tmpString) : 0;
             _pollingInterval = tmpInt > MinimalPollingInterval ? tmpInt : MinimalPollingInterval;
 
-            _logger.LogInformation("DkgWebNodeService initialized. Service node url: {_serviceNodeUrl}, name: '{_name}', polling interval: {_pollingInterval}", 
+            _logger.LogInformation("DkgWebNodeService initialized. Service node url: {_serviceNodeUrl}, name: '{_name}', polling interval: {_pollingInterval}",
                                     _serviceNodeUrl, _name, _pollingInterval);
         }
 
@@ -72,7 +83,7 @@ namespace dkgWebNode.Services
             {
                 NiceName = _name,
                 Address = _address ?? "",
-                PrivateKey = _privateKey ?? "",
+                PrivateKey = _privateKey ?? "" ,
                 ServiceNodeUrl = _serviceNodeUrl ?? "",
                 PollingInterval = _pollingInterval
             };
@@ -84,7 +95,7 @@ namespace dkgWebNode.Services
             {
                 _name = config.NiceName;
             }
-            if (config.PublicKey is not null && config.PublicKey != "")
+            if (config.Address != "")
             {
                 _address = config.Address;
             }
@@ -103,8 +114,83 @@ namespace dkgWebNode.Services
             _pollingInterval = config.PollingInterval;
 
             _logger.LogInformation("DkgWebNodeService configuration updated. Service node url: {_serviceNodeUrl}, name: '{_name}', polling interval: {_pollingInterval}",
-                                    _serviceNodeUrl, _name, _pollingInterval); 
+                                    _serviceNodeUrl, _name, _pollingInterval);
             NotifyStateChanged();
         }
+
+        public void RunDkg()
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+            DkgNodeConfig nodeConfig = GetNodeConfig();
+            _logger.LogDebug("Starting Dkg node with private key '{key}', address '{address}'", nodeConfig.PrivateKey, nodeConfig.Address);
+
+            _dkgNodeService = new DkgNodeService(nodeConfig, _logger);
+            _dkgNodeService.OnDkgChange += OnDkgStateChanged;
+            var task = RunDkgUntilCancelled(_cancellationTokenSource.Token);
+            NotifyDkgStateChanged();
+            task.Wait();
+            _dkgNodeService.OnDkgChange -= OnDkgStateChanged;
+            _dkgNodeService = null;
+            NotifyDkgStateChanged();
+        }
+
+        private void OnDkgStateChanged()
+        {
+            NotifyDkgStateChanged();
+        }
+        public void CancelDkg()
+        {
+            _cancellationTokenSource.Cancel();
+        }
+
+        public DkgState GetDkgState()
+        {
+            return new DkgState()
+            {
+                NodeState = _dkgNodeService?.GetStatus().ToString() ?? "Stopped",
+                RoundState = "Unknown",
+                RoundId = _dkgNodeService?.GetRound()?.ToString() ?? "N/A",
+            };
+        }
+        private async Task RunDkgUntilCancelled(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var httpClient = new HttpClient();
+                while (!cancellationToken.IsCancellationRequested && _dkgNodeService is not null)
+                {
+                    if (_dkgNodeService.GetStatus() == NotRegistered)
+                    {
+                        await _dkgNodeService.Register(httpClient);
+                    }
+
+                    var statusResponse = await _dkgNodeService.ReportStatus(httpClient, null);
+
+                    if (_dkgNodeService.GetStatus() == RunningStepOne)
+                    {
+                        await _dkgNodeService.RunDkg(httpClient, statusResponse.Data, cancellationToken);
+                        _dkgNodeService.UpdateKeys();
+                    }
+                    else
+                    {
+                        await Task.Delay(_pollingInterval, cancellationToken);
+                    }
+                }                
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Operation was cancelled.");
+            }
+            catch(Exception ex)
+            {
+                _logger.LogInformation("Error {msg}", ex.Message);
+            }
+            finally
+            {
+                // Clean up resources, if necessary
+                _logger.LogInformation("Cleaning up resources.");
+            }
+        }
+
     }
 }

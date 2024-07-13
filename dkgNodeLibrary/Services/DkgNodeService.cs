@@ -26,6 +26,7 @@
 using System.Text;
 using System.Text.Json; 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 using dkg.share;
 using dkg.group;
@@ -50,16 +51,19 @@ namespace dkgNode.Services
         public void SetStatus(NStatus status)
         {
             Status = status;
+            NotifyDkgStateChanged();
         }
         public void SetStatusAndRound(NStatus status, int round)
         {
             Status = status;
             Round = round;
+            NotifyDkgStateChanged();
         }
         public void SetStatusClearRound(NStatus status)
         {
             Status = status;
             Round = null;
+            NotifyDkgStateChanged();
         }
 
         // ...
@@ -92,7 +96,9 @@ namespace dkgNode.Services
         internal bool dieOnStep2 = false;
         internal bool dieOnStep3 = false;
 
-        public DkgNodeService(DkgNodeConfig config, ILogger<DkgNodeService> logger, bool dos2 = false, bool dos3 = false)
+        public event Action? OnDkgChange;
+        private void NotifyDkgStateChanged() => OnDkgChange?.Invoke();
+        public DkgNodeService(DkgNodeConfig config, ILogger logger, bool dos2 = false, bool dos3 = false)
         {
             dieOnStep2 = dos2;
             dieOnStep3 = dos3;

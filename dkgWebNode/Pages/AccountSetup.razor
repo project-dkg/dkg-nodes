@@ -3,11 +3,13 @@
 @using Solnet.Wallet.Bip39
 @using Solnet.KeyStore
 @using MudBlazor
+@using Microsoft.Extensions.Logging
 
 @inject IJSRuntime JSRuntime
 @inject IDialogService DialogService
 @inject DkgWebNodeService DkgWebNodeService
 @inject KeystoreService KeystoreService
+@inject ILogger<AccountSetup> Logger
 
 
 <MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h3">Welcome to Dkg Web Node!</MudText>
@@ -24,8 +26,8 @@
         <MudCardContent>
             <MudText Typo="Typo.h5">Create Solana Account</MudText>
             <MudTextField Class="mb-2" @bind-Value="_mnemonic" Label="Mnemonic seed (12 words)" Variant="Variant.Outlined" 
-                          Adornment="Adornment.End" OnAdornmentClick="() => GenerateMnemonic()" AdornmentIcon="@RefreshMnemonicIcon"
-                          AdornmentAriaLabel="Create new seed" Immediate="false" />
+                          Adornment="Adornment.End" OnAdornmentClick="() => GenerateMnemonic()" AdornmentIcon="@_refreshMnemonicIcon"
+                          AdornmentAriaLabel="Create new seed" Immediate="true" OnChange="@CheckMnemonic()"/>
             <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined"/>
             <MudTextField Class="mb-2" @bind-Value="_passwordCreate" Label="Password" Variant="Variant.Outlined" InputType="@_passwordCreateInput"
                           Adornment="Adornment.End" AdornmentIcon="@_passwordCreateInputIcon" OnAdornmentClick="ButtonShowPasswordCreateClick"
@@ -34,10 +36,6 @@
                 <MudCheckBox Class="mb-2 mr-2" @bind-Value="_hasSavedMnemonic" Color="Color.Primary" Disabled="@_isCreatingAccount">I have saved my mnemonic seed and password safely</MudCheckBox>
                 <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!IsMnemonicValid() || !_hasSavedMnemonic)" 
                            OnClick="CreateAccount">Create Account From Seed</MudButton>
-                @if (_isCreatingAccount)
-                {
-                    <MudProgressCircular Indeterminate="true" />
-                }
             </MudPaper>
         </MudCardContent>
     </MudCard>
@@ -49,7 +47,7 @@
             <MudText Class="mb-2" Typo=" Typo.h5">Import Solana Account</MudText>
             <InputFile id="fileInput" style="display:none" OnChange="HandleFileSelected" />
             <MudTextField Class="mb-2" @bind-Value="_keystoreImport" Label="Keystore Data" Variant="Variant.Outlined" Lines="6" AutoGrow
-                          Adornment="Adornment.End" OnAdornmentClick="() => ClickFileInput()" AdornmentIcon="@LoadIcon"
+                          Adornment="Adornment.End" OnAdornmentClick="() => ClickFileInput()" AdornmentIcon="@_loadIcon"
                           AdornmentAriaLabel="Load key store from file" />
             <MudTextField Class="mb-2" @bind-Value="_passwordImport" Label="Password" Variant="Variant.Outlined" InputType="@_passwordImportInput" 
                           Adornment="Adornment.End" AdornmentIcon="@_passwordImportInputIcon" OnAdornmentClick="ButtonShowPasswordImportClick"
@@ -81,8 +79,8 @@
     private string _address = "";
     private bool _hasSavedMnemonic = false;
 
-    private const string LoadIcon = Icons.Material.Filled.Download;
-    private const string RefreshMnemonicIcon = Icons.Material.Filled.Refresh;
+    private const string _loadIcon = Icons.Material.Filled.Download;
+    private const string _refreshMnemonicIcon = Icons.Material.Filled.Refresh;
 
     private bool _showPasswordCreate = false;
     private bool _showPasswordImport = false;
@@ -93,6 +91,7 @@
     private string _passwordCreateInputIcon => _showPasswordCreate ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
     private string _passwordImportInputIcon => _showPasswordImport ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
 
+    private bool _isMnemonicValid = false;
 
     private void ButtonShowPasswordCreateClick()
     {
@@ -117,6 +116,7 @@
         var wallet = new Wallet(mnemonic);
         var account = wallet.Account;
 
+        Logger.LogDebug("Creating account with private key '{key}', address '{address}'", account.PrivateKey.Key, account.PublicKey.Key);
         await KeystoreService.Save(_passwordCreate, account.PrivateKey.KeyBytes, account.PublicKey.Key);
         _isCreatingAccount = false;
         await Task.Yield();
@@ -195,11 +195,14 @@
         }
     }
 
-    private bool IsMnemonicValid()
+    private async Task CheckMnemonic()
     { 
-       GenerateAddress();
-       return _address != "";  
+        GenerateAddress();
+        _isMnemonicValid = _address != "";
+        await Task.Yield();
     }
+
+    private bool IsMnemonicValid() => _isMnemonicValid;
 
     protected override void OnInitialized()
     {
