@@ -1,0 +1,25 @@
+﻿@using MudBlazor
+
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        Are you sure?
+    </TitleContent>
+    <DialogContent>
+        Do you want to remove the keystore from this system?
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Remove</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    private void Submit() => MudDialog!.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog!.Cancel();
+}

@@ -1,0 +1,224 @@
+﻿@using System.Text
+@using Solnet.Wallet
+@using Solnet.Wallet.Bip39
+@using Solnet.KeyStore
+@using MudBlazor
+@using Microsoft.Extensions.Logging
+
+@inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
+@inject DkgWebNodeService DkgWebNodeService
+@inject KeystoreService KeystoreService
+@inject ILogger<AccountSetup> Logger
+
+
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h3">Welcome to Dkg Web Node!</MudText>
+<MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h5">
+    Before you can use it please either <br />
+    <MudButton Variant="@(_showCreateSolanaAccountCard ? Variant.Outlined : Variant.Text)" Color="Color.Primary"
+               OnClick="ToggleViewToCreate">create</MudButton> a new Solana account or
+    <MudButton Variant="@(_showImportSolanaAccountCard ? Variant.Outlined : Variant.Text)" Color="Color.Primary"
+               OnClick="ToggleViewToImport">import</MudButton> your existing account.
+</MudText>
+@if (_showCreateSolanaAccountCard)
+{
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h5">Create Solana Account</MudText>
+            <MudTextField Class="mb-2" @bind-Value="_mnemonic" Label="Mnemonic seed (12 words)" Variant="Variant.Outlined" 
+                          Adornment="Adornment.End" OnAdornmentClick="() => GenerateMnemonic()" AdornmentIcon="@_refreshMnemonicIcon"
+                          AdornmentAriaLabel="Create new seed" Immediate="true" OnChange="@CheckMnemonic()"/>
+            <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined"/>
+            <MudTextField Class="mb-2" @bind-Value="_passwordCreate" Label="Password" Variant="Variant.Outlined" InputType="@_passwordCreateInput"
+                          Adornment="Adornment.End" AdornmentIcon="@_passwordCreateInputIcon" OnAdornmentClick="ButtonShowPasswordCreateClick"
+                          AdornmentAriaLabel="Show Password" />
+            <MudPaper Class="d-flex" Elevation="0">
+                <MudCheckBox Class="mb-2 mr-2" @bind-Value="_hasSavedMnemonic" Color="Color.Primary" Disabled="@_isCreatingAccount">I have saved my mnemonic seed and password safely</MudCheckBox>
+                <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!IsMnemonicValid() || !_hasSavedMnemonic)" 
+                           OnClick="CreateAccount">Create Account From Seed</MudButton>
+            </MudPaper>
+        </MudCardContent>
+    </MudCard>
+}
+@if (_showImportSolanaAccountCard)
+{
+    <MudCard>
+        <MudCardContent>
+            <MudText Class="mb-2" Typo=" Typo.h5">Import Solana Account</MudText>
+            <InputFile id="fileInput" style="display:none" OnChange="HandleFileSelected" />
+            <MudTextField Class="mb-2" @bind-Value="_keystoreImport" Label="Keystore Data" Variant="Variant.Outlined" Lines="6" AutoGrow
+                          Adornment="Adornment.End" OnAdornmentClick="() => ClickFileInput()" AdornmentIcon="@_loadIcon"
+                          AdornmentAriaLabel="Load key store from file" />
+            <MudTextField Class="mb-2" @bind-Value="_passwordImport" Label="Password" Variant="Variant.Outlined" InputType="@_passwordImportInput" 
+                          Adornment="Adornment.End" AdornmentIcon="@_passwordImportInputIcon" OnAdornmentClick="ButtonShowPasswordImportClick"
+                          AdornmentAriaLabel="Show Password" />
+            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="ImportKeystore">Import account</MudButton>
+        </MudCardContent>
+    </MudCard>
+}
+
+
+<MudOverlay @bind-Visible="_isCreatingAccount" DarkBackground="true" Absolute="true" Class="cursor-progress">
+    <MudPaper Class="pa-16 ma-2">
+        <MudText>Creating or importing your account. Please be patient, it takes a long time.</MudText>
+    </MudPaper>
+</MudOverlay>
+
+@code {
+    private bool _showCreateSolanaAccountCard = false;
+    private bool _showImportSolanaAccountCard = false;
+
+    private bool _isCreatingAccount = false;
+
+    private string _passwordCreate = "";
+
+    private string _keystoreImport = "";
+    private string _passwordImport = "";
+
+    private string _mnemonic = "";
+    private string _address = "";
+    private bool _hasSavedMnemonic = false;
+
+    private const string _loadIcon = Icons.Material.Filled.Download;
+    private const string _refreshMnemonicIcon = Icons.Material.Filled.Refresh;
+
+    private bool _showPasswordCreate = false;
+    private bool _showPasswordImport = false;
+
+    private InputType _passwordCreateInput => _showPasswordCreate ? InputType.Text : InputType.Password;
+    private InputType _passwordImportInput => _showPasswordImport ? InputType.Text : InputType.Password;
+
+    private string _passwordCreateInputIcon => _showPasswordCreate ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    private string _passwordImportInputIcon => _showPasswordImport ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    private bool _isMnemonicValid = false;
+
+    private void ButtonShowPasswordCreateClick()
+    {
+        _showPasswordCreate = !_showPasswordCreate;
+    }
+
+    private void ButtonShowPasswordImportClick()
+    {
+        _showPasswordImport = !_showPasswordImport;
+    }
+
+    private async void ClickFileInput()
+    {
+        await JSRuntime.InvokeVoidAsync("triggerFileInputClick", "fileInput");
+    }
+
+    private async void CreateAccount()
+    {
+        _isCreatingAccount = true;
+        await Task.Yield();
+        var mnemonic = new Mnemonic(_mnemonic);
+        var wallet = new Wallet(mnemonic);
+        var account = wallet.Account;
+
+        Logger.LogDebug("Creating account with private key '{key}', address '{address}'", account.PrivateKey.Key, account.PublicKey.Key);
+        await KeystoreService.Save(_passwordCreate, account.PrivateKey.KeyBytes, account.PublicKey.Key);
+        _isCreatingAccount = false;
+        await Task.Yield();
+
+        DkgWebNodeService.SetKeys(account.PrivateKey.Key, account.PublicKey.Key);
+    }
+
+    private void GenerateAddress()
+    {
+        string oldAddress = _address;
+
+        var words = _mnemonic.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 12)
+        {
+            _address = "";
+        }
+        else
+        {
+            try
+            {
+                var wallet = new Wallet(_mnemonic);
+                var account = wallet.Account;
+                _address = account.PublicKey.Key;
+            }
+            catch (Exception)
+            {
+                _address = "";
+            }
+        }
+        if (_address != oldAddress) StateHasChanged();
+    }
+
+    private void GenerateMnemonic()
+    {
+        var mnemonic = new Mnemonic(WordList.English, WordCount.Twelve);
+        _mnemonic = mnemonic.ToString();
+        var wallet = new Wallet(_mnemonic);
+        Account account = wallet.Account;
+        _address = account.PublicKey.Key;
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            using var stream = file.OpenReadStream();
+            using var reader = new StreamReader(stream);
+            _keystoreImport = await reader.ReadToEndAsync();
+        }
+    }
+
+    private async Task ImportKeystore()
+    {
+        _isCreatingAccount = true;
+        await Task.Yield();
+        var (privateKey, publicKey) = KeystoreService.Import(_keystoreImport, _passwordImport);
+        if (privateKey is not null && publicKey is not null)
+        {
+            DkgWebNodeService.SetKeys(privateKey, publicKey);
+            await KeystoreService.Save(_passwordImport, Encoding.UTF8.GetBytes(privateKey), publicKey);
+            _isCreatingAccount = false;
+            StateHasChanged();
+            await Task.Yield();
+        }
+        else
+        {
+            _isCreatingAccount = false;
+            StateHasChanged();
+            await Task.Yield();
+            var parameters = new DialogParameters<ErrDialog>
+            {
+                { x => x.ErrorText, "Failed to import keystore possibly because of incorrect password. Please try again." }
+            };
+            await DialogService.ShowAsync<ErrDialog>("Error Dialog", parameters);
+        }
+    }
+
+    private async Task CheckMnemonic()
+    { 
+        GenerateAddress();
+        _isMnemonicValid = _address != "";
+        await Task.Yield();
+    }
+
+    private bool IsMnemonicValid() => _isMnemonicValid;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        GenerateMnemonic();
+        GenerateAddress();
+    }
+
+    private void ToggleViewToCreate()
+    {
+        _showCreateSolanaAccountCard = true;
+        _showImportSolanaAccountCard = false;
+    }
+    private void ToggleViewToImport()
+    {
+        _showCreateSolanaAccountCard = false;
+        _showImportSolanaAccountCard = true;
+    }
+}

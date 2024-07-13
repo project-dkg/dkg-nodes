@@ -1,0 +1,54 @@
+﻿@using MudBlazor
+@using dkgNode.Models
+
+
+@inject IDialogService DialogService
+@inject DkgWebNodeService DkgWebNodeService
+
+
+<MudDialog>
+    <TitleContent>
+        <MudText Align="Align.Center" Class="mb-2" Typo=" Typo.h4">Dkg Web Node Configuration</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField Class="mb-2" @bind-Value="config.NiceName" Label="Node Name" Variant="Variant.Outlined" />
+        <MudTextField Class="mb-2" @bind-Value="config.ServiceNodeUrl" Label="Service Node URL" Variant="Variant.Outlined" />
+        <MudTextField Class="mb-2" @bind-Value="config.PollingInterval" Label="@_pollingIntervalLabel" Variant="Variant.Outlined"
+                      Adornment="Adornment.End" AdornmentText="ms" AdornmentColor="Color.Info" OnChange="@HandleIntervalChanged()"/>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private string _pollingIntervalLabel = $"Polling Interval ({DkgWebNodeService.MinimalPollingInterval} or more)";
+
+    [Parameter]
+    public DkgNodeConfig config { get; set; } = new DkgNodeConfig()
+        {
+            ServiceNodeUrl = DkgWebNodeService.DefaultServiceNodeUrl,
+            NiceName = DkgWebNodeService.DefaultName,
+            PollingInterval = DkgWebNodeService.MinimalPollingInterval
+        };
+
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    private void Submit()
+    {
+        MudDialog!.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog!.Cancel();
+
+    private async Task HandleIntervalChanged()
+    {
+        if (config.PollingInterval < DkgWebNodeService.MinimalPollingInterval)
+        {
+            config.PollingInterval = DkgWebNodeService.MinimalPollingInterval;
+        }
+        await Task.Yield();
+    }
+}

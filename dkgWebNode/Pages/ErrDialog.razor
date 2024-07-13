@@ -1,0 +1,25 @@
+﻿@using MudBlazor
+
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        Error
+    </TitleContent>
+    <DialogContent>
+        <MudText>@ErrorText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" OnClick="Submit">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public string? ErrorText { get; set; }
+
+    private void Submit() => MudDialog!.Close(DialogResult.Ok(true));
+
+}

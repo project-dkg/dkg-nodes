@@ -25,7 +25,6 @@
 
 using dkgCommon.Constants;
 using dkgCommon.Models;
-using dkgServiceNode.Constants;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
@@ -34,7 +33,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using static dkgCommon.Constants.NodeStatusConstants;
-using static dkgServiceNode.Constants.RoundStatusConstants;
+using static dkgCommon.Constants.RoundStatusConstants;
 
 using Solnet.Wallet;
 using System.Xml.Linq;

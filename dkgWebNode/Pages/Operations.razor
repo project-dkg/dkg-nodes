@@ -1,0 +1,161 @@
+﻿@using MudBlazor
+@using BlazorDownloadFile
+@using dkgNode.Models
+@using dkgWebNode.Models;
+
+@inject IDialogService DialogService
+@inject KeystoreService KeystoreService
+@inject DkgWebNodeService DkgWebNodeService
+@inject IBlazorDownloadFileService BlazorDownloadFileService
+
+@implements IDisposable
+
+
+<MudText Align="Align.Center" Class="mb-4" Typo=" Typo.h3">Dkg Web Node Operations Center</MudText>
+
+<MudCard>
+    <MudCardHeader>
+        <MudText Typo="Typo.h4" Class="mb-4">Node State</MudText>
+        </MudCardHeader>
+    <MudCardContent>
+        <MudPaper Class="d-flex" Elevation="0">
+            <MudGrid>
+                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                    <MudText>Address:</MudText>
+                </MudItem>
+                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                    <MudText>@_address</MudText>
+                </MudItem>
+
+                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                    <MudText>Name:</MudText>
+                </MudItem>
+                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                    <MudText>@_name</MudText>
+                </MudItem>
+
+                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                    <MudText>State:</MudText>
+                </MudItem>
+                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                    <MudText>@_state</MudText>
+                </MudItem>
+
+                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                    <MudText>Round Number:</MudText>
+                </MudItem>
+                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                    <MudText>@_roundNumber</MudText>
+                </MudItem>
+            </MudGrid>
+            <MudSwitch T=bool Color="Color.Success" UncheckedColor="Color.Error" Class="flex-column justify-end"
+                       Size="Size.Large" Label=@(_running ? "Running" : "Stopped") ValueChanged="@HandleSwitchChanged" />
+        </MudPaper>
+    </MudCardContent>
+</MudCard>
+
+
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <MudText Typo="Typo.h4" Class="mb-4">Node Management</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="ConfigureNode">Configure Node</MudButton>
+        <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Warning" OnClick="RemoveKeystore">Remove Keystore</MudButton>
+        <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportKeystore">Export Keystore</MudButton>
+    </MudCardContent>
+</MudCard>
+
+
+@code {
+    private string _address = "Node Solana address";
+    private string _name = "Node name";
+    private string _state = "Node state";
+    private string _roundNumber = "Round number";
+
+    private bool _running = false;
+
+    private async Task HandleSwitchChanged(bool value)
+    {
+        _running = value;
+        if (_running)
+        {
+            DkgWebNodeService.RunDkg();
+        }
+        else
+        {
+            DkgWebNodeService.CancelDkg();
+        }
+        OnNodeStateUpdate();
+        await Task.Yield();
+    }
+
+    private async Task ConfigureNode()
+    {
+        DkgNodeConfig cfg = DkgWebNodeService.GetNodeConfig();
+        var parameters = new DialogParameters<ConfigureDialog>
+            {
+                { x => x.config, cfg }
+            };
+
+        var dialog = DialogService.Show<ConfigureDialog>("Node Configuration Dialog", parameters);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            DkgWebNodeService.SetNodeConfig(cfg);
+            await DkgWebNodeService.SaveNodeConfig();
+            OnNodeStateUpdate();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        OnNodeStateUpdate();
+        DkgWebNodeService.OnDkgChange += OnNodeStateUpdate;
+    }
+
+    public void Dispose()
+    {
+        DkgWebNodeService.OnDkgChange -= OnNodeStateUpdate;
+    }
+
+    private void OnNodeStateUpdate()
+    {
+        DkgNodeConfig cfg = DkgWebNodeService.GetNodeConfig();
+        _address = cfg.Address;
+        _name = cfg.Name;
+
+        DkgState state = DkgWebNodeService.GetDkgState();
+        _state = state.NodeState;
+        _roundNumber = state.RoundId;
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveKeystore()
+    {
+        var dialog = DialogService.Show<CKsDialog>("Clear Keystore Confirmation Dialog");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            _running = false;
+            await HandleSwitchChanged(false);
+            KeystoreService.Clear();
+            DkgWebNodeService.ClearKeys();
+        }
+    }
+
+    private async Task ExportKeystore()
+    {
+        var keystore = await KeystoreService.GetJsonString();
+        if (keystore is not null)
+        {
+            //var fileName = await JSRuntime.InvokeAsync<string>("prompt", "Enter a file name:");
+
+            await BlazorDownloadFileService.DownloadFileFromText("keystore.json", keystore, System.Text.Encoding.UTF8, "application/json");
+        }
+    }
+
+  
+}

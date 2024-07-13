@@ -1,0 +1,47 @@
+﻿@page "/"
+
+@inject DkgWebNodeService DkgWebNodeService
+@inject KeystoreService KeystoreService
+@implements IDisposable
+
+<PageTitle>Dkg Web Node</PageTitle>
+
+
+@if (DkgWebNodeService.HasKeys())
+{
+    <Operations />
+}
+else if (_keystoreExists)
+{
+    <AccountLogin />
+}
+else
+{
+    <AccountSetup />
+}
+
+
+@code {
+    private bool _keystoreExists = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DkgWebNodeService.InitNodeConfig();
+        await DkgWebNodeService.SaveNodeConfig();
+        DkgWebNodeService.OnChange += StateHasChanged;
+        _keystoreExists = await KeystoreService.Exists();
+        KeystoreService.OnClear += HandleKeystoreCleared;
+    }
+
+    private void HandleKeystoreCleared()
+    {
+        _keystoreExists = false;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        DkgWebNodeService.OnChange -= StateHasChanged;
+        KeystoreService.OnClear -= HandleKeystoreCleared;
+    }
+}   
