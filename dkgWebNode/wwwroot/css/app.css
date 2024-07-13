@@ -101,3 +101,19 @@ a, .btn-link {
 code {
     color: #c02d76;
 }
+
+.key-value-pair {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+}
+
+.key-text {
+    margin-right: 16px; /* Adjust spacing between key and value as needed */
+}
+
+.value-text {
+    /* Additional styling for value text if needed */
+}
+

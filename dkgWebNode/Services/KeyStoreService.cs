@@ -12,59 +12,56 @@ using Solnet.Wallet.Utilities;
 
 namespace dkgWebNode.Services
 {
-    public class KeystoreService
+    public class KeystoreService(IJSRuntime jsRuntime)
     {
-        private readonly IJSRuntime _jsRuntime;
+        private readonly IJSRuntime _jsRuntime = jsRuntime;
         private readonly string _keyStoreKey = "KeyStore";
-        private SecretKeyStoreService _secretKeyStoreService = new SecretKeyStoreService();
-        public KeystoreService(IJSRuntime jsRuntime)
-        {
-            _jsRuntime = jsRuntime;
-        }
+        private readonly SecretKeyStoreService _secretKeyStoreService = new();
 
+        public async Task<string?> GetJsonString()
+        {
+            string? keystoreString = await _jsRuntime.InvokeAsync<string?>("getFromLocalStorage", _keyStoreKey);
+            if (keystoreString is not null)
+            {
+                try
+                {
+                    byte[] keystoreDataBytes = Convert.FromBase64String(keystoreString);
+                    keystoreString = Encoding.UTF8.GetString(keystoreDataBytes);
+                }
+                catch
+                {
+                }
+            }
+
+            return keystoreString;
+        }
         public async Task Save(string password, byte[] privateKeyBytes, string publicKey)
         {
-            // EncryptAndGenerateDefaultKeyStoreAsJson в wasm непередаваемо медленно работает
-            // Поэтому вместо этого нужно что-то другое придумать
-            // string keystoreString = _secretKeyStoreService.EncryptAndGenerateDefaultKeyStoreAsJson(password, privateKeyBytes, publicKey);
-            // byte[] keystoreDataBytes = Encoding.UTF8.GetBytes(keystoreString);
-            // keystoreString = Convert.ToBase64String(keystoreDataBytes);
-
-            // Пока что просто сохраняем secret key
-
-            string keystoreString = new Base58Encoder().EncodeData(privateKeyBytes);
-            await _jsRuntime.InvokeVoidAsync("saveToLocalStorage", _keyStoreKey, keystoreString);
+             string keystoreString = _secretKeyStoreService.EncryptAndGenerateDefaultKeyStoreAsJson(password, privateKeyBytes, publicKey);
+             byte[] keystoreDataBytes = Encoding.UTF8.GetBytes(keystoreString);
+             keystoreString = Convert.ToBase64String(keystoreDataBytes);
+             await _jsRuntime.InvokeVoidAsync("saveToLocalStorage", _keyStoreKey, keystoreString);
         }
 
         public async Task<(string?, string?)> Load(string password)
         {
-            string? keystoreString = await _jsRuntime.InvokeAsync<string?>("getFromLocalStorage", _keyStoreKey);
+            string? keystoreString = await GetJsonString();
             string? solanaAddress = null;
             string? solanaPrivateKey = null;
             if (keystoreString is not null)
             {
                 try
                 {
-                        //        byte[] keystoreDataBytes = Convert.FromBase64String(keystoreString);
-                        //        keystoreString = Encoding.UTF8.GetString(keystoreDataBytes);
+                        JsonDocument jsonDocument = JsonDocument.Parse(keystoreString);
+                        solanaAddress = jsonDocument.RootElement.GetProperty("address").GetString();
 
-                        //        JsonDocument jsonDocument = JsonDocument.Parse(keystoreString);
-                        //        solanaAddress = jsonDocument.RootElement.GetProperty("address").GetString();
-
-                        //       if (solanaAddress is null)
-                        //       {
-                        //           return (null, null);                       
-                        //       }
-                        //       else
-                        //       {
-                        //           keystoreDataBytes = _secretKeyStoreService.DecryptKeyStoreFromJson(password, keystoreString);
-                        //           solanaPrivateKey = Solnet.Wallet.Utilities.Encoders.Base58.EncodeData(keystoreDataBytes);
-                        //       }
-                        Account account = Account.FromSecretKey(keystoreString);
-                        solanaPrivateKey = account.PrivateKey.Key;
-                        solanaAddress = account.PublicKey.Key;
+                        if (solanaAddress is not null)
+                        {
+                           byte[] keystoreDataBytes = _secretKeyStoreService.DecryptKeyStoreFromJson(password, keystoreString);
+                           solanaPrivateKey = Encoders.Base58.EncodeData(keystoreDataBytes);
+                        }
                     }
-                    catch
+                catch
                 {
                 }
             }
@@ -73,21 +70,14 @@ namespace dkgWebNode.Services
 
         public async Task<string?> LoadAddress()
         {
-            string? keystoreString = await _jsRuntime.InvokeAsync<string?>("getFromLocalStorage", _keyStoreKey);
+            string? keystoreString = await GetJsonString();
             string? solanaAddress = null;
             if (keystoreString is not null)
             {
                 try
                 {
-                    //        byte[] keystoreDataBytes = Convert.FromBase64String(keystoreString);
-                    //        keystoreString = Encoding.UTF8.GetString(keystoreDataBytes);
-
-                    //        JsonDocument jsonDocument = JsonDocument.Parse(keystoreString);
-                    //        solanaAddress = jsonDocument.RootElement.GetProperty("address").GetString();
-
-                    string solanaSecretKey = keystoreString;
-                    Account account = Account.FromSecretKey(solanaSecretKey);
-                    solanaAddress = account.PublicKey.Key;
+                    JsonDocument jsonDocument = JsonDocument.Parse(keystoreString);
+                    solanaAddress = jsonDocument.RootElement.GetProperty("address").GetString();
                 }
                 catch
                 {
@@ -95,6 +85,27 @@ namespace dkgWebNode.Services
             }
             return solanaAddress;
         }
+        public (string?, string?) Import(string keystore, string password)
+        {
+            string? solanaAddress = null;
+            string? solanaPrivateKey = null;
+            try
+            {
+                JsonDocument jsonDocument = JsonDocument.Parse(keystore);
+                solanaAddress = jsonDocument.RootElement.GetProperty("address").GetString();
+
+                if (solanaAddress is not null)
+                {
+                   byte[] keystoreDataBytes = _secretKeyStoreService.DecryptKeyStoreFromJson(password, keystore);
+                   solanaPrivateKey = Encoders.Base58.EncodeData(keystoreDataBytes);
+                }
+            }
+            catch
+            {
+            }
+            return (solanaPrivateKey, solanaAddress);
+        }
+
         public async void Clear()
         {
             await _jsRuntime.InvokeVoidAsync("clearLocalStorage", _keyStoreKey);

@@ -9,9 +9,7 @@
 
 @if (DkgWebNodeService.HasKeys())
 {
-    <h1>Operations</h1>
-    <span>Welcome to your new app.</span>
-
+    <Operations />
 }
 else if (_keystoreExists)
 {
@@ -19,7 +17,7 @@ else if (_keystoreExists)
 }
 else
 {
- <AccountSetup />
+    <AccountSetup />
 }
 
 
@@ -28,19 +26,17 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await DkgWebNodeService.InitNodeConfig();
+        await DkgWebNodeService.SaveNodeConfig();
         DkgWebNodeService.OnChange += StateHasChanged;
         _keystoreExists = await KeystoreService.Exists();
         KeystoreService.OnClear += HandleKeystoreCleared;
     }
 
-    private async void HandleKeystoreCleared()
+    private void HandleKeystoreCleared()
     {
-        var oldKeystoreExists = _keystoreExists;
-        _keystoreExists = await KeystoreService.Exists();
-        if (_keystoreExists != oldKeystoreExists) 
-        {
-            StateHasChanged();
-        }
+        _keystoreExists = false;
+        StateHasChanged();
     }
 
     public void Dispose()

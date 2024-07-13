@@ -1,5 +1,6 @@
 ﻿@using MudBlazor
 
+@inject IDialogService DialogService
 @inject KeystoreService KeystoreService
 @inject DkgWebNodeService DkgWebNodeService
 
@@ -10,40 +11,23 @@
     <MudCardContent>
         <MudText Typo="Typo.h5">Unlock Solana Account</MudText>
         <MudPaper Class="d-flex" Elevation="0">
-            <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined" Disabled="@_isUnlockingAccount" />      
-            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Warning" OnClick="RemoveKeystore" Disabled="@_isUnlockingAccount">Remove Keystore</MudButton>
+            <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined"/>      
+            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Warning" OnClick="RemoveKeystore">Remove Keystore</MudButton>
         </MudPaper>
         <MudTextField Class="mb-2" @bind-Value="_passwordLogin" Label="Password" Variant="Variant.Outlined" InputType="@_passwordLoginInput"
                       Adornment="Adornment.End" AdornmentIcon="@_passwordLoginInputIcon" OnAdornmentClick="ButtonShowPasswordLoginClick"
-                      AdornmentAriaLabel="Show Password" Disabled="@_isUnlockingAccount" />
+                      AdornmentAriaLabel="Show Password" />
         <MudPaper Class="d-flex" Elevation="0">
-            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAccount" Disabled="@_isUnlockingAccount">Unlock Account</MudButton>
-            @if (_isUnlockingAccount)
-            {
-                <MudProgressCircular Indeterminate="true" />
-            }
+            <MudButton Class="mb-2" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAccount">Unlock Account</MudButton>
          </MudPaper>
     </MudCardContent>
 </MudCard>
 
-<MudDialog @bind-Visible="_showConfirmationDialog" Title="Are you sure?" CloseButton="true" CloseButtonColor="Color.Default">
-    <DialogContent>
-        <MudText>Do you want to remove the keystore from this system?</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="ClearKeystore">Yes</MudButton>
-        <MudButton Color="Color.Default" OnClick="CancelClearKeystore">No</MudButton>
-    </DialogActions>
-</MudDialog>
-
-<MudDialog @bind-Visible="_showErrorMessage" Title="Error" CloseButton="true" CloseButtonColor="Color.Default">
-    <DialogContent>
-        <MudText>Failed to decode keystore possibly because of incorrect password. Please try again</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="HideErrorMessage">OK</MudButton>
-    </DialogActions>
-</MudDialog>
+<MudOverlay @bind-Visible="_isUnlockingAccount" DarkBackground="true" Absolute="true" Class="cursor-progress">
+    <MudPaper Class="pa-16 ma-2">
+        <MudText>Unlocking your account. Please be patient, it takes a long time.</MudText>
+    </MudPaper>
+</MudOverlay>
 
 @code {
     private bool _isUnlockingAccount = false;
@@ -53,9 +37,6 @@
     private InputType _passwordLoginInput => _showPasswordLogin ? InputType.Text : InputType.Password;
     private string _passwordLoginInputIcon => _showPasswordLogin ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
 
-    private bool _showConfirmationDialog = false;
-    private bool _showErrorMessage = false;
-
     private void ButtonShowPasswordLoginClick()
     {
         _showPasswordLogin = !_showPasswordLogin;
@@ -63,37 +44,35 @@
 
     private async void UnlockAccount()
     {
+        _isUnlockingAccount = true;
+        await Task.Delay(1);
         var (privateKey, publicKey) = await KeystoreService.Load(_passwordLogin);
+        _isUnlockingAccount = false;
+        StateHasChanged();
+        await Task.Delay(1);
         if (privateKey is not null && publicKey is not null)
         {
-            DkgWebNodeService.SetKeys(publicKey, privateKey);
+            DkgWebNodeService.SetKeys(privateKey, publicKey);
         }
         else
         {
-            _showErrorMessage = true;     
+            var parameters = new DialogParameters<ErrDialog>
+            {
+                { x => x.ErrorText, "Failed to unlock keystore possibly because of incorrect password. Please try again." }
+            };
+            await DialogService.ShowAsync<ErrDialog>("Error Dialog", parameters);
         }
     }
 
-    private void ClearKeystore()
+    private async Task RemoveKeystore()
     {
-        KeystoreService.Clear();
-        DkgWebNodeService.ClearKeys();
-        _showConfirmationDialog = false;
-    }
-
-    private void CancelClearKeystore()
-    {
-        _showConfirmationDialog = false;
-    }
-
-    private void RemoveKeystore()
-    {
-        _showConfirmationDialog = true;
-    }
-
-    private void HideErrorMessage()
-    {
-        _showErrorMessage = false;
+        var dialog = DialogService.Show<CKsDialog>("Clear Keystore Confirmation Dialog");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            KeystoreService.Clear();
+            DkgWebNodeService.ClearKeys();
+        }
     }
 
     protected override async Task OnInitializedAsync()
