@@ -15,7 +15,7 @@
 
 <MudCard>
     <MudCardHeader>
-        <MudText Typo="Typo.h4" Class="mb-4">Node State</MudText>
+        <MudText Typo="Typo.h4" Class="mb-4">Node Status</MudText>
         </MudCardHeader>
     <MudCardContent>
         <MudPaper Class="d-flex" Elevation="0">
@@ -35,7 +35,7 @@
                 </MudItem>
 
                 <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
-                    <MudText>State:</MudText>
+                    <MudText>Status:</MudText>
                 </MudItem>
                 <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
                     <MudText>@_state</MudText>
@@ -47,6 +47,12 @@
                 <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
                     <MudText>@_roundNumber</MudText>
                 </MudItem>
+                <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                    <MudText>Round Status:</MudText>
+                </MudItem>
+                <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                    <MudText>@_roundStatus</MudText>
+                </MudItem>
             </MudGrid>
             <MudSwitch T=bool Color="Color.Success" UncheckedColor="Color.Error" Class="flex-column justify-end"
                        Size="Size.Large" Label=@(_running ? "Running" : "Stopped") ValueChanged="@HandleSwitchChanged" />
@@ -54,6 +60,46 @@
     </MudCardContent>
 </MudCard>
 
+
+<MudCard>
+    <MudCardHeader>
+        <MudText Typo="Typo.h4" Class="mb-4">Last Round Information</MudText>
+    </MudCardHeader>
+        <MudCardContent>
+            <MudGrid>
+            <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                <MudText>Round Number:</MudText>
+            </MudItem>
+            <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                <MudText>@_lastRoundNumber</MudText>
+            </MudItem>
+            <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                <MudText>Round Final Status:</MudText>
+            </MudItem>
+            <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                <MudText>@_lastRoundStatus</MudText>
+            </MudItem>
+            <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                <MudText>Round Result:</MudText>
+            </MudItem>
+            <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                <MudText>@_lastRoundResult</MudText>
+            </MudItem>
+            <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                <MudText>Node Final Status:</MudText>
+            </MudItem>
+            <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                <MudText>@_lastNodeStatus</MudText>
+            </MudItem>
+            <MudItem xs="4" sm="3" md="3" lg="3" xl="3">
+                <MudText>Node Random:</MudText>
+            </MudItem>
+            <MudItem xs="8" sm="9" md="9" lg="9" xl="9">
+                <MudText>@_lastNodeRandom</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
 
 <MudCard Class="mt-4">
     <MudCardHeader>
@@ -72,6 +118,13 @@
     private string _name = "Node name";
     private string _state = "Node state";
     private string _roundNumber = "Round number";
+    private string _roundStatus = "Round state";
+
+    private string _lastRoundNumber = "Last round number";
+    private string _lastRoundStatus = "Last round state";
+    private string _lastRoundResult = "Last round result";
+    private string _lastNodeStatus = "Last state";
+    private string _lastNodeRandom = "Last node random";
 
     private bool _running = false;
 
@@ -86,7 +139,7 @@
         {
             DkgWebNodeService.CancelDkg();
         }
-        OnNodeStateUpdate();
+        OnNodeStatusUpdate();
         await Task.Yield();
     }
 
@@ -105,30 +158,38 @@
         {
             DkgWebNodeService.SetNodeConfig(cfg);
             await DkgWebNodeService.SaveNodeConfig();
-            OnNodeStateUpdate();
+            OnNodeStatusUpdate();
         }
     }
 
+ 
     protected override void OnInitialized()
     {
-        OnNodeStateUpdate();
-        DkgWebNodeService.OnDkgChange += OnNodeStateUpdate;
+        OnNodeStatusUpdate();
+        DkgWebNodeService.OnDkgChange += OnNodeStatusUpdate;
     }
 
     public void Dispose()
     {
-        DkgWebNodeService.OnDkgChange -= OnNodeStateUpdate;
+        DkgWebNodeService.OnDkgChange -= OnNodeStatusUpdate;
     }
 
-    private void OnNodeStateUpdate()
+    private void OnNodeStatusUpdate()
     {
         DkgNodeConfig cfg = DkgWebNodeService.GetNodeConfig();
         _address = cfg.Address;
         _name = cfg.Name;
 
-        DkgState state = DkgWebNodeService.GetDkgState();
-        _state = state.NodeState;
+        DkgStatus state = DkgWebNodeService.GetDkgStatus();
+        _state = state.NodeStatus;
         _roundNumber = state.RoundId;
+        _roundStatus = state.RoundStatus;
+
+        _lastRoundNumber = state.LastRoundId;
+        _lastRoundStatus = state.LastRoundStatus;
+        _lastRoundResult = state.LastRoundResult;
+        _lastNodeStatus = state.LastNodeStatus;
+        _lastNodeRandom = state.LastNodeRandom;
 
         StateHasChanged();
     }

@@ -6,8 +6,8 @@
     <DockerPublishLocally>False</DockerPublishLocally>
     <ProjectGuid>357381d9-5241-448f-a5ac-40e90d2a19ab</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
-    <DockerServiceName>dkgservicenode</DockerServiceName>
+    <DockerServiceUrl>{Scheme}://localhost:8083</DockerServiceUrl>
+    <DockerServiceName>dkgwebnode</DockerServiceName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />

@@ -64,5 +64,14 @@ namespace dkgServiceNode.Data
         {
             return await NodesRoundHistory.FirstOrDefaultAsync(nrh => nrh.NodeId == nodeId && nrh.RoundId == roundId);
         }
+
+        public async Task<NodesRoundHistory?> GetLastNodeRoundHistory(int nodeId, int currentRoundId)
+        {
+            return await NodesRoundHistory
+                .Where(nrh => nrh.NodeId == nodeId && nrh.RoundId != currentRoundId)
+                .OrderByDescending(nrh => nrh.RoundId)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

@@ -24,30 +24,70 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using dkgCommon.Constants;
+using System.Threading.Tasks;
 
 namespace dkgCommon.Models
 {
     public class StatusResponse
     {
         public int RoundId { get; set; }
+        public RStatus RoundStatus { get; set; }
+        public int LastRoundId { get; set; }
+        public RStatus LastRoundStatus { get; set; }
+        public int? LastRoundResult { get; set; } = null;
         public NStatus Status { get; set; }
+        public NStatus LastStatus { get; set; }
+        public int? LastNodeRandom { get; set; } = null;
         public string[] Data { get; set; }
+  
         public StatusResponse()
         {
-            RoundId = -1;
+            RoundId = 0;
+            LastRoundId = 0;
             Status = NStatus.Unknown;
+            LastStatus = NStatus.Unknown;
+            RoundStatus = RStatus.Unknown;
+            LastRoundStatus = RStatus.Unknown;
             Data = [];
         }
         public StatusResponse(int roundId, NStatus status)
+            {
+            RoundId = roundId;
+            LastRoundId = 0;
+            Status = status;
+            LastStatus = NStatus.Unknown;
+            RoundStatus = RStatus.Unknown;
+            LastRoundStatus = RStatus.Unknown;
+            Data = [];
+
+        }
+        public StatusResponse(int roundId, RStatus roundStatus, 
+                              int lastRoundId, RStatus lastRoundStatus, int? lastRoundResult,
+                              NStatus status, NStatus lastStatus, int? lastNodeRandom)
         {
             RoundId = roundId;
+            RoundStatus = roundStatus;
+            LastRoundId = lastRoundId;
+            LastRoundStatus = lastRoundStatus;
+            LastRoundResult = lastRoundResult;
             Status = status;
+            LastStatus = lastStatus;
+            LastNodeRandom = lastNodeRandom;
             Data = [];        
         }
-        public StatusResponse(int roundId, NStatus status, string[] data)
+        public StatusResponse(int roundId, RStatus roundStatus,
+                              int lastRoundId, RStatus lastRoundStatus, int? lastRoundResult,
+                              NStatus status, NStatus lastStatus, int? lastNodeRandom,
+                              string[] data)
         {
             RoundId = roundId;
+            RoundStatus = roundStatus;
+            LastRoundId = lastRoundId;
+            LastRoundStatus = lastRoundStatus;
+            LastRoundResult = lastRoundResult;
             Status = status;
+            LastStatus = lastStatus;
+            LastNodeRandom = lastNodeRandom;
             Data = data;
         }
         public override string ToString()

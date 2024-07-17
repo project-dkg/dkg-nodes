@@ -37,6 +37,7 @@ using dkgCommon.Constants;
 using dkgCommon.Models;
 
 using static dkgCommon.Constants.NStatus;
+using System.Text.RegularExpressions;
 
 
 namespace dkgNode.Services
@@ -46,9 +47,49 @@ namespace dkgNode.Services
         // Node Status and Round
         internal NStatus Status { get; set; } = NotRegistered;
         internal int? Round { get; set; } = null;
+        internal RStatus RoundStatus { get; set; } = RStatus.Unknown;
+        public int? LastRound { get; set; } = null;
+        public RStatus LastRoundStatus { get; set; } = RStatus.Unknown;
+        public string LastRoundResult { get; set; } = "N/A";
+        public NStatus LastNodeStatus { get; set; } = Unknown;
+        public string LastNodeRandom { get; set; } = "N/A"; 
         public NStatus GetStatus() => Status;
         public int? GetRound() => Round;
-        public void SetStatus(NStatus status)
+        public RStatus GetRoundStatus() => RoundStatus;
+        public int? GetLastRound() => LastRound;
+        public RStatus GetLastRoundStatus() => LastRoundStatus;
+        public string GetLastRoundResult() => LastRoundResult;
+        public NStatus GetLastNodeStatus() => LastNodeStatus;
+        public string GetLastNodeRandom() => LastNodeRandom;
+        private static string FormatResult(int? result)
+        {
+            if (result == null)
+            {
+                return "N/A";
+            }
+
+            string str = result.Value.ToString("D6");
+            string formatted = Regex.Replace(str, ".{2}", "$0 ").Trim();
+            return formatted;
+        }
+
+        public void SetStatus(StatusResponse statusResponse)
+        {
+            Status = statusResponse.Status;
+            Round = statusResponse.RoundId;
+            RoundStatus = (Round is not null && Round > 0) ? statusResponse.RoundStatus : RStatus.Unknown;
+            if (statusResponse.LastRoundId != 0)
+            {
+                LastRound = statusResponse.LastRoundId;
+                LastRoundStatus = statusResponse.LastRoundStatus;
+                LastRoundResult = FormatResult(statusResponse.LastRoundResult);
+                LastNodeStatus = statusResponse.LastStatus;
+                LastNodeRandom = FormatResult(statusResponse.LastNodeRandom);
+            }
+
+            NotifyDkgStateChanged();
+        }
+        public void SetStatusOnly(NStatus status)
         {
             Status = status;
             NotifyDkgStateChanged();
@@ -57,19 +98,21 @@ namespace dkgNode.Services
         {
             Status = status;
             Round = round;
+            RoundStatus = (Round is not null && Round > 0) ? RStatus.NotStarted : RStatus.Unknown;
             NotifyDkgStateChanged();
         }
         public void SetStatusClearRound(NStatus status)
         {
             Status = status;
             Round = null;
+            RoundStatus = RStatus.Unknown;
             NotifyDkgStateChanged();
         }
 
         // ...
         internal Secp256k1Group G { get; }
-        internal IScalar PrivateKey { get; set; }  // Приватный ключ этого узла  
-        internal IPoint PublicKey { get; set; }    // Публичный ключ этого узла
+        internal IScalar? PrivateKey { get; set; } // Приватный ключ этого узла  
+        internal IPoint? PublicKey { get; set; }    // Публичный ключ этого узла
 
         // Пороговое значение для верификации ключа, то есть сколько нужно валидных commitment'ов
         // Алгоритм Шамира допускает минимальное значение = N/2+1, где N - количество участников
@@ -216,7 +259,7 @@ namespace dkgNode.Services
             {
                 Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from '{ServiceNodeUrl}'\n{Message}",
                                                                  Name, encodedPublicKeys, ServiceNodeUrl, ex.Message);
-                SetStatus(Failed);
+                SetStatusOnly(Failed);
                 return;
             }
 
@@ -366,7 +409,7 @@ namespace dkgNode.Services
                         {
                             Logger.LogDebug("'{Name}': Changing node state to {Status}", Name, statusResponse.Status);
                             if (statusResponse.Status == NotRegistered || statusResponse.RoundId == 0) SetStatusClearRound(statusResponse.Status);
-                            else SetStatus(statusResponse.Status);
+                            else SetStatus(statusResponse);
                         }
                     }
                 }
@@ -405,7 +448,7 @@ namespace dkgNode.Services
 
             try
             {
-                Dkg = DistKeyGenerator.CreateDistKeyGenerator(G, PrivateKey, PublicKeys, Threshold) ??
+                Dkg = DistKeyGenerator.CreateDistKeyGenerator(G, PrivateKey!, PublicKeys, Threshold) ??
                       throw new Exception($"Could not create distributed key generator/handler");
                 deals = Dkg.GetDistDeals() ??
                         throw new Exception($"Could not get a list of deals");
