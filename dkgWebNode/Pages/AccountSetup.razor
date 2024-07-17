@@ -27,7 +27,7 @@
             <MudText Typo="Typo.h5">Create Solana Account</MudText>
             <MudTextField Class="mb-2" @bind-Value="_mnemonic" Label="Mnemonic seed (12 words)" Variant="Variant.Outlined" 
                           Adornment="Adornment.End" OnAdornmentClick="() => GenerateMnemonic()" AdornmentIcon="@_refreshMnemonicIcon"
-                          AdornmentAriaLabel="Create new seed" Immediate="true" OnChange="@CheckMnemonic()"/>
+                          AdornmentAriaLabel="Create new seed" Immediate="true" onchange="@CheckMnemonic()"/>
             <MudTextField Class="mb-2" @bind-Value="_address" Label="Address" ReadOnly="true" Variant="Variant.Outlined"/>
             <MudTextField Class="mb-2" @bind-Value="_passwordCreate" Label="Password" Variant="Variant.Outlined" InputType="@_passwordCreateInput"
                           Adornment="Adornment.End" AdornmentIcon="@_passwordCreateInputIcon" OnAdornmentClick="ButtonShowPasswordCreateClick"

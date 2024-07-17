@@ -14,7 +14,7 @@
         <MudTextField Class="mb-2" @bind-Value="config.NiceName" Label="Node Name" Variant="Variant.Outlined" />
         <MudTextField Class="mb-2" @bind-Value="config.ServiceNodeUrl" Label="Service Node URL" Variant="Variant.Outlined" />
         <MudTextField Class="mb-2" @bind-Value="config.PollingInterval" Label="@_pollingIntervalLabel" Variant="Variant.Outlined"
-                      Adornment="Adornment.End" AdornmentText="ms" AdornmentColor="Color.Info" OnChange="@HandleIntervalChanged()"/>
+                      Adornment="Adornment.End" AdornmentText="ms" AdornmentColor="Color.Info" onchange="@HandleIntervalChanged()"/>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>

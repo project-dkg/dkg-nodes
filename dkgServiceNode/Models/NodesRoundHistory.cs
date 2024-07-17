@@ -43,14 +43,14 @@ namespace dkgServiceNode.Models
         public int RoundId { get; set; }
 
         [ForeignKey("RoundId")]
-        public Round Round { get; set; }
+        public Round? Round { get; set; }
 
         [Required]
         [Column("node_id")]
         public int NodeId { get; set; }
 
         [ForeignKey("NodeId")]
-        public Node Node { get; set; }
+        public Node? Node { get; set; }
 
         [Required]
         [Column("node_final_status")]

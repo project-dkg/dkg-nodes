@@ -141,12 +141,19 @@ namespace dkgWebNode.Services
             _cancellationTokenSource.Cancel();
         }
 
-        public DkgState GetDkgState()
-        {
-            return new DkgState()
+        public DkgStatus GetDkgStatus()
+        {   
+            return new DkgStatus()
             {
-                NodeState = _dkgNodeService?.GetStatus().ToString() ?? "Stopped",
+                NodeStatus = _dkgNodeService?.GetStatus().ToString() ?? "Stopped",
                 RoundId = _dkgNodeService?.GetRound()?.ToString() ?? "N/A",
+                RoundStatus = _dkgNodeService?.GetRoundStatus().ToString() ?? "N/A",
+
+                LastRoundId = _dkgNodeService?.GetLastRound()?.ToString() ?? "N/A",
+                LastRoundStatus = _dkgNodeService?.GetLastRoundStatus().ToString() ?? "N/A",
+                LastRoundResult = _dkgNodeService?.GetLastRoundResult().ToString() ?? "N/A",
+                LastNodeStatus = _dkgNodeService?.GetLastNodeStatus().ToString() ?? "N/A",
+                LastNodeRandom = _dkgNodeService?.GetLastNodeRandom().ToString() ?? "N/A"
             };
         }
         private async Task RunDkgUntilCancelled(CancellationToken cancellationToken)

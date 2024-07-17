@@ -3,9 +3,18 @@
     "Docker Compose": {
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
+      "composeLaunchAction": "LaunchBrowser",
+      "composeLaunchServiceName": "dkgwebnodenode",
+      "composeLaunchUrl": "{Scheme}://localhost:8083",
       "serviceActions": {
         "dkgservicenode": "StartDebugging",
-        "dkgnode": "StartDebugging"
+        "adminer": "StartWithoutDebugging",
+        "dkgwebnode": "StartWithoutDebugging",
+        "dkgnode1": "StartDebugging",
+        "dkgnode2": "StartDebugging",
+        "dkgnode3": "StartDebugging",
+        "dkgnode4": "StartDebugging",
+        "dkgservice_db": "StartWithoutDebugging"
       }
     }
   }

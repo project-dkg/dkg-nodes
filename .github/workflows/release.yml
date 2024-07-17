@@ -58,6 +58,59 @@ jobs:
           min-versions-to-keep: 1
           delete-only-untagged-versions: 'true'
 
+  release-web-node:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: maxirmx
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/maxirmx/dkg-web-node
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: dkgWebNode/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Purge old versions
+        if: contains(github.ref, 'refs/tags/v')
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: dkg-web-node
+          package-type: 'container'
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: 'true'
+
   release-dkg-node:
     runs-on: ubuntu-latest
     permissions:
