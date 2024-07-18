@@ -46,14 +46,16 @@ namespace dkgNode.Services
     {
         // Node Status and Round
         internal NStatus Status { get; set; } = NotRegistered;
+        public string NodeRandom { get; set; } = "Unknown";
         internal int? Round { get; set; } = null;
         internal RStatus RoundStatus { get; set; } = RStatus.Unknown;
         public int? LastRound { get; set; } = null;
         public RStatus LastRoundStatus { get; set; } = RStatus.Unknown;
-        public string LastRoundResult { get; set; } = "N/A";
+        public string LastRoundResult { get; set; } = "Unknown";
         public NStatus LastNodeStatus { get; set; } = Unknown;
-        public string LastNodeRandom { get; set; } = "N/A"; 
+        public string LastNodeRandom { get; set; } = "Unknown"; 
         public NStatus GetStatus() => Status;
+        public string GetNodeRandom() => NodeRandom;
         public int? GetRound() => Round;
         public RStatus GetRoundStatus() => RoundStatus;
         public int? GetLastRound() => LastRound;
@@ -65,17 +67,18 @@ namespace dkgNode.Services
         {
             if (result == null)
             {
-                return "N/A";
+                return "Unknown";
             }
 
             string str = result.Value.ToString("D6");
-            string formatted = Regex.Replace(str, ".{2}", "$0 ").Trim();
+            string formatted = Regex.Replace(str, "(\\d{2})(\\d{2})(\\d{2}).*", "$1 $2 $3");
             return formatted;
         }
 
         public void SetStatus(StatusResponse statusResponse)
         {
             Status = statusResponse.Status;
+            NodeRandom = FormatResult(statusResponse.NodeRandom);
             Round = statusResponse.RoundId;
             RoundStatus = (Round is not null && Round > 0) ? statusResponse.RoundStatus : RStatus.Unknown;
             if (statusResponse.LastRoundId != 0)
@@ -92,13 +95,6 @@ namespace dkgNode.Services
         public void SetStatusOnly(NStatus status)
         {
             Status = status;
-            NotifyDkgStateChanged();
-        }
-        public void SetStatusAndRound(NStatus status, int round)
-        {
-            Status = status;
-            Round = round;
-            RoundStatus = (Round is not null && Round > 0) ? RStatus.NotStarted : RStatus.Unknown;
             NotifyDkgStateChanged();
         }
         public void SetStatusClearRound(NStatus status)
@@ -192,25 +188,25 @@ namespace dkgNode.Services
                 {
                     try
                     {
-                        Reference? reference = JsonSerializer.Deserialize<Reference>(responseContent, JsonSerializerOptions);
-                        if (reference == null)
+                        StatusResponse? statusResponse = JsonSerializer.Deserialize<StatusResponse>(responseContent, JsonSerializerOptions);
+                        if (statusResponse == null)
                         {
                             Logger.LogError("'{Name}': failed to parse service node response '{responseContent}' from '{ServiceNodeUrl}'",
                                              Name, responseContent, ServiceNodeUrl);
                         }
                         else
                         {
-                            if (reference.Id == 0)
+                            SetStatus(statusResponse);
+                            if (statusResponse.RoundId == 0)
                             {
-                                roundId = null;
                                 Logger.LogDebug("'{Name}': attempted to register with '{ServiceNodeUrl}' [No round]",
                                                        Name, ServiceNodeUrl);
                             }
                             else
                             {
-                                roundId = reference.Id;
                                 Logger.LogInformation("'{Name}': registered with '{ServiceNodeUrl}' [Round {roundId}]",
                                                         Name, ServiceNodeUrl, roundId);
+                                SetStatusOnly(WaitingRoundStart);
                             }
                         }
                     }
@@ -225,11 +221,6 @@ namespace dkgNode.Services
                     Logger.LogError("'{Name}': failed to register with '{ServiceNodeUrl}': {StatusCode}\n{content}",
                                     Name, ServiceNodeUrl, response.StatusCode, responseContent);
                 }
-            }
-
-            if (roundId != null)
-            {
-                SetStatusAndRound(WaitingRoundStart, (int)roundId);
             }
         }
 

@@ -146,14 +146,15 @@ namespace dkgWebNode.Services
             return new DkgStatus()
             {
                 NodeStatus = _dkgNodeService?.GetStatus().ToString() ?? "Stopped",
-                RoundId = _dkgNodeService?.GetRound()?.ToString() ?? "N/A",
-                RoundStatus = _dkgNodeService?.GetRoundStatus().ToString() ?? "N/A",
+                RoundId = _dkgNodeService?.GetRound()?.ToString() ?? "Unknown",
+                RoundStatus = _dkgNodeService?.GetRoundStatus().ToString() ?? "Unknown",
+                NodeRandom = _dkgNodeService?.GetNodeRandom().ToString() ?? "Unknown",
 
-                LastRoundId = _dkgNodeService?.GetLastRound()?.ToString() ?? "N/A",
-                LastRoundStatus = _dkgNodeService?.GetLastRoundStatus().ToString() ?? "N/A",
-                LastRoundResult = _dkgNodeService?.GetLastRoundResult().ToString() ?? "N/A",
-                LastNodeStatus = _dkgNodeService?.GetLastNodeStatus().ToString() ?? "N/A",
-                LastNodeRandom = _dkgNodeService?.GetLastNodeRandom().ToString() ?? "N/A"
+                LastRoundId = _dkgNodeService?.GetLastRound()?.ToString() ?? "Unknown",
+                LastRoundStatus = _dkgNodeService?.GetLastRoundStatus().ToString() ?? "Unknown",
+                LastRoundResult = _dkgNodeService?.GetLastRoundResult().ToString() ?? "Unknown",
+                LastNodeStatus = _dkgNodeService?.GetLastNodeStatus().ToString() ?? "Unknown",
+                LastNodeRandom = _dkgNodeService?.GetLastNodeRandom().ToString() ?? "Unknown"
             };
         }
         private async Task RunDkgUntilCancelled(CancellationToken cancellationToken)

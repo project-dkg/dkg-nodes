@@ -36,6 +36,7 @@ namespace dkgCommon.Models
         public RStatus LastRoundStatus { get; set; }
         public int? LastRoundResult { get; set; } = null;
         public NStatus Status { get; set; }
+        public int? NodeRandom { get; set; } = null;
         public NStatus LastStatus { get; set; }
         public int? LastNodeRandom { get; set; } = null;
         public string[] Data { get; set; }
@@ -63,7 +64,7 @@ namespace dkgCommon.Models
         }
         public StatusResponse(int roundId, RStatus roundStatus, 
                               int lastRoundId, RStatus lastRoundStatus, int? lastRoundResult,
-                              NStatus status, NStatus lastStatus, int? lastNodeRandom)
+                              NStatus status, int? nodeRandom, NStatus lastStatus, int? lastNodeRandom)
         {
             RoundId = roundId;
             RoundStatus = roundStatus;
@@ -71,13 +72,14 @@ namespace dkgCommon.Models
             LastRoundStatus = lastRoundStatus;
             LastRoundResult = lastRoundResult;
             Status = status;
+            NodeRandom = nodeRandom;
             LastStatus = lastStatus;
             LastNodeRandom = lastNodeRandom;
             Data = [];        
         }
         public StatusResponse(int roundId, RStatus roundStatus,
                               int lastRoundId, RStatus lastRoundStatus, int? lastRoundResult,
-                              NStatus status, NStatus lastStatus, int? lastNodeRandom,
+                              NStatus status, int? nodeRandom, NStatus lastStatus, int? lastNodeRandom,
                               string[] data)
         {
             RoundId = roundId;
@@ -86,6 +88,7 @@ namespace dkgCommon.Models
             LastRoundStatus = lastRoundStatus;
             LastRoundResult = lastRoundResult;
             Status = status;
+            NodeRandom = nodeRandom;
             LastStatus = lastStatus;
             LastNodeRandom = lastNodeRandom;
             Data = data;

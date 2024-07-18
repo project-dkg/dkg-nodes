@@ -70,16 +70,16 @@ services:
     depends_on:
       - dkgservicenode
 
-  dkgwebnode:
-    container_name: dkg_web_node
-    image: ${DOCKER_REGISTRY-}dkgwebnode
-    build:
-      context: .
-      dockerfile: dkgWebNode/Dockerfile
-    ports:
-      - "8083:80"    
-    depends_on:
-      - dkgservicenode
+#  dkgwebnode:
+#    container_name: dkg_web_node
+#    image: ${DOCKER_REGISTRY-}dkgwebnode
+#    build:
+#      context: .
+#      dockerfile: dkgWebNode/Dockerfile
+#    ports:
+#      - "8083:80"    
+#    depends_on:
+#      - dkgservicenode
 
   dkgservice_db:
     container_name: dkgservice_db
