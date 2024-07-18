@@ -22,6 +22,6 @@ COPY dkgWebNode/config/nginx.docker.config  /etc/nginx/conf.d/default.conf
 
 # Expose port 80 for HTTP
 EXPOSE 80
-#EXPOSE 443
+EXPOSE 443
 # Start Nginx and keep it running in the foreground
 CMD ["nginx", "-g", "daemon off;"]

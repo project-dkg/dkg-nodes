@@ -210,11 +210,10 @@ namespace dkgServiceNode.Data
             }
 
             Ensure_0_8_0(connection);
-            PuVersionUpdate("0.8.1", connection);
-            PuVersionUpdate("0.8.2", connection);
             PuVersionUpdate("0.9.1", connection);
             PuVersionUpdate("0.9.2", connection);
             PuVersionUpdate("0.9.3", connection);
+            PuVersionUpdate("0.9.4", connection);
         }
     }
 
