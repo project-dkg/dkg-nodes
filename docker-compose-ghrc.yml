@@ -44,5 +44,15 @@ services:
 # /etc/nginx/certificate/s.key
       - /etc/nginx/certificate:/etc/nginx/certificate
 
+  dkgwebnode:
+    container_name: dkg_web_node
+    image: ghcr.io/maxirmx/dkg-web-node:latest
+    depends_on:
+      - dkgservicenode
+    ports:
+      - "8083:443"
+    volumes:
+      - /etc/nginx/certificate:/etc/nginx/certificate
+
 volumes:
   pgdata: {}
