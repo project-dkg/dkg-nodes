@@ -1,8 +1,8 @@
 # Dkg nodes
-[![Test](https://github.com/maxirmx/dkg-nodes/actions/workflows/test.yml/badge.svg)](https://github.com/maxirmx/dkg-nodes/actions/workflows/test.yml)
+[![Test](https://github.com/project-dkg/dkg-nodes/actions/workflows/test.yml/badge.svg)](https://github.com/project-dkg/dkg-nodes/actions/workflows/test.yml)
 
 ## Background
-This project continues [Implementation of a distributed key generation algorithm (Pedersen 91) in C#](https://github.com/maxirmx/dkg). 
+This project continues [Implementation of a distributed key generation algorithm (Pedersen 91) in C#](https://github.com/project-dkg/dkg). 
 Pedersen 91 algorithm is synchronous by its nature. In ```dkg-nodes``` project we provide a wrapper for Pedersen 91 that help to run it in truly asynchronous distributed environment.
 Implementation includes two types of entities
 * ```dkg node``` that is a participant of distributed key generation algorithm. ```dkg node``` is REST API client and thus does not require any of its resources to be published
@@ -25,7 +25,7 @@ docker run --env=DKG_SERVICE_NODE_URL=<Service node URL> --env=DKG_NODE_NAME=<Na
            --env=DKG_SOLANA_KEYSTORE=<KeyStore> --env=DKG_SOLANA_KEYSTORE_PWD=<KeyStore password> \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           -d ghcr.io/maxirmx/dkg-node:0.5.2
+           -d ghcr.io/project-dkg/dkg-node:0.5.2
 ```
 __Example__
 
@@ -33,7 +33,7 @@ __Example__
 docker run --env=DKG_SERVICE_NODE_URL=http://dkg.samsonov.net:8080 --env=DKG_NODE_NAME=TheNodeAtKreel0 \
            --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
            --env=DOTNET_RUNNING_IN_CONTAINER=true --env=DOTNET_VERSION=8.0.4 --env=ASPNET_VERSION=8.0.4 \
-           -d ghcr.io/maxirmx/dkg-node:0.5.2
+           -d ghcr.io/project-dkg/dkg-node:0.5.2
 ```
 ## Using appsettings.json to provide dkg node configuration
 
@@ -53,7 +53,7 @@ Node parameters shall be specified in Node section, for example:
 
 ## Service node front end
 
-We provide a simple GUI to control ```dkg service node``` in a [separate project](https://github.com/maxirmx/dkg-frontend). 
+We provide a simple GUI to control ```dkg service node``` in a [separate project](https://github.com/project-dkg/dkg-frontend). 
 
 ## Starting service node with front-end in a docker container
 ```
@@ -62,7 +62,7 @@ version: '3.4'
 services:
   dkgservicenode:
     container_name: dkg_service_node
-    image: ghcr.io/maxirmx/dkg-service-node:latest
+    image: ghcr.io/project-dkg/dkg-service-node:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
@@ -90,7 +90,7 @@ services:
 
   dkgfrontend:
     container_name: dkg_frontend
-    image: ghcr.io/maxirmx/dkg-frontend:latest
+    image: ghcr.io/project-dkg/dkg-frontend:latest
     environment:
       - NGINX_SSL_CERTIFICATE_PATH=/etc/nginx/certificate/s.crt
       - NGINX_SSL_CERTIFICATE_KEY_PATH=/etc/nginx/certificate/s.key

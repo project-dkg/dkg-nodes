@@ -29,7 +29,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/maxirmx/dkg-service-node
+            ghcr.io/project-dkg/dkg-service-node
           tags: |
             type=schedule
             type=ref,event=branch
@@ -82,7 +82,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/maxirmx/dkg-web-node
+            ghcr.io/project-dkg/dkg-web-node
           tags: |
             type=schedule
             type=ref,event=branch
@@ -135,7 +135,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/maxirmx/dkg-node
+            ghcr.io/project-dkg/dkg-node
           tags: |
             type=schedule
             type=ref,event=branch

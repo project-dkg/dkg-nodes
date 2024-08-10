@@ -3,7 +3,7 @@ version: '3.4'
 services:
   dkgservicenode:
     container_name: dkg_service_node
-    image: ghcr.io/maxirmx/dkg-service-node:latest
+    image: ghcr.io/project-dkg/dkg-service-node:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
@@ -31,7 +31,7 @@ services:
 
   dkgfrontend:
     container_name: dkg_frontend
-    image: ghcr.io/maxirmx/dkg-frontend:latest
+    image: ghcr.io/project-dkg/dkg-frontend:latest
     environment:
       - NGINX_SSL_CERTIFICATE_PATH=/etc/nginx/certificate/s.crt
       - NGINX_SSL_CERTIFICATE_KEY_PATH=/etc/nginx/certificate/s.key
@@ -46,7 +46,7 @@ services:
 
   dkgwebnode:
     container_name: dkg_web_node
-    image: ghcr.io/maxirmx/dkg-web-node:latest
+    image: ghcr.io/project-dkg/dkg-web-node:latest
     depends_on:
       - dkgservicenode
     ports:
