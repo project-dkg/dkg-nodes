@@ -173,11 +173,11 @@
     {
         _isCreatingAccount = true;
         await Task.Yield();
-        var (privateKey, publicKey) = KeystoreService.Import(_keystoreImport, _passwordImport);
-        if (privateKey is not null && publicKey is not null)
+        var (privateKey, publicKey, privateKeyBytes) = KeystoreService.Import(_keystoreImport, _passwordImport);
+        if (privateKey is not null && publicKey is not null && privateKeyBytes is not null)
         {
             DkgWebNodeService.SetKeys(privateKey, publicKey);
-            await KeystoreService.Save(_passwordImport, Encoding.UTF8.GetBytes(privateKey), publicKey);
+            await KeystoreService.Save(_passwordImport, privateKeyBytes, publicKey);
             _isCreatingAccount = false;
             StateHasChanged();
             await Task.Yield();

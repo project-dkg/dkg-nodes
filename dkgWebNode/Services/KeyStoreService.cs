@@ -83,10 +83,11 @@ namespace dkgWebNode.Services
             }
             return solanaAddress;
         }
-        public (string?, string?) Import(string keystore, string password)
+        public (string?, string?, byte[]?) Import(string keystore, string password)
         {
             string? solanaAddress = null;
             string? solanaPrivateKey = null;
+            byte[]? keystoreDataBytes = null;
             try
             {
                 JsonDocument jsonDocument = JsonDocument.Parse(keystore);
@@ -94,14 +95,14 @@ namespace dkgWebNode.Services
 
                 if (solanaAddress is not null)
                 {
-                   byte[] keystoreDataBytes = _secretKeyStoreService.DecryptKeyStoreFromJson(password, keystore);
+                   keystoreDataBytes = _secretKeyStoreService.DecryptKeyStoreFromJson(password, keystore);
                    solanaPrivateKey = Encoders.Base58.EncodeData(keystoreDataBytes);
                 }
             }
             catch
             {
             }
-            return (solanaPrivateKey, solanaAddress);
+            return (solanaPrivateKey, solanaAddress, keystoreDataBytes);
         }
 
         public async void Clear()

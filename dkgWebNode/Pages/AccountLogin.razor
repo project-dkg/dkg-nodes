@@ -45,11 +45,11 @@
     private async void UnlockAccount()
     {
         _isUnlockingAccount = true;
-        await Task.Delay(1);
+        await Task.Yield();
         var (privateKey, publicKey) = await KeystoreService.Load(_passwordLogin);
         _isUnlockingAccount = false;
         StateHasChanged();
-        await Task.Delay(1);
+        await Task.Yield();
         if (privateKey is not null && publicKey is not null)
         {
             DkgWebNodeService.SetKeys(privateKey, publicKey);
