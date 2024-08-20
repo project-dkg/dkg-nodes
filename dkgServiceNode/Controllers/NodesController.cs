@@ -68,7 +68,32 @@ namespace dkgServiceNode.Controllers
             logger = lgger;
         }
 
-        // GET: api/Nodes
+        // GET: api/nodes/fetch
+        [HttpPost("fetch")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(NodesFrameResult))]
+        public async Task<ActionResult<NodesFrameResult>> FetchNodes(NodesFrame nodesFrame)
+        {
+            NodesFrameResult res = new()
+            {
+                TotalNodes = await dkgContext.Nodes.CountAsync(),
+
+                NodesFrame = await dkgContext.Nodes
+                                             .Where(n =>
+                                                    n.Name.Contains(nodesFrame.Search) ||
+                                                    n.Id.ToString().Contains(nodesFrame.Search) ||
+                                                    n.Address.Contains(nodesFrame.Search) ||
+                                                   (n.RoundId.ToString() != null && n.RoundId.ToString()!.Contains(nodesFrame.Search)) ||
+                                                   (n.RoundId == null && ("null".Contains(nodesFrame.Search) ||
+                                                                          "--".Contains(nodesFrame.Search)) ))
+                //NodeStatusConstants.GetNodeStatusById(n.StatusValue).ToString().Contains(nodesFrame.Search))
+                                  .Skip(nodesFrame.Page * nodesFrame.ItemsPerPage)
+                                  .Take(nodesFrame.ItemsPerPage)
+                                  .ToListAsync(),
+            };
+            return res;
+        }
+
+        // GET: api/nodes
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Node>))]
         public async Task<ActionResult<IEnumerable<Node>>> GetNodes()
@@ -77,9 +102,9 @@ namespace dkgServiceNode.Controllers
             return res;
         }
 
-        // GET: api/Nodes/5
+        // GET: api/nodes/5
         [HttpGet("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Round))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Node))]
         public async Task<ActionResult<Node>> GetNode(int id)
         {
             var node = await dkgContext.Nodes.FindAsync(id);
