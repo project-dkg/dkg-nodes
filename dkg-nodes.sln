@@ -16,6 +16,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgNodeLibrary", "dkgNodeLibrary\dkgNodeLibrary.csproj", "{B84032D8-E234-4AE6-9381-894EDC2847C3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgNode", "dkgNode\dkgNode.csproj", "{3E85DFC2-CD63-432F-A924-0E2EA6A754BC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{ABF1E862-AE0A-47BC-9A3C-60C9C9ACBAA9} = {ABF1E862-AE0A-47BC-9A3C-60C9C9ACBAA9}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dkgWebNode", "dkgWebNode\dkgWebNode.csproj", "{B72F9CFC-6565-4009-814B-D3BBD4F26964}"
 	ProjectSection(ProjectDependencies) = postProject
