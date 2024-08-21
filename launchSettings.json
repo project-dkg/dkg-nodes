@@ -9,12 +9,11 @@
       "serviceActions": {
         "dkgservicenode": "StartDebugging",
         "adminer": "StartWithoutDebugging",
-        //"dkgwebnode": "StartWithoutDebugging",
         "dkgnode1": "StartDebugging",
-        //"dkgnode2": "StartDebugging",
-        //"dkgnode3": "StartDebugging",
-        //"dkgnode4": "StartDebugging",
-        "dkgservice_db": "StartWithoutDebugging"
+        "dkgservice_db": "StartWithoutDebugging",
+        "dkgnode2": "StartDebugging",
+        "dkgnode3": "StartDebugging",
+        "dkgnode4": "StartDebugging"
       }
     }
   }
