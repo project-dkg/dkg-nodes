@@ -217,6 +217,7 @@ namespace dkgServiceNode.Data
             PuVersionUpdate("0.9.5", connection);
             PuVersionUpdate("0.9.6", connection);
             PuVersionUpdate("0.10.0", connection);
+            PuVersionUpdate("0.10.1", connection);
         }
     }
 
