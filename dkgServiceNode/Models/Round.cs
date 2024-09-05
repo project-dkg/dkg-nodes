@@ -117,10 +117,38 @@ namespace dkgServiceNode.Models
         [JsonIgnore]
         public ICollection<Node> Nodes { get; set; } = [];
 
-        [JsonIgnore]
-        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
+//        [JsonIgnore]
+//        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
 
         public override string ToString() => $"Round {Id}";
 
+        public Round()
+        {
+        }
+
+        public Round(Round other)
+        {
+            Id = other.Id;
+            StatusValue = other.StatusValue;
+            MaxNodes = other.MaxNodes;
+            Timeout2 = other.Timeout2;
+            Timeout3 = other.Timeout3;
+            TimeoutR = other.TimeoutR;
+            NodeCount = other.NodeCount;
+            NodeCountStepOne = other.NodeCountStepOne;
+            NodeCountWStepTwo = other.NodeCountWStepTwo;
+            NodeCountStepTwo = other.NodeCountStepTwo;
+            NodeCountWStepThree = other.NodeCountWStepThree;
+            NodeCountStepThree = other.NodeCountStepThree;
+            NodeCountStepFour = other.NodeCountStepFour;
+            NodeCountFinished = other.NodeCountFinished;
+            NodeCountFailed = other.NodeCountFailed;
+            NodeCountTimedOut = other.NodeCountTimedOut;
+            Result = other.Result;
+            CreatedOn = other.CreatedOn;
+            ModifiedOn = other.ModifiedOn;
+            Nodes = other.Nodes;
+//            NodesRoundHistory = other.NodesRoundHistory;
+        }
     }
 }

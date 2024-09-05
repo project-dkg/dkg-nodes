@@ -33,6 +33,9 @@ using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Xml.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using dkgServiceNode.Services.Cache;
 
 namespace dkgServiceNode.Controllers
 {
@@ -46,73 +49,55 @@ namespace dkgServiceNode.Controllers
     {
         protected readonly DkgContext dkgContext;
         protected readonly Runner runner;
+        protected readonly ILogger logger;
+        private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
 
-        public RoundsController(IHttpContextAccessor httpContextAccessor, UserContext uContext, DkgContext dContext, Runner rnner) :
-               base(httpContextAccessor, uContext)
+        public RoundsController(IHttpContextAccessor httpContextAccessor, 
+                                UserContext uContext, 
+                                DkgContext dContext, 
+                                Runner rnner,
+                                NodesRoundHistoryCache nrhc,
+                                ILogger<NodesController> lgger) :
+                                base(httpContextAccessor, uContext)
         {
             dkgContext = dContext;
             runner = rnner;
+            logger = lgger;
+            nodesRoundHistoryCache = nrhc;
         }
 
         // GET: api/rounds
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Round>))]
-        public async Task<ActionResult<IEnumerable<Round>>> GetRounds()
+        public ActionResult<IEnumerable<Round>> GetRounds()
         {
             var rounds = dkgContext.GetAllRoundsSortedByIdDescending();
 
-            var roundIds = rounds.Select(r => r.Id).ToArray();
-
-            var nodeCounts = dkgContext.GetAllNodes()
-                .Where(n => roundIds.Contains(n.RoundId ?? 0))
-                .GroupBy(n => new { n.RoundId, n.StatusValue })
-                .Select(g => new NodeCountResult
-                {
-                    RoundId = g.Key.RoundId ?? 0,
-                    Status = (NStatus)g.Key.StatusValue,
-                    Count = g.Count()
-                })
-                .ToList();
-
-            List<NodeCountResult> nodeCountsH = await dkgContext.NodesRoundHistory
-                .Where(n => roundIds.Contains(n.RoundId))
-                .GroupBy(n => new { n.RoundId, n.NodeFinalStatusValue })
-                .Select(g => new NodeCountResult
-                {
-                    RoundId = g.Key.RoundId,
-                    Status = (NStatus)g.Key.NodeFinalStatusValue,
-                    Count = g.Count()
-                })
-                .ToListAsync();
-
             foreach (var round in rounds)
             {
-                round.NodeCount = NodeCountResult.GetCount(nodeCounts, round.Id, null) +
-                                  NodeCountResult.GetCount(nodeCountsH, round.Id, null) -
-                                  NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.NotRegistered);
+                int nodeCountWaitingRoundStart = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingRoundStart);
+                round.NodeCountStepOne = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepOne);
+                round.NodeCountWStepTwo = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingStepTwo);
+                round.NodeCountStepTwo = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepTwo);
+                round.NodeCountWStepThree = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingStepThree);
+                round.NodeCountStepThree = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepThree);
+                round.NodeCountStepFour = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepFour);
+                round.NodeCountFailed = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.Failed);
+                round.NodeCountFinished = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.Finished);
+                round.NodeCountTimedOut = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.TimedOut);
 
-                int nodeCountWaitingRoundStart = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingRoundStart);
-                round.NodeCountStepOne = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepOne);
-                round.NodeCountWStepTwo = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingStepTwo);
-                round.NodeCountStepTwo = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepTwo);
-                round.NodeCountWStepThree = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.WaitingStepThree);
-                round.NodeCountStepThree = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepThree);
-                round.NodeCountStepFour = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.RunningStepFour);
-                round.NodeCountFailed = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.Failed) +
-                                        NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Failed);
-                round.NodeCountFinished = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.Finished) +
-                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.Finished);
-                round.NodeCountTimedOut = NodeCountResult.GetCount(nodeCounts, round.Id, NStatus.TimedOut) +
-                                          NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.TimedOut);
+                int eaCount = round.NodeCountStepOne +
+                              round.NodeCountWStepTwo +
+                              round.NodeCountStepTwo +
+                              round.NodeCountWStepThree +
+                              round.NodeCountStepThree +
+                              round.NodeCountStepFour +
+                              round.NodeCountFailed +
+                              round.NodeCountFinished +
+                              round.NodeCountTimedOut +
+                              nodeCountWaitingRoundStart;
 
-                int eaCount = NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepOne) +
-                              NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.WaitingStepTwo) +
-                              NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepTwo) +
-                              NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.WaitingStepThree) +
-                              NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepThree) +
-                              NodeCountResult.GetCount(nodeCountsH, round.Id, NStatus.RunningStepFour);
-                if (round.Status == RStatus.Cancelled) round.NodeCountFailed += eaCount;
-                else round.NodeCountTimedOut += eaCount;
+                round.NodeCount = eaCount;
             }
 
             return rounds;
@@ -225,25 +210,27 @@ namespace dkgServiceNode.Controllers
             return await UpdateRoundState(dkgContext, round);
         }
 
-        internal static List<Node> GetNodesWithRandomForRound(List<Node> nodes, int roundId)
-        {
-            return nodes
-                .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == roundId && nrh.NodeRandom != null))
-                .ToList();
-        }
+//        internal static List<Node> GetNodesWithRandomForRound(List<Node> nodes, int roundId)
+//        {
+//            return nodes
+//                .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == roundId && nrh.NodeRandom != null))
+//                .ToList();
+//        }
 
         internal async Task TryRunRound(Round round)
         {
             List<Node> rNodes = dkgContext.GetAllNodes()
-                .Where(n => n.RoundId == round.Id || n.RoundId == round.Id - 1)
+                .Where(n => n.RoundId == round.Id)
                 .ToList();
 
             List<Node> fiNodes = rNodes
-                .Where(node => node.NodesRoundHistory.Any(nrh => nrh.RoundId == round.Id - 1 && nrh.NodeRandom != null))
+                .Where(node => dkgContext.CheckNodeQualification(node.Id, round.Id - 1))
                 .ToList();
 
             if (fiNodes.Count < 3)
             {
+                logger.LogWarning("Not enough nodes has been qualified to start a round. Count = {count}, minimum = 3", fiNodes.Count);
+
                 await ResetNodeStates(dkgContext, rNodes);
                 round.Result = null;
                 round.StatusValue = (short)RStatus.Failed;
@@ -259,7 +246,7 @@ namespace dkgServiceNode.Controllers
                 if (round.MaxNodes < fiNodes.Count)
                 {
                     int lastRR = dkgContext.LastRoundResult() ?? new Random().Next();
-                    fiNodes.Sort(new NodeComparer(lastRR, round.Id - 1));
+                    fiNodes.Sort(new NodeComparer(lastRR, round.Id - 1, nodesRoundHistoryCache));
                     fi2Nodes = fiNodes.Take(round.MaxNodes).ToList();
                     reNodes = fiNodes.Skip(round.MaxNodes).ToList();
                 }
@@ -273,16 +260,9 @@ namespace dkgServiceNode.Controllers
             {
                 await dkgContext.UpdateRoundAsync(round);
             }
-            catch (DbUpdateConcurrencyException)
+            catch 
             {
-                if (!dkgContext.RoundExists(round.Id))
-                {
-                    return _404Round(round.Id);
-                }
-                else
-                {
-                    throw;
-                }
+                return _404Round(round.Id);
             }
             return NoContent();
         }

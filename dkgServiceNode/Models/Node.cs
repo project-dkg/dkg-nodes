@@ -58,13 +58,7 @@ namespace dkgServiceNode.Models
         public int? Random { get; set; }
 
         [NotMapped]
-        public int? PrevRandom { get; set; }
-
-        [NotMapped]
         public string Signature { get; set; } = string.Empty;
-
-        [ForeignKey("RoundId")]
-        public Round? Round{ get; set; }
 
         [NotMapped]
         public NodeStatus Status
@@ -73,8 +67,8 @@ namespace dkgServiceNode.Models
             set { StatusValue = (short)value.NodeStatusId; }
         }
 
-        [JsonIgnore]
-        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
+//        [JsonIgnore]
+//        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
 
         public override string ToString() => Name;
 
@@ -82,5 +76,24 @@ namespace dkgServiceNode.Models
         {
             Random = CR.Calculate(PublicKey);
         }
-    }
+
+        public Node()
+        {
+            
+        }
+        public Node(Node other)
+
+        {
+            Id = other.Id;
+            Name = other.Name;
+            PublicKey = other.PublicKey;
+            RoundId = other.RoundId;
+            StatusValue = other.StatusValue;
+            Address = other.Address;
+            Random = other.Random;
+            Signature = other.Signature;
+            Status = other.Status;
+//            NodesRoundHistory = other.NodesRoundHistory;
+        }
+}
 }

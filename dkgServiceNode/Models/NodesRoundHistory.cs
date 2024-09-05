@@ -42,15 +42,9 @@ namespace dkgServiceNode.Models
         [Column("round_id")]
         public int RoundId { get; set; }
 
-        [ForeignKey("RoundId")]
-        public Round? Round { get; set; }
-
         [Required]
         [Column("node_id")]
         public int NodeId { get; set; }
-
-        [ForeignKey("NodeId")]
-        public Node? Node { get; set; }
 
         [Required]
         [Column("node_final_status")]
@@ -64,6 +58,26 @@ namespace dkgServiceNode.Models
         {
             get { return NodeStatusConstants.GetNodeStatusById(NodeFinalStatusValue); }
             set { NodeFinalStatusValue = (short)value.NodeStatusId; }
+        }
+
+        public NodesRoundHistory()
+        {
+        }
+        public NodesRoundHistory(Node node)
+        {
+            NodeId = node.Id;
+            NodeFinalStatus = node.Status;
+            NodeRandom = node.Random;
+            RoundId = node.RoundId ?? 0;
+        }
+        public NodesRoundHistory(NodesRoundHistory other)
+        {
+            Id = other.Id;
+            RoundId = other.RoundId;
+            NodeId = other.NodeId;
+            NodeFinalStatusValue = other.NodeFinalStatusValue;
+            NodeRandom = other.NodeRandom;
+            NodeFinalStatus = other.NodeFinalStatus;
         }
     }
 }

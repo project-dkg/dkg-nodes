@@ -27,10 +27,8 @@ using Microsoft.AspNetCore.Mvc;
 using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using dkgCommon.Constants;
-using dkgServiceNode.Services.RoundRunner;
-using System.Security.Cryptography.X509Certificates;
-using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
+using dkgServiceNode.Services.Cache;
 
 namespace dkgServiceNode.Controllers
 {
@@ -38,6 +36,74 @@ namespace dkgServiceNode.Controllers
     {
         protected readonly UserContext userContext;
         protected readonly int curUserId;
+
+        private static UInt64 c2Fetch = 0;
+        private static UInt64 c2Get = 0;
+        private static UInt64 c2GetAll = 0;
+        private static UInt64 c2Register = 0;
+        private static UInt64 c2Status = 0;
+        private static UInt64 c2Reset = 0;
+        private static UInt64 c2Delete = 0;
+        private static UInt64 c2Statistics = 0;
+
+        private static TimeSpan e2Fetch = new();
+        private static readonly object e2FetchLock = new();
+        private static TimeSpan e2Get = new();
+        private static readonly object e2GetLock = new();
+        private static TimeSpan e2GetAll = new();
+        private static readonly object e2GetAllLock = new();
+        private static TimeSpan e2Register = new();
+        private static readonly object e2RegisterLock = new();
+        private static TimeSpan e2Status = new();
+        private static readonly object e2StatusLock = new();
+        private static TimeSpan e2Reset = new();
+        private static readonly object e2ResetLock = new();
+        private static TimeSpan e2Delete = new();
+        private static readonly object e2DeleteLock = new();
+        private static TimeSpan e2Statistics = new();
+        private static readonly object e2StatisticsLock = new();
+
+        protected static void UpdateE2Timing(ref TimeSpan e2Timing, ref UInt64 c2Timing, TimeSpan t, object lockObject)
+        {
+            lock (lockObject)
+            {
+                e2Timing += t;
+            }
+            Interlocked.Increment(ref c2Timing);
+        }
+
+        protected static TimingResult GetTimingResult(string name, ref UInt64 c2Timing, ref TimeSpan e2Timing, object lockObject)
+        {
+            double v;
+            UInt64 c = Interlocked.Read(ref c2Timing);
+            lock (lockObject)
+            {
+                v = c == 0 ? 0 : e2Timing.TotalMilliseconds / (double)c;
+            }
+            return new TimingResult()
+            {
+                Name = name,
+                Count = c,
+                TimePerCall = v
+            };
+        }
+
+        protected static void UpdateE2Fetch(TimeSpan t) => UpdateE2Timing(ref e2Fetch, ref c2Fetch, t, e2FetchLock);
+        protected static void UpdateE2Get(TimeSpan t) => UpdateE2Timing(ref e2Get, ref c2Get, t, e2GetLock);
+        protected static void UpdateE2GetAll(TimeSpan t) => UpdateE2Timing(ref e2GetAll, ref c2GetAll, t, e2GetAllLock);
+        protected static void UpdateE2Register(TimeSpan t) => UpdateE2Timing(ref e2Register, ref c2Register, t, e2RegisterLock);
+        protected static void UpdateE2Status(TimeSpan t) => UpdateE2Timing(ref e2Status, ref c2Status, t, e2StatusLock);
+        protected static void UpdateE2Reset(TimeSpan t) => UpdateE2Timing(ref e2Reset, ref c2Reset, t, e2ResetLock);
+        protected static void UpdateE2Delete(TimeSpan t) => UpdateE2Timing(ref e2Delete, ref c2Delete, t, e2DeleteLock);
+        protected static void UpdateE2Statistics(TimeSpan t) => UpdateE2Timing(ref e2Statistics, ref c2Statistics, t, e2StatisticsLock);
+        protected static TimingResult GetE2Fetch() => GetTimingResult("fetch", ref c2Fetch, ref e2Fetch, e2FetchLock);
+        protected static TimingResult GetE2Get() => GetTimingResult("get", ref c2Get, ref e2Get, e2GetLock);
+        protected static TimingResult GetE2GetAll() => GetTimingResult("getAll", ref c2GetAll, ref e2GetAll, e2GetAllLock);
+        protected static TimingResult GetE2Status() => GetTimingResult("status", ref c2Status, ref e2Status, e2StatusLock);
+        protected static TimingResult GetE2Reset() => GetTimingResult("reset", ref c2Reset, ref e2Reset, e2ResetLock);
+        protected static TimingResult GetE2Delete() => GetTimingResult("delete", ref c2Delete, ref e2Delete, e2DeleteLock);
+        protected static TimingResult GetE2Register() => GetTimingResult("register", ref c2Register, ref e2Register, e2RegisterLock);
+        protected static TimingResult GetE2Statistics() => GetTimingResult("statistics", ref c2Statistics, ref e2Statistics, e2StatisticsLock);
 
         protected ObjectResult _400()
         {
@@ -154,17 +220,15 @@ namespace dkgServiceNode.Controllers
 
             if (needsUpdate)
             {
-                dkgContext.Entry(node).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
+                await dkgContext.UpdateNodeAsync(node);
             }
         }
 
         protected async Task ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
         {
-            bool needsUpdate = false;
-
             foreach (var node in nodes)
             {
+                bool needsUpdate = false;
                 if (node.StatusValue != (short)NStatus.NotRegistered)
                 {
                     node.StatusValue = (short)NStatus.NotRegistered;
@@ -176,16 +240,10 @@ namespace dkgServiceNode.Controllers
                     node.RoundId = null;
                     needsUpdate = true;
                 }
-
                 if (needsUpdate)
                 {
-                    dkgContext.Entry(node).State = EntityState.Modified;
+                    await dkgContext.UpdateNodeAsync(node);
                 }
-            }
-
-            if (needsUpdate)
-            {
-                await dkgContext.SaveChangesAsync();
             }
         }
 
@@ -195,8 +253,7 @@ namespace dkgServiceNode.Controllers
             {
                 node.StatusValue = nStatus;
                 node.RoundId = roundId;
-                dkgContext.Entry(node).State = EntityState.Modified;
-                await dkgContext.SaveChangesAsync();
+                await dkgContext.UpdateNodeAsync(node);
             }
         }
     }
