@@ -135,7 +135,7 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
-        readonly static string sqlScript_0_12_0 = @"
+        readonly static string sqlScript_0_12_1 = @"
             START TRANSACTION;
 
             DROP TRIGGER IF EXISTS nodes_before_update_trigger ON nodes;
@@ -145,7 +145,7 @@ namespace dkgServiceNode.Data
                 p_node_id INT,
                 p_round_id INT,
                 p_node_final_status SMALLINT,
-                p_node_random VARCHAR
+                p_node_random INT
             )
             LANGUAGE plpgsql
             AS $$
@@ -170,7 +170,7 @@ namespace dkgServiceNode.Data
             $$;
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.12.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            ('0.12.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
             COMMIT;
             ";
@@ -260,7 +260,7 @@ namespace dkgServiceNode.Data
             PuVersionUpdate("0.9.6", connection);
             PuVersionUpdate("0.10.2", connection);
             PuVersionUpdate("0.11.0", connection);
-            EnsureVersion("0.12.0", sqlScript_0_12_0, connection);
+            EnsureVersion("0.12.1", sqlScript_0_12_1, connection);
         }
     }
 
