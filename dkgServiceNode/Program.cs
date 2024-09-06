@@ -38,6 +38,8 @@ builder.Services.AddSingleton<NodesRoundHistoryCache>();
 
 var app = builder.Build();
 
+app.UseMiddleware<RequestLimitingMiddleware>(10);
+
 app.UseCors(x => x
     .AllowAnyOrigin()
     .AllowAnyMethod()

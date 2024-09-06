@@ -145,7 +145,6 @@ namespace dkgServiceNode.Controllers
                 }
                 else
                 {
-
                     node.StatusValue = (short)NStatus.NotRegistered;
                     node.RoundId = null;
                     await dkgContext.UpdateNodeAsync(node);

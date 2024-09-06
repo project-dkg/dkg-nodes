@@ -67,9 +67,6 @@ namespace dkgServiceNode.Models
             set { StatusValue = (short)value.NodeStatusId; }
         }
 
-//        [JsonIgnore]
-//        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
-
         public override string ToString() => Name;
 
         public void CalculateRandom()
@@ -93,7 +90,6 @@ namespace dkgServiceNode.Models
             Random = other.Random;
             Signature = other.Signature;
             Status = other.Status;
-//            NodesRoundHistory = other.NodesRoundHistory;
         }
 }
 }

@@ -117,9 +117,6 @@ namespace dkgServiceNode.Models
         [JsonIgnore]
         public ICollection<Node> Nodes { get; set; } = [];
 
-//        [JsonIgnore]
-//        public ICollection<NodesRoundHistory> NodesRoundHistory { get; set; } = [];
-
         public override string ToString() => $"Round {Id}";
 
         public Round()
@@ -148,7 +145,6 @@ namespace dkgServiceNode.Models
             CreatedOn = other.CreatedOn;
             ModifiedOn = other.ModifiedOn;
             Nodes = other.Nodes;
-//            NodesRoundHistory = other.NodesRoundHistory;
         }
     }
 }
