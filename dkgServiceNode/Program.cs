@@ -3,8 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
+using dkgServiceNode.Services.Cache;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = builder.Configuration;
+
+int controllers = configuration.GetValue<int?>("Controllers") ?? 5;
 
 // Add services to the container.
 
@@ -14,8 +19,6 @@ builder.Services.AddCors();
 // configure DI for application services
 builder.Services.AddScoped<IJwtUtils, JwtUtils>();
 builder.Services.AddHttpContextAccessor();
-
-var configuration = builder.Configuration;
 
 // Configure Jwt secret
 builder.Services.Configure<AppSecret>(configuration.GetSection("AppSecret"));
@@ -31,8 +34,13 @@ builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connecti
 builder.Services.AddDbContext<DkgContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddSingleton<Runner>();
+builder.Services.AddSingleton<NodesCache>();
+builder.Services.AddSingleton<RoundsCache>();
+builder.Services.AddSingleton<NodesRoundHistoryCache>();
 
 var app = builder.Build();
+
+app.UseMiddleware<RequestLimitingMiddleware>(controllers);
 
 app.UseCors(x => x
     .AllowAnyOrigin()
@@ -41,11 +49,11 @@ app.UseCors(x => x
 );
 
 // Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-// }
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseMiddleware<JwtMiddleware>();
 

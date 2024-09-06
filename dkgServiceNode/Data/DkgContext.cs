@@ -25,244 +25,115 @@
 
 using dkgCommon.Constants;
 using dkgServiceNode.Models;
+using dkgServiceNode.Services.Cache;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Concurrent;
 
 namespace dkgServiceNode.Data
 {
     public class DkgContext : DbContext
     {
-        private static readonly ConcurrentDictionary<int, Node> _cacheNodes = [];
-        private static readonly ConcurrentDictionary<string, int> _publicKeyToId = [];
-        private static readonly ConcurrentDictionary<string, int> _addressToId = [];
-        private static bool _isCacheNodesLoaded = false;
-        private static readonly object _cacheNodesLock = new object();
-
         private DbSet<Node> Nodes { get; set; }
+        private DbSet<Round> Rounds { get; set; }
+        private DbSet<NodesRoundHistory> NodesRoundHistory { get; set; }
 
-        public DkgContext(DbContextOptions<DkgContext> options) : base(options)
+        private readonly NodesCache nodesCache;
+        private readonly RoundsCache roundsCache;
+        private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
+        public DkgContext(DbContextOptions<DkgContext> options,
+                          NodesCache nc,
+                          RoundsCache rc,  
+                          NodesRoundHistoryCache nrhc) : base(options)
         {
-            // Ensure cache is loaded only once
-            if (!_isCacheNodesLoaded)
+            nodesCache = nc;
+            roundsCache = rc;
+            nodesRoundHistoryCache = nrhc;
+            if (Nodes is not null)
             {
-                lock (_cacheNodesLock)
-                {
-                    if (!_isCacheNodesLoaded)
-                    {
-                        LoadNodesToCache();
-                        _isCacheNodesLoaded = true;
-                    }
-                }
+                nodesCache.LoadNodesToCache(Nodes);
             }
-            if (!_isCacheRoundsLoaded)
+            if (Rounds is not null)
             {
-                lock (_cacheRoundsLock)
-                {
-                    if (!_isCacheRoundsLoaded)
-                    {
-                        LoadRoundsToCache();
-                        _isCacheRoundsLoaded = true;
-                    }
-                }
+                roundsCache.LoadRoundsToCache(Rounds);
+            }
+            if (NodesRoundHistory is not null)
+            {
+                nodesRoundHistoryCache.LoadNodesRoundHistoriesToCache(NodesRoundHistory);
             }
         }
-        private static void LoadNodeToCache(Node node)
-        {
-            _cacheNodes[node.Id] = node;
-            _publicKeyToId[node.PublicKey] = node.Id;
-            _addressToId[node.Address] = node.Id;
-        }
-        private void LoadNodesToCache()
-        {
-            foreach (var node in Nodes)
-            {
-                LoadNodeToCache(node);
-            }
-        }
-        public Node? GetNodeById(int id)
-        {
-            _cacheNodes.TryGetValue(id, out Node? node);
-            return node;
-        }
-
-        public Node? GetNodeByPublicKey(string publicKey)
-        {
-            if (_publicKeyToId.TryGetValue(publicKey, out var id))
-            {
-                return GetNodeById(id);
-            }
-            return null;
-        }
-
-        public Node? GetNodeByAddress(string address)
-        {
-            if (_addressToId.TryGetValue(address, out var id))
-            {
-                return GetNodeById(id);
-            }
-            return null;
-        }
+        public Node? GetNodeById(int id) => nodesCache.GetNodeById(id);
+        public Node? GetNodeByPublicKey(string publicKey) => nodesCache.GetNodeByPublicKey(publicKey);
+        public Node? GetNodeByAddress(string address) => nodesCache.GetNodeByAddress(address);
         public async Task AddNodeAsync(Node node)
         {
             Nodes.Add(node);
             await SaveChangesAsync();
-            LoadNodeToCache(node);
+            nodesCache.LoadNodeToCache(node);
+            await LoadNodesRoundHistory(node);
+            nodesRoundHistoryCache.UpdateNodeCounts(null, NStatus.NotRegistered, node.RoundId, node.Status);
         }
 
-        public List<Node> GetAllNodes()
+        private async Task LoadNodesRoundHistory(Node node)
         {
-            return _cacheNodes.Values.ToList();
-        }
-
-        public int GetNodeCount()
-        {
-            return _cacheNodes.Count;
-        }
-        public List<Node> GetAllNodesSortedById()
-        {
-            var sortedNodes = _cacheNodes.OrderBy(kvp => kvp.Key)
-                                    .Select(kvp => kvp.Value)
-                                    .ToList();
-            return sortedNodes;
-        }
-
-        public List<Node> GetFilteredNodes(string search = "")
-        {
-            if (string.IsNullOrWhiteSpace(search))
+            if (node.RoundId != null && node.Random != null)
             {
-                return GetAllNodes();
-            }
+                nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(new NodesRoundHistory(node));
 
-            var filteredNodes = _cacheNodes
-                .Where(kvp =>
-                    kvp.Value.Name.Contains(search) ||
-                    kvp.Value.Id.ToString().Contains(search) ||
-                    kvp.Value.Address.Contains(search) ||
-                    (kvp.Value.RoundId != null && kvp.Value.RoundId.ToString()!.Contains(search)) ||
-                    (kvp.Value.RoundId == null && ("null".Contains(search) || "--".Contains(search))) ||
-                    NodeStatusConstants.GetNodeStatusById(kvp.Value.StatusValue).ToString().Contains(search))
-                .Select(kvp => kvp.Value)
-                .ToList();
-
-            return filteredNodes;
-        }
-
-        private static void RemoveToIdEntries(ConcurrentDictionary<string, int> dictionary, int nodeId)
-        {
-            var keysToRemove = dictionary
-                .Where(kvp => kvp.Value == nodeId)
-                .Select(kvp => kvp.Key)
-                .ToList(); 
-
-            foreach (var key in keysToRemove)
-            {
-                dictionary.TryRemove(key, out _);
+                await Database.ExecuteSqlRawAsync(
+                  "CALL upsert_node_round_history({0}, {1}, {2}, {3})",
+                  node.Id, node.RoundId, node.StatusValue, node.Random);
             }
         }
+        public List<Node> GetAllNodes() => nodesCache.GetAllNodes();
+
+        public int GetNodeCount() => nodesCache.GetNodeCount();
+        public List<Node> GetAllNodesSortedById() => nodesCache.GetAllNodesSortedById();
+        public List<Node> GetFilteredNodes(string search = "") => nodesCache.GetFilteredNodes(search);
         public async Task UpdateNodeAsync(Node node)
         {
-            // Update node in the database
-            Entry(node).State = EntityState.Modified; 
-            await SaveChangesAsync();
+            NodesRoundHistory? nrh = GetLastNodeRoundHistory(node.Id, -1);
+            nodesRoundHistoryCache.UpdateNodeCounts(nrh?.RoundId, nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
+                                                    node.RoundId, node.Status);
 
-            // Update node in the cache
-            RemoveToIdEntries(_addressToId, node.Id);
-            RemoveToIdEntries(_publicKeyToId, node.Id);
-            LoadNodeToCache(node);
+            Entry(node).State = EntityState.Modified;
+            await SaveChangesAsync();
+            await LoadNodesRoundHistory(node);
+            nodesCache.UpdateNodeInCache(node);
         }
 
         public async Task DeleteNodeAsync(Node node)
         {
-            // Remove node from the database
+            nodesRoundHistoryCache.UpdateNodeCounts(node.RoundId, node.Status, null, NStatus.NotRegistered);
             Nodes.Remove(node);
             await SaveChangesAsync();
-
-            // Remove node from the cache
-            RemoveToIdEntries(_addressToId, node.Id);
-            RemoveToIdEntries(_publicKeyToId, node.Id);
-            _cacheNodes.TryRemove(node.Id, out _);
+            nodesCache.DeleteNodeFromCache(node);
         }
 
-        private DbSet<Round> Rounds { get; set; }
-        private static readonly ConcurrentDictionary<int, Round> _cacheRounds = [];
-        private static bool _isCacheRoundsLoaded = false;
-        private static readonly object _cacheRoundsLock = new object();
-
-        private static void LoadRoundToCache(Round round)
-        {
-            _cacheRounds[round.Id] = round;
-        }
-        private void LoadRoundsToCache()
-        {
-            foreach (var round in Rounds)
-            {
-                LoadRoundToCache(round);
-            }
-        }
-        public Round? GetRoundById(int id)
-        {
-            _cacheRounds.TryGetValue(id, out Round? round);
-            return round;
-        }
-        public List<Round> GetAllRounds()
-        {
-            return _cacheRounds.Values.ToList();
-        }
-        public List<Round> GetAllRoundsSortedByIdDescending()
-        {
-            var sortedRounds = _cacheRounds.OrderByDescending(kvp => kvp.Key)
-                                            .Select(kvp => kvp.Value)
-                                            .ToList();
-            return sortedRounds;
-        }
+        public Round? GetRoundById(int id) => roundsCache.GetRoundById(id);
+        public List<Round> GetAllRounds() => roundsCache.GetAllRounds();
+        public List<Round> GetAllRoundsSortedByIdDescending() => roundsCache.GetAllRoundsSortedByIdDescending();
         public async Task AddRoundAsync(Round round)
         {
             Rounds.Add(round);
             await SaveChangesAsync();
-            LoadRoundToCache(round);
+            roundsCache.AddRoundToCache(round);
         }
         public async Task UpdateRoundAsync(Round round)
         {
-            Entry(round).State = EntityState.Modified;
+            Rounds.Update(round);
             await SaveChangesAsync();
-
-            LoadRoundToCache(round);
+            roundsCache.UpdateRoundInCache(round);
         }
         public async Task DeleteRoundAsync(Round round)
         {
             Rounds.Remove(round);
             await SaveChangesAsync();
-
-            _cacheNodes.TryRemove(round.Id, out _);
+            roundsCache.DeleteRoundFromCache(round.Id);
         }
-
-        public bool RoundExists(int id)
-        {
-            return _cacheRounds.ContainsKey(id);
-        }
-        public int? LastRoundResult()
-        {
-            Round? lastRR = _cacheRounds.Values
-                .Where(r => r.Result != null)
-                .OrderByDescending(r => r.Id)
-                .FirstOrDefault();
-            return lastRR?.Result;
-        }
-
-        public DbSet<NodesRoundHistory> NodesRoundHistory { get; set; }
-
-        public async Task<NodesRoundHistory?> FindNodeRoundHistoryAsync(int nodeId, int roundId)
-        {
-            return await NodesRoundHistory.FirstOrDefaultAsync(nrh => nrh.NodeId == nodeId && nrh.RoundId == roundId);
-        }
-
-        public async Task<NodesRoundHistory?> GetLastNodeRoundHistory(int nodeId, int currentRoundId)
-        {
-            return await NodesRoundHistory
-                .Where(nrh => nrh.NodeId == nodeId && nrh.RoundId != currentRoundId)
-                .OrderByDescending(nrh => nrh.RoundId)
-                .FirstOrDefaultAsync();
-        }
+        public bool RoundExists(int id) => roundsCache.RoundExists(id);
+        public int? LastRoundResult() => roundsCache.LastRoundResult();
+        public NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int currentRoundId) => nodesRoundHistoryCache.GetLastNodeRoundHistory(nodeId, currentRoundId);
+        public bool CheckNodeQualification(int nodeId, int previousRoundId) => nodesRoundHistoryCache.CheckNodeQualification(nodeId, previousRoundId);
+        public int? GetNodeRandomForRound(int nodeId, int roundId) => nodesRoundHistoryCache.GetNodeRandomForRound(nodeId, roundId);
 
     }
 }

@@ -23,7 +23,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using dkg.poly;
+using dkgServiceNode.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Npgsql;
+using Solnet.Wallet.Bip39;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static NpgsqlTypes.NpgsqlTsQuery;
 
 namespace dkgServiceNode.Data
 {
@@ -129,6 +135,47 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
+        readonly static string sqlScript_0_12_0 = @"
+            START TRANSACTION;
+
+            DROP TRIGGER IF EXISTS nodes_before_update_trigger ON nodes;
+            DROP FUNCTION IF EXISTS update_nodes_round_history();
+
+            CREATE OR REPLACE PROCEDURE upsert_node_round_history(
+                p_node_id INT,
+                p_round_id INT,
+                p_node_final_status SMALLINT,
+                p_node_random VARCHAR
+            )
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+            -- Check if the record exists
+                IF EXISTS(
+                    SELECT 1
+                    FROM nodes_round_history
+                    WHERE node_id = p_node_id AND round_id = p_round_id
+                ) THEN
+            -- Update the existing record and return it
+                    UPDATE nodes_round_history
+                    SET node_final_status = p_node_final_status,
+                        node_random = p_node_random
+                    WHERE node_id = p_node_id AND round_id = p_round_id;
+                ELSE
+            -- Insert a new record and return it
+                    INSERT INTO nodes_round_history(node_id, round_id, node_final_status, node_random)
+                    VALUES(p_node_id, p_round_id, p_node_final_status, p_node_random);
+                END IF;
+            END;
+            $$;
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.12.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
+
+
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -213,6 +260,7 @@ namespace dkgServiceNode.Data
             PuVersionUpdate("0.9.6", connection);
             PuVersionUpdate("0.10.2", connection);
             PuVersionUpdate("0.11.0", connection);
+            EnsureVersion("0.12.0", sqlScript_0_12_0, connection);
         }
     }
 

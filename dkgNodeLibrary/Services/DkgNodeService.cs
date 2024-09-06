@@ -168,7 +168,7 @@ namespace dkgNode.Services
 
             try
             {
-                response = await httpClient.PostAsync($"{ServiceNodeUrl}/api/nodes/register", httpContent);
+                response = await httpClient.PostAsync($"{ServiceNodeUrl}/api/ops/register", httpContent);
             }
             catch (Exception e)
             {
@@ -369,7 +369,7 @@ namespace dkgNode.Services
             var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             try
             {
-                httpResponse = await httpClient.PostAsync($"{ServiceNodeUrl}/api/nodes/status", httpContent);
+                httpResponse = await httpClient.PostAsync($"{ServiceNodeUrl}/api/ops/status", httpContent);
                 if (httpResponse == null)
                 {
                     Logger.LogError("Node '{Name}' failed to report {r} to '{ServiceNodeUrl}', no response received, resetting node",

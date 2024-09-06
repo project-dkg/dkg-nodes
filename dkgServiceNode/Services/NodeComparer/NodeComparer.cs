@@ -24,6 +24,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 using dkgServiceNode.Models;
+using dkgServiceNode.Services.Cache;
 
 namespace dkgServiceNode.Services.NodeComparer
 {
@@ -31,17 +32,17 @@ namespace dkgServiceNode.Services.NodeComparer
     {
         private readonly int ZPoint;
         private readonly int RoundId;
-
-        public NodeComparer(int zPoint, int roundId)
+        private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
+        public NodeComparer(int zPoint, int roundId, NodesRoundHistoryCache nrhc)
         {
             ZPoint = zPoint;
             RoundId = roundId;
+            nodesRoundHistoryCache = nrhc;
         }
 
         private int? GetInt(Node? x)
         {
-            var nodeRoundHistory = x?.NodesRoundHistory.FirstOrDefault(nrh => nrh.RoundId == RoundId);
-            return nodeRoundHistory?.NodeRandom;
+            return x != null ? nodesRoundHistoryCache.GetNodeRandomForRound(x.Id, RoundId) : null;
         }
         public int Compare(Node? x, Node? y)
         {
