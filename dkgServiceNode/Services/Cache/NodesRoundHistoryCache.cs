@@ -49,7 +49,8 @@ namespace dkgServiceNode.Services.Cache
                         .Select(group => new { NodeId = group.Key, MaxRoundId = group.Max(nrh => nrh.RoundId) })
                         .Select(maxRound => histories
                             .Where(nrh => nrh.NodeId == maxRound.NodeId && nrh.RoundId == maxRound.MaxRoundId)
-                            .FirstOrDefault())
+                        .OrderBy(nrh => nrh.Id)
+                        .FirstOrDefault())
                         .ToList();
 
                     foreach (var history in maxRoundNodeHistories)
@@ -187,7 +188,7 @@ namespace dkgServiceNode.Services.Cache
         }
         public  bool CheckNodeQualification(int nodeId, int previousRoundId)
         {
-            return GetNodeRandomForRound(nodeId, previousRoundId) != null;
+            return previousRoundId > 0 && GetNodeRandomForRound(nodeId, previousRoundId) != null;
         }
         public  int? GetNodeRandomForRound(int nodeId, int roundId)
         {

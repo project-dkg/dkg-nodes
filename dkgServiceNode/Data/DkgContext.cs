@@ -68,26 +68,36 @@ namespace dkgServiceNode.Data
             Nodes.Add(node);
             await SaveChangesAsync();
             nodesCache.LoadNodeToCache(node);
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(new NodesRoundHistory(node));
+            await LoadNodesRoundHistory(node);
             nodesRoundHistoryCache.UpdateNodeCounts(null, NStatus.NotRegistered, node.RoundId, node.Status);
         }
+
+        private async Task LoadNodesRoundHistory(Node node)
+        {
+            if (node.RoundId != null && node.Random != null)
+            {
+                nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(new NodesRoundHistory(node));
+
+                await Database.ExecuteSqlRawAsync(
+                  "CALL upsert_node_round_history({0}, {1}, {2}, {3})",
+                  node.Id, node.RoundId, node.StatusValue, node.Random);
+            }
+        }
         public List<Node> GetAllNodes() => nodesCache.GetAllNodes();
+
         public int GetNodeCount() => nodesCache.GetNodeCount();
         public List<Node> GetAllNodesSortedById() => nodesCache.GetAllNodesSortedById();
         public List<Node> GetFilteredNodes(string search = "") => nodesCache.GetFilteredNodes(search);
         public async Task UpdateNodeAsync(Node node)
         {
             NodesRoundHistory? nrh = GetLastNodeRoundHistory(node.Id, -1);
-            nodesRoundHistoryCache.UpdateNodeCounts(nrh?.RoundId, nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered, 
+            nodesRoundHistoryCache.UpdateNodeCounts(nrh?.RoundId, nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
                                                     node.RoundId, node.Status);
 
             Entry(node).State = EntityState.Modified;
             await SaveChangesAsync();
-
+            await LoadNodesRoundHistory(node);
             nodesCache.UpdateNodeInCache(node);
-            // possible race condition (:)
-
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(new NodesRoundHistory(node));
         }
 
         public async Task DeleteNodeAsync(Node node)

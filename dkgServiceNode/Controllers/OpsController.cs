@@ -30,17 +30,11 @@ using dkgServiceNode.Models;
 using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text;
 using static dkgCommon.Constants.NodeStatusConstants;
 using static dkgCommon.Constants.RoundStatusConstants;
 
 using Solnet.Wallet;
-using System.Xml.Linq;
-using static NpgsqlTypes.NpgsqlTsQuery;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using Microsoft.AspNetCore.Routing;
-using System.Net.NetworkInformation;
 using System.Diagnostics;
 
 namespace dkgServiceNode.Controllers
@@ -347,8 +341,8 @@ namespace dkgServiceNode.Controllers
         }
 
         internal StatusResponse CreateStatusResponse(Round? round,
-                                                            NodesRoundHistory? lastRoundHistory, 
-                                                            NStatus status, int? random)
+                                                     NodesRoundHistory? lastRoundHistory, 
+                                                     NStatus status, int? random)
         {
             int roundId = round != null ? round.Id : 0;
             RStatus roundStatus = round != null ? (RStatus)round.StatusValue : RStatus.Unknown;
