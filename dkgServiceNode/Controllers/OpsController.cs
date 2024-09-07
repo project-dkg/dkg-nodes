@@ -109,9 +109,15 @@ namespace dkgServiceNode.Controllers
                 if (xNode == null)
                 {
                     node.RoundId = roundId;
-                    node.CalculateRandom();
-                    if (roundId == null) node.StatusValue = (short)NStatus.NotRegistered;
-                    await dkgContext.AddNodeAsync(node);
+                    if (roundId == null)
+                    {
+                        node.StatusValue = (short)NStatus.NotRegistered;
+                    }
+                    else
+                    {
+                        node.CalculateRandom();
+                        await dkgContext.AddNodeAsync(node);
+                    }
                     xNode = dkgContext.GetNodeByAddress(node.Address);
                 }
                 else

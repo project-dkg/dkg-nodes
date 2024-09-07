@@ -31,7 +31,10 @@ DbEnsure.Ensure(connectionString ?? "");
 
 builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<DkgContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<DkgContext>(options => {
+    options.UseNpgsql(connectionString);
+    options.EnableSensitiveDataLogging();
+});
 
 builder.Services.AddSingleton<Runner>();
 builder.Services.AddSingleton<NodesCache>();

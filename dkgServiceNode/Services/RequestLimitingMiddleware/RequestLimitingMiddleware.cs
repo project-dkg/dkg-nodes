@@ -27,7 +27,6 @@ public class RequestLimitingMiddleware
         }
         else
         {
-            // If not the specific controller, just pass through
             await _next(context);
         }
     }
