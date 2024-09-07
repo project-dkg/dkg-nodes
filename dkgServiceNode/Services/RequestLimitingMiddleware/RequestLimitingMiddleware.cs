@@ -12,15 +12,23 @@ public class RequestLimitingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        await _semaphore.WaitAsync();
+        if (context.Request.Path.StartsWithSegments($"/api/ops", StringComparison.OrdinalIgnoreCase))
+        {
+            await _semaphore.WaitAsync();
 
-        try
-        {
-            await _next(context);
+            try
+            {
+                await _next(context);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
-        finally
+        else
         {
-            _semaphore.Release();
+            // If not the specific controller, just pass through
+            await _next(context);
         }
     }
 }

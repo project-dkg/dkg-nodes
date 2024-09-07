@@ -35,6 +35,7 @@ namespace dkgServiceNode.Services.Cache
 
         public  void LoadRoundsToCache(IEnumerable<Round> rounds)
         {
+            if (_isCacheRoundsLoaded) return;
             lock (_cacheRoundsLock)
             {
                 if (!_isCacheRoundsLoaded)

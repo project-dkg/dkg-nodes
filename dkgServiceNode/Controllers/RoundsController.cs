@@ -213,12 +213,13 @@ namespace dkgServiceNode.Controllers
         internal async Task TryRunRound(Round round)
         {
             List<Node> rNodes = dkgContext.GetAllNodes()
-                .Where(n => n.RoundId == round.Id)
-                .ToList();
+                    .Where(n => n.RoundId == round.Id && n.Status == NStatus.WaitingRoundStart)
+                    .ToList();
+
 
             List<Node> fiNodes = rNodes
-                .Where(node => dkgContext.CheckNodeQualification(node.Id, round.Id - 1))
-                .ToList();
+                    .Where(node => dkgContext.CheckNodeQualification(node.Id, round.Id - 1))
+                    .ToList();
 
             if (fiNodes.Count < 3)
             {

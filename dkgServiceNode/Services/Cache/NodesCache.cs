@@ -39,6 +39,7 @@ namespace dkgServiceNode.Services.Cache
 
         public  void LoadNodesToCache(IEnumerable<Node> nodes)
         {
+            if (_isCacheNodesLoaded) return;
             lock (_cacheNodesLock)
             {
                 if (!_isCacheNodesLoaded)
@@ -150,7 +151,7 @@ namespace dkgServiceNode.Services.Cache
                      (kvp.Value.RoundId != null && kvp.Value.RoundId.ToString()!.Contains(search)) ||
                      (kvp.Value.RoundId == null && ("null".Contains(search) || "--".Contains(search))) ||
                      NodeStatusConstants.GetNodeStatusById(kvp.Value.StatusValue).ToString().Contains(search))
-                 .Select(kvp => new Node(kvp.Value)) // Copy the filtered nodes
+                 .Select(kvp => new Node(kvp.Value))
                  .ToList();
             }
             return filteredNodes;

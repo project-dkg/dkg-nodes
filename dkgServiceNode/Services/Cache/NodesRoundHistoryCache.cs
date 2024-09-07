@@ -40,6 +40,7 @@ namespace dkgServiceNode.Services.Cache
 
         public void LoadNodesRoundHistoriesToCache(IEnumerable<NodesRoundHistory> histories)
         {
+            if (_isCacheNodesRoundHistoryLoaded) return;
             lock (_cacheNodesRoundHistoryLock)
             {
                 if (!_isCacheNodesRoundHistoryLoaded)
