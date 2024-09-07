@@ -26,6 +26,7 @@
 using dkgServiceNode.Models;
 
 using System.Runtime.CompilerServices;
+using System.Text;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
 
 namespace dkgServiceNode.Services.RoundRunner
@@ -58,6 +59,7 @@ namespace dkgServiceNode.Services.RoundRunner
                 if (roundToRun != null && nodes != null)
                 {
                     roundToRun.Run(nodes);
+                    SetStepTwoWaitingTime(round);
                 }
             }
         }
