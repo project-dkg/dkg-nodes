@@ -510,7 +510,11 @@ namespace dkgServiceNode.Controllers
                 var lastRoundHistory = dkgContext.GetLastNodeRoundHistory(node.Id, statusReport.RoundId);
 
                 RStatus? rStatus = null;
-                if (round != null) rStatus = round.Status;
+                if (round != null)
+                {
+                    await UpdateRoundState(round);
+                    rStatus = round.Status;
+                }
 
                 if (actionMap.TryGetValue((rStatus, statusReport.Status), out var function))
                 {
