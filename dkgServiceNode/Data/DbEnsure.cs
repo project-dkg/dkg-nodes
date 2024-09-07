@@ -259,6 +259,7 @@ namespace dkgServiceNode.Data
             Ensure_0_8_0(connection);
             EnsureVersion("0.12.1", sqlScript_0_12_1, connection);
             PuVersionUpdate("0.12.4", connection);
+            PuVersionUpdate("0.12.5", connection);
         }
     }
 

@@ -32,9 +32,6 @@ using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Xml.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using dkgServiceNode.Services.Cache;
 
 namespace dkgServiceNode.Controllers

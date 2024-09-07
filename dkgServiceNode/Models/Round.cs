@@ -111,7 +111,7 @@ namespace dkgServiceNode.Models
         [NotMapped]
         public RoundStatus CancelStatus
         {
-            get { return Status.CancelStatus(); }
+            get { return RoundStatus.CancelStatus(); }
         }
 
         [JsonIgnore]

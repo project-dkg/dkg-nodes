@@ -109,8 +109,7 @@ namespace dkgNodesTests
         [Test]
         public void TestCancelStatus()
         {
-            RoundStatus roundStatus = RoundStatusConstants.Started;
-            Assert.That(roundStatus.CancelStatus(), Is.EqualTo(RoundStatusConstants.Cancelled));
+            Assert.That(RoundStatus.CancelStatus(), Is.EqualTo(RoundStatusConstants.Cancelled));
         }
 
         [Test]

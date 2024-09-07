@@ -72,6 +72,8 @@ namespace dkgServiceNode.Controllers
             Stopwatch stopwatch = new();
             stopwatch.Start();
 
+            await UpdateRunningRoundsIfNeeded();
+
             ActionResult<StatusResponse> res;
             bool verified = false;
 
@@ -573,6 +575,26 @@ namespace dkgServiceNode.Controllers
                 catch
                 {
                 }
+            }
+        }
+
+        private static DateTime lastUpdateRunningRoundsTime = DateTime.MinValue;
+        private static readonly TimeSpan updateRunningRoundsInterval = TimeSpan.FromSeconds(120);
+
+        internal async Task UpdateRunningRounds()
+        {
+            var rounds = dkgContext.GetAllRounds().Where(r => RoundStatus.IsRunning(r.Status));
+            foreach (var round in rounds)
+            {
+                await UpdateRoundState(round);
+            }
+        }
+        private async Task UpdateRunningRoundsIfNeeded()
+        {
+            if (DateTime.Now - lastUpdateRunningRoundsTime >= updateRunningRoundsInterval)
+            {
+                await UpdateRunningRounds();
+                lastUpdateRunningRoundsTime = DateTime.Now;
             }
         }
 
