@@ -1,3 +1,6 @@
 [submodule "dkg"]
 	path = dkg
 	url = https://github.com/project-dkg/dkg
+[submodule "dkg-common"]
+	path = dkg-common
+	url = git@github.com:project-dkg/dkg-common.git

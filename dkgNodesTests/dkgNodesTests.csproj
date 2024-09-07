@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\dkgCommon\dkgCommon.csproj" />
+    <ProjectReference Include="..\dkg-common\dkgCommon\dkgCommon.csproj" />
     <ProjectReference Include="..\dkgNodeLibrary\dkgNodeLibrary.csproj" />
     <ProjectReference Include="..\dkgServiceNode\dkgServiceNode.csproj" />
     <ProjectReference Include="..\dkg\dkgLibrary\dkgLibrary.csproj" />

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\dkg-common\dkgCommon\dkgCommon.csproj" />
     <ProjectReference Include="..\dkgNodeLibrary\dkgNodeLibrary.csproj" />
   </ItemGroup>
 </Project>
