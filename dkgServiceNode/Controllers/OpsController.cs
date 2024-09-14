@@ -306,7 +306,7 @@ namespace dkgServiceNode.Controllers
 
             await ResetNodeState(dkgContext, node);
             string rStatus = round == null ? "null" : GetRoundStatusById(round.StatusValue).ToString();
-            return _409Status(stReport.PublicKey, stReport.Name, GetNodeStatusById(stReport.Status).ToString(), rStatus);
+            return _409Status(stReport.Address, stReport.Name, GetNodeStatusById(stReport.Status).ToString(), rStatus);
         }
         internal async Task<ObjectResult> AcceptFinished(Round? round, Node node, NodesRoundHistory? lastRoundHistory, StatusReport stReport)
         {
@@ -501,10 +501,10 @@ namespace dkgServiceNode.Controllers
 
             };
 
-            var node = dkgContext.GetNodeByPublicKey(statusReport.PublicKey);
+            var node = dkgContext.GetNodeByAddress(statusReport.Address);
             if (node == null)
             {
-                res = _404Node(statusReport.PublicKey, statusReport.Name);
+                res = _404Node(statusReport.Address, statusReport.Name);
             }
             else
             {

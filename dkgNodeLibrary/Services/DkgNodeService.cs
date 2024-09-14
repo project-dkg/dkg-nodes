@@ -359,7 +359,7 @@ namespace dkgNode.Services
             var statusResponse = new StatusResponse(roundId, Failed);
             string r = $"[status '{NodeStatusConstants.GetNodeStatusById(Status).Name}', round '{(Round == null ? 0: Round)}']";
 
-            var report = new StatusReport(Config.PublicKey!, Name, Round ?? 0, Status);
+            var report = new StatusReport(Config.Address, Name, Round ?? 0, Status);
             if (data != null)
             {
                 report.Data = data;

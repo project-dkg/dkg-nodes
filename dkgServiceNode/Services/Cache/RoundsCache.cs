@@ -30,28 +30,10 @@ namespace dkgServiceNode.Services.Cache
     public class RoundsCache
     {
         private  readonly Dictionary<int, Round> _cacheRounds = new();
-        private  bool _isCacheRoundsLoaded = false;
         private  readonly object _cacheRoundsLock = new();
-
-        public  void LoadRoundsToCache(IEnumerable<Round> rounds)
+        public void SaveRoundToCache(Round round)
         {
-            if (_isCacheRoundsLoaded) return;
-            lock (_cacheRoundsLock)
-            {
-                if (!_isCacheRoundsLoaded)
-                {
-                   foreach (var round in rounds)
-                    {
-                        LoadRoundToCache(round);
-                    }
-                    _isCacheRoundsLoaded = true;
-                }
-            }
-        }
-
-        private  void LoadRoundToCache(Round round)
-        {
-            _cacheRounds[round.Id] = round;
+            _cacheRounds[round.Id] = new Round(round);
         }
 
         public  Round? GetRoundById(int id)
@@ -74,7 +56,7 @@ namespace dkgServiceNode.Services.Cache
         {
             lock (_cacheRoundsLock)
             {
-                LoadRoundToCache(round);
+                SaveRoundToCache(round);
             }
         }
 

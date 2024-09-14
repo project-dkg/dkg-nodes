@@ -52,29 +52,8 @@ namespace dkgServiceNode.Data
             nodesRoundHistoryCache = nrhc;
 
             logger = lggr;
-
-            try
-            {
-                if (Nodes is not null)
-                {
-                    nodesCache.LoadNodesToCache(Nodes);
-                }
-                if (Rounds is not null)
-                {
-                    roundsCache.LoadRoundsToCache(Rounds);
-                }
-                if (NodesRoundHistory is not null)
-                {
-                    nodesRoundHistoryCache.LoadNodesRoundHistoriesToCache(NodesRoundHistory);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Error loading caches: {msg}", ex.Message);
-            }
         }
         public Node? GetNodeById(int id) => nodesCache.GetNodeById(id);
-        public Node? GetNodeByPublicKey(string publicKey) => nodesCache.GetNodeByPublicKey(publicKey);
         public Node? GetNodeByAddress(string address) => nodesCache.GetNodeByAddress(address);
         public async Task AddNodeAsync(Node node)
         {
@@ -82,8 +61,8 @@ namespace dkgServiceNode.Data
             { 
                 Nodes.Add(node);
                 await SaveChangesAsync();
-                nodesCache.LoadNodeToCache(node);
-                await LoadNodesRoundHistory(node);
+                nodesCache.SaveNodeToCache(node);
+                await SaveNodesRoundHistory(node);
                 nodesRoundHistoryCache.UpdateNodeCounts(null, NStatus.NotRegistered, node.RoundId, node.Status);
             }
             catch (Exception ex)
@@ -92,11 +71,11 @@ namespace dkgServiceNode.Data
             }
         }
 
-        private async Task LoadNodesRoundHistory(Node node)
+        private async Task SaveNodesRoundHistory(Node node)
         {
             if (node.RoundId != null && node.Random != null)
             {
-                nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(new NodesRoundHistory(node));
+                nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(new NodesRoundHistory(node));
 
                 await Database.ExecuteSqlRawAsync(
                   "CALL upsert_node_round_history({0}, {1}, {2}, {3})",
@@ -116,9 +95,7 @@ namespace dkgServiceNode.Data
                 nodesRoundHistoryCache.UpdateNodeCounts(nrh?.RoundId, nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
                                                         node.RoundId, node.Status);
 
-                Entry(node).State = EntityState.Modified;
-                await SaveChangesAsync();
-                await LoadNodesRoundHistory(node);
+                await SaveNodesRoundHistory(node);
                 nodesCache.UpdateNodeInCache(node);
             }
             catch (Exception ex)
@@ -186,7 +163,7 @@ namespace dkgServiceNode.Data
         }
         public bool RoundExists(int id) => roundsCache.RoundExists(id);
         public int? LastRoundResult() => roundsCache.LastRoundResult();
-        public NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int currentRoundId) => nodesRoundHistoryCache.GetLastNodeRoundHistory(nodeId, currentRoundId);
+        public NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int RoundId) => nodesRoundHistoryCache.GetLastNodeRoundHistory(nodeId, RoundId);
         public bool CheckNodeQualification(int nodeId, int previousRoundId) => nodesRoundHistoryCache.CheckNodeQualification(nodeId, previousRoundId);
         public int? GetNodeRandomForRound(int nodeId, int roundId) => nodesRoundHistoryCache.GetNodeRandomForRound(nodeId, roundId);
 

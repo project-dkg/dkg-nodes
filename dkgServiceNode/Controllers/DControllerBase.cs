@@ -110,10 +110,10 @@ namespace dkgServiceNode.Controllers
             return StatusCode(StatusCodes.Status400BadRequest,
                               new ErrMessage { Msg = "Inconsistent request." });
         }
-        protected ObjectResult _400NoResult(int roundId, string name, string publicKey)
+        protected ObjectResult _400NoResult(int roundId, string name, string address)
         {
             return StatusCode(StatusCodes.Status400BadRequest,
-                              new { message = $"Round: {roundId} node [{name}:{publicKey}] finished with no result data" });
+                              new { message = $"Round: {roundId} node [{name}:@{address}] finished with no result data" });
         }
         protected ObjectResult _403()
         {
@@ -144,10 +144,10 @@ namespace dkgServiceNode.Controllers
         {
             return _404(id, "Node");
         }
-        protected ObjectResult _404Node(string publicKey, string name)
+        protected ObjectResult _404Node(string address, string name)
         {
             return StatusCode(StatusCodes.Status404NotFound,
-                              new { message = $"Failed to find node [{name}:{publicKey}]." });
+                              new { message = $"Failed to find node [{name}:@{address}]." });
         }
         protected ObjectResult _404Round(int id)
         {
@@ -168,10 +168,10 @@ namespace dkgServiceNode.Controllers
                               new { message = $"Could not find a round that is collecting node applications." });
         }
 
-        protected ObjectResult _409Status(string publicKey, string name, string nStatus, string rStatus)
+        protected ObjectResult _409Status(string address, string name, string nStatus, string rStatus)
         {
             return StatusCode(StatusCodes.Status409Conflict,
-                              new { message = $"Node [{name}:{publicKey}] reports status '{nStatus}' that does not fit round status {rStatus}" });
+                              new { message = $"Node [{name}:@{address}] reports status '{nStatus}' that does not fit round status {rStatus}" });
         }
         protected ObjectResult _500(string msg)
         {
@@ -226,25 +226,12 @@ namespace dkgServiceNode.Controllers
 
         protected async Task ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
         {
+            List<Task> tasks = [];
             foreach (var node in nodes)
             {
-                bool needsUpdate = false;
-                if (node.StatusValue != (short)NStatus.NotRegistered)
-                {
-                    node.StatusValue = (short)NStatus.NotRegistered;
-                    needsUpdate = true;
-                }
-
-                if (node.RoundId != null)
-                {
-                    node.RoundId = null;
-                    needsUpdate = true;
-                }
-                if (needsUpdate)
-                {
-                    await dkgContext.UpdateNodeAsync(node);
-                }
+                tasks.Add(ResetNodeState(dkgContext, node));
             }
+            await Task.WhenAll(tasks);
         }
 
         protected async Task UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
