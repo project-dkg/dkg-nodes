@@ -31,51 +31,15 @@ namespace dkgServiceNode.Services.Cache
     public  class NodesRoundHistoryCache
     {
         private  readonly Dictionary<int, List<NodesRoundHistory>> _cacheNodesRoundHistory = [];
-        private  bool _isCacheNodesRoundHistoryLoaded = false;
-        private  bool _isCacheCountsRoundHistoryLoaded = false;
         private readonly object _cacheNodesRoundHistoryLock = new();
         private  readonly object _cacheCountsRoundHistoryLock = new();
 
         private Dictionary<(int RoundId, NStatus Status), int> _nodeCounts = [];
 
-        public void LoadNodesRoundHistoriesToCache(IEnumerable<NodesRoundHistory> histories)
+        public void SetHistoryCounterNoLock(int roundId, NStatus status, int count)
         {
-            if (_isCacheNodesRoundHistoryLoaded) return;
-            lock (_cacheNodesRoundHistoryLock)
-            {
-                if (!_isCacheNodesRoundHistoryLoaded)
-                {
-                    var maxRoundNodeHistories = histories
-                        .GroupBy(nrh => nrh.NodeId)
-                        .Select(group => new { NodeId = group.Key, MaxRoundId = group.Max(nrh => nrh.RoundId) })
-                        .Select(maxRound => histories
-                            .Where(nrh => nrh.NodeId == maxRound.NodeId && nrh.RoundId == maxRound.MaxRoundId)
-                        .OrderBy(nrh => nrh.Id)
-                        .FirstOrDefault())
-                        .ToList();
-
-                    foreach (var history in maxRoundNodeHistories)
-                    {
-                        if (history != null)
-                        {
-                            LoadNodesRoundHistoryToCacheNoLock(history);
-                        }
-                    }
-                    _isCacheNodesRoundHistoryLoaded = true;
-                }
-                lock (_cacheCountsRoundHistoryLock)
-                {
-                    if (!_isCacheCountsRoundHistoryLoaded)
-                    {
-                        _nodeCounts = histories
-                            .GroupBy(n => new { n.RoundId, n.NodeFinalStatusValue })
-                            .ToDictionary(g => (g.Key.RoundId, (NStatus)g.Key.NodeFinalStatusValue), g => g.Count());
-                        _isCacheCountsRoundHistoryLoaded = true;
-                    }
-                }
-            }
+           _nodeCounts[(roundId, status)] = count;
         }
-
         public void UpdateNodeCounts(int? oldRoundId, NStatus oldStatus, int? newRoundId, NStatus newStatus)
         {
             if (oldRoundId != newRoundId || oldStatus != newStatus)
@@ -117,22 +81,22 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        private  void LoadNodesRoundHistoryToCacheNoLock(NodesRoundHistory history)
+        public void SaveNodesRoundHistoryToCacheNoLock(NodesRoundHistory history)
         {
             if (!_cacheNodesRoundHistory.ContainsKey(history.NodeId))
             {
-                _cacheNodesRoundHistory[history.NodeId] = new List<NodesRoundHistory>();
+                _cacheNodesRoundHistory[history.NodeId] = [];
             }
-            _cacheNodesRoundHistory[history.NodeId].Add(history);
+            _cacheNodesRoundHistory[history.NodeId].Add(new NodesRoundHistory(history));
         }
 
-        public  void LoadNodesRoundHistoryToCache(NodesRoundHistory history)
+        public  void SaveNodesRoundHistoryToCache(NodesRoundHistory history)
         {
             lock (_cacheNodesRoundHistoryLock)
             {
                 if (!_cacheNodesRoundHistory.TryGetValue(history.NodeId, out List<NodesRoundHistory>? histories))
                 {
-                    _cacheNodesRoundHistory[history.NodeId] = new List<NodesRoundHistory> { history };
+                    _cacheNodesRoundHistory[history.NodeId] = [new NodesRoundHistory(history)];
                 }
                 else
                 {
@@ -142,12 +106,12 @@ namespace dkgServiceNode.Services.Cache
                     // If the existing record is found, replace it with the new history
                     if (index != -1)
                     {
-                        _cacheNodesRoundHistory[history.NodeId][index] = history;
+                        _cacheNodesRoundHistory[history.NodeId][index] = new NodesRoundHistory(history);
                     }
                     else
                     {
                         // Add the new history to the list if it doesn't exist
-                        _cacheNodesRoundHistory[history.NodeId].Add(history);
+                        _cacheNodesRoundHistory[history.NodeId].Add(new NodesRoundHistory(history));
 
                         // Remove excess items if the list has more than 10 items
                         if (_cacheNodesRoundHistory[history.NodeId].Count > 10)
@@ -169,14 +133,14 @@ namespace dkgServiceNode.Services.Cache
             }
         }
 
-        public  NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int currentRoundId)
+        public  NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int RoundId)
         {
             NodesRoundHistory? res = null;
             lock (_cacheNodesRoundHistoryLock)
             {
                 if (_cacheNodesRoundHistory.TryGetValue(nodeId, out List<NodesRoundHistory>? histories))
                 {
-                    var history = histories.Where(nrh => nrh.RoundId != currentRoundId)
+                    var history = histories.Where(nrh => nrh.RoundId != RoundId)
                                            .OrderByDescending(nrh => nrh.RoundId)
                                            .FirstOrDefault();
                     if (history != null)

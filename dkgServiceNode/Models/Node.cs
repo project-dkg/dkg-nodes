@@ -42,20 +42,25 @@ namespace dkgServiceNode.Models
         [Column("name")]
         public string Name { get; set; } = "--";
 
-        [Column("public_key")]
+        [Column("address")]
+        // Solana Wallet Address
+        public string Address { get; set; } = string.Empty;
+
+        [NotMapped]
+        // Dkg Algorithm Public Key
         public string PublicKey { get; set; } = string.Empty;
 
         [Column("round_id")]
-        public int? RoundId { get; set; }
+        // This is required to make Entity Framework happy
+        // Otherwise EF creates shadow foreign key and starts to use
+        // his placeholder is null in the database and is never changed
+        public int? RoundId { get; set; } = null;
 
-        [Column("status")]
+        [NotMapped]
         public short StatusValue { get; set; } = 0;
 
-        [Column("address")]
-        public string Address { get; set; } = string.Empty;
-
-        [Column("random")]
-        public int? Random { get; set; }
+        [NotMapped]
+        public int? Random { get; set; } = null;
 
         [NotMapped]
         public string Signature { get; set; } = string.Empty;
@@ -79,7 +84,6 @@ namespace dkgServiceNode.Models
             
         }
         public Node(Node other)
-
         {
             Id = other.Id;
             Name = other.Name;
@@ -91,5 +95,5 @@ namespace dkgServiceNode.Models
             Signature = other.Signature;
             Status = other.Status;
         }
-}
+    }
 }

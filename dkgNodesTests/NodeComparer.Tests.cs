@@ -51,8 +51,8 @@ namespace dkgNodesTests
 
             var history1 = new NodesRoundHistory { NodeId = 100181, RoundId = 1, NodeRandom = 5 };
             var history2 = new NodesRoundHistory { NodeId = 100182, RoundId = 1, NodeRandom = 3 };
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history1);
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history2);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
 
             var result = comparer.Compare(null, node);
             Assert.That(result, Is.EqualTo(1));
@@ -76,8 +76,8 @@ namespace dkgNodesTests
             var history1 = new NodesRoundHistory { NodeId = 1001811, RoundId = 1, NodeRandom = 5 };
             var history2 = new NodesRoundHistory { NodeId = 1001812, RoundId = 1, NodeRandom = 5 };
 
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history1);
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history2);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
 
             var result = comparer.Compare(node1, node2);
             Assert.That(result, Is.EqualTo(0));
@@ -93,8 +93,8 @@ namespace dkgNodesTests
             var history1 = new NodesRoundHistory { NodeId = 1001821, RoundId = 1, NodeRandom = 3 };
             var history2 = new NodesRoundHistory { NodeId = 1001822, RoundId = 1, NodeRandom = 5 };
 
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history1);
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history2);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
 
             var result = comparer.Compare(node1, node2);
             Assert.That(result, Is.EqualTo(-1));
@@ -110,8 +110,8 @@ namespace dkgNodesTests
             var history1 = new NodesRoundHistory { NodeId = 1001831, RoundId = 1, NodeRandom = 5 };
             var history2 = new NodesRoundHistory { NodeId = 1001832, RoundId = 1, NodeRandom = 3 };
 
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history1);
-            nodesRoundHistoryCache.LoadNodesRoundHistoryToCache(history2);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
+            nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
 
             var result = comparer.Compare(node1, node2);
             Assert.That(result, Is.EqualTo(1));

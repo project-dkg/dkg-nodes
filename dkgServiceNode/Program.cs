@@ -4,6 +4,7 @@ using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
 using dkgServiceNode.Services.RoundRunner;
 using dkgServiceNode.Services.Cache;
+using dkgServiceNode.Services.Initialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,8 +27,12 @@ builder.Services.Configure<AppSecret>(configuration.GetSection("AppSecret"));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-var connectionString = configuration.GetConnectionString("DefaultConnection");
-DbEnsure.Ensure(connectionString ?? "");
+
+builder.Services.AddSingleton<NodesCache>();
+builder.Services.AddSingleton<RoundsCache>();
+builder.Services.AddSingleton<NodesRoundHistoryCache>();
+
+var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
 
 builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
@@ -37,11 +42,20 @@ builder.Services.AddDbContext<DkgContext>(options => {
 });
 
 builder.Services.AddSingleton<Runner>();
-builder.Services.AddSingleton<NodesCache>();
-builder.Services.AddSingleton<RoundsCache>();
-builder.Services.AddSingleton<NodesRoundHistoryCache>();
 
 var app = builder.Build();
+
+// -------------- Initialize database and caches ---------------
+// runs syncronously with no locks against parallel execution 
+var initializer = new Initializer(
+        app.Services.GetRequiredService<NodesCache>(),
+        app.Services.GetRequiredService<RoundsCache>(),
+        app.Services.GetRequiredService<NodesRoundHistoryCache>(),
+        app.Services.GetRequiredService<ILogger<Initializer>>()
+        );
+initializer.Initialize(connectionString);
+// -------------------------------------------------------------
+
 
 app.UseMiddleware<RequestLimitingMiddleware>(controllers);
 

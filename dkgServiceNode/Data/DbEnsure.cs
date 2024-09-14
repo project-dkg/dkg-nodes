@@ -23,13 +23,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkg.poly;
-using dkgServiceNode.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Npgsql;
-using Solnet.Wallet.Bip39;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using static NpgsqlTypes.NpgsqlTsQuery;
 
 namespace dkgServiceNode.Data
 {
@@ -175,6 +169,35 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
+        readonly static string sqlScript_0_13_0 = @"
+            START TRANSACTION;
+
+            ALTER TABLE nodes
+                DROP COLUMN IF EXISTS public_key,
+                DROP COLUMN IF EXISTS status,
+                DROP COLUMN IF EXISTS random;
+
+            CREATE OR REPLACE FUNCTION get_node_counts()
+            RETURNS TABLE (round_id INT, status INT, count INT) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT 
+                    round_id, 
+                    node_final_status AS status, 
+                    COUNT(*) AS count
+                FROM 
+                    nodes_round_history
+                GROUP BY 
+                    round_id, 
+                    node_final_status;
+            END;
+            $$ LANGUAGE plpgsql;
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.13.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+            COMMIT;
+            ";
 
         private static string PuVersionUpdateQuery(string v)
         {
@@ -238,27 +261,21 @@ namespace dkgServiceNode.Data
                 scriptCommand.ExecuteNonQuery();
             }
         }
-        public static void Ensure(string connectionString)
+        public static void Ensure(NpgsqlConnection connection, ILogger logger)
         {
-
-            using var connection = new NpgsqlConnection(connectionString);
-            while (true)
+            try
             {
-                try
-                {
-                    connection.Open();
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to create database connection: {ex.Message}");
-                    Thread.Sleep(3000);
-                }
+                logger.LogInformation("Initializing database at 0.8.0");
+                Ensure_0_8_0(connection);
+                logger.LogInformation("Update to 0.12.1");
+                EnsureVersion("0.12.1", sqlScript_0_12_1, connection);
+                logger.LogInformation("Update to 0.13.0");
+                EnsureVersion("0.13.0", sqlScript_0_13_0, connection);
             }
-
-            Ensure_0_8_0(connection);
-            EnsureVersion("0.12.1", sqlScript_0_12_1, connection);
-            PuVersionUpdate("0.12.7", connection);
+            catch (Exception ex)
+            {
+                logger.LogError("Error initializing database: {msg}", ex.Message);
+            }
         }
     }
 

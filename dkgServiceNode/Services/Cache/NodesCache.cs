@@ -25,6 +25,7 @@
 
 using dkgCommon.Constants;
 using dkgServiceNode.Models;
+using Npgsql;
 using System.Collections.Concurrent;
 
 namespace dkgServiceNode.Services.Cache
@@ -32,40 +33,19 @@ namespace dkgServiceNode.Services.Cache
     public  class NodesCache
     {
         private  readonly Dictionary<int, Node> _cacheNodes = new();
-        private  readonly ConcurrentDictionary<string, int> _publicKeyToId = new();
         private  readonly ConcurrentDictionary<string, int> _addressToId = new();
-        private  bool _isCacheNodesLoaded = false;
         private  readonly object _cacheNodesLock = new();
-
-        public  void LoadNodesToCache(IEnumerable<Node> nodes)
-        {
-            if (_isCacheNodesLoaded) return;
-            lock (_cacheNodesLock)
-            {
-                if (!_isCacheNodesLoaded)
-                {
-                    foreach (var node in nodes)
-                    {
-                        LoadNodeToCacheNoLock(node);
-                    }
-                    _isCacheNodesLoaded = true;
-                }
-            }
-        }
-
-        private  void LoadNodeToCacheNoLock(Node node)
+        public void SaveNodeToCacheNoLock(Node node)
         {
             _cacheNodes[node.Id] = new Node(node);
-            _publicKeyToId[node.PublicKey] = node.Id;
             _addressToId[node.Address] = node.Id;
         }
 
-        public  void LoadNodeToCache(Node node)
+        public  void SaveNodeToCache(Node node)
         {
             lock (_cacheNodesLock)
             {
                 _cacheNodes[node.Id] = new Node(node);
-                _publicKeyToId[node.PublicKey] = node.Id;
                 _addressToId[node.Address] = node.Id;
             }
         }
@@ -81,15 +61,6 @@ namespace dkgServiceNode.Services.Cache
                 }
             }
             return res;
-        }
-
-        public  Node? GetNodeByPublicKey(string publicKey)
-        {
-            if (_publicKeyToId.TryGetValue(publicKey, out var id))
-            {
-                return GetNodeById(id);
-            }
-            return null;
         }
 
         public  Node? GetNodeByAddress(string address)
@@ -174,15 +145,13 @@ namespace dkgServiceNode.Services.Cache
         {
             // Update node in the cache
             RemoveToIdEntries(_addressToId, node.Id);
-            RemoveToIdEntries(_publicKeyToId, node.Id);
-            LoadNodeToCache(node);
+            SaveNodeToCache(node);
         }
 
         public  void DeleteNodeFromCache(Node node)
         {
             // Remove node from the cache
             RemoveToIdEntries(_addressToId, node.Id);
-            RemoveToIdEntries(_publicKeyToId, node.Id);
             lock (_cacheNodesLock)
             {
                 _cacheNodes.Remove(node.Id);
