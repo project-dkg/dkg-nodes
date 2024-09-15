@@ -152,7 +152,7 @@ namespace dkgServiceNode.Services.Initialization
                         ModifiedOn = reader.GetDateTime(reader.GetOrdinal("modified"))
                     };
 
-                    _roundsCache.SaveRoundToCache(round);
+                    _roundsCache.SaveRoundToCacheNoLock(round);
                     counter++;
                 }
                 _logger.LogInformation("Populated cache with {counter} rounds from database", counter);

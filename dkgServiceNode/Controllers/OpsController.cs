@@ -36,6 +36,7 @@ using static dkgCommon.Constants.RoundStatusConstants;
 
 using Solnet.Wallet;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace dkgServiceNode.Controllers
 {
@@ -315,21 +316,28 @@ namespace dkgServiceNode.Controllers
                 return _500UndefinedRound();
             }
 
-            runner.SetResultWaitingTime(round);
-
-            if (stReport.Data.Length != 0)
+            if (node.Status == NStatus.Finished)
             {
-                runner.SetResult(round, node, stReport.Data);
-                await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
-                await UpdateRoundState(round);
-                return Accepted(CreateStatusResponse(round, lastRoundHistory, stReport.Status, node.Random));
+                return Ok(CreateStatusResponse(round, lastRoundHistory, NStatus.Finished, node.Random));
             }
             else
             {
-                runner.SetNoResult(round, node);
-                await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
-                await UpdateRoundState(round);
-                return _400NoResult(round.Id, node.Name, node.PublicKey);
+                runner.SetResultWaitingTime(round);
+
+                if (stReport.Data.Length != 0)
+                {
+                    runner.SetResult(round, node, stReport.Data);
+                    await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
+                    await UpdateRoundState(round);
+                    return Accepted(CreateStatusResponse(round, lastRoundHistory, stReport.Status, node.Random));
+                }
+                else
+                {
+                    runner.SetNoResult(round, node);
+                    await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
+                    await UpdateRoundState(round);
+                    return _400NoResult(round.Id, node.Name, node.PublicKey);
+                }
             }
         }
         internal async Task<ObjectResult> AcceptFailed(Round? round, Node node, NodesRoundHistory? lastRoundHistory, StatusReport stReport)
@@ -514,15 +522,16 @@ namespace dkgServiceNode.Controllers
                 RStatus? rStatus = null;
                 if (round != null)
                 {
-                    await UpdateRoundState(round);
+                    // await UpdateRoundState(round);
                     rStatus = round.Status;
                 }
 
                 if (actionMap.TryGetValue((rStatus, statusReport.Status), out var function))
                 {
-                    logger.LogDebug("State transition round [{id}] node [{name}] : ({rStatus}, {nStatus}) -> {f}",
+                    logger.LogDebug("State transition round [{id}] node [{name}] : ({rStatus}, {nStatus}) -> {f}(Data: {data})",
                                         (round != null ? round.Id.ToString() : "null"),
-                                        node.Name, rStatus, statusReport.Status, function.Method.Name);
+                                        node.Name, rStatus, statusReport.Status, function.Method.Name,
+                                       statusReport.Data.Length == 0 ? "empty" : statusReport.Data);
                     res = await function(round, node, lastRoundHistory, statusReport);
 
                 }
