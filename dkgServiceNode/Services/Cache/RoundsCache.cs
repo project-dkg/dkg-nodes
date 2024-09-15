@@ -31,20 +31,28 @@ namespace dkgServiceNode.Services.Cache
     {
         private  readonly Dictionary<int, Round> _cacheRounds = new();
         private  readonly object _cacheRoundsLock = new();
-        public void SaveRoundToCache(Round round)
-        {
-            _cacheRounds[round.Id] = new Round(round);
-        }
 
         public  Round? GetRoundById(int id)
         {
-            _cacheRounds.TryGetValue(id, out var round);
-            return round;
+            Round? res = null;
+            lock (_cacheRoundsLock)
+            {
+                if (_cacheRounds.TryGetValue(id, out Round? round))
+                {
+                    res = new Round(round);
+                }
+            }
+            return res;
         }
 
         public  List<Round> GetAllRounds()
         {
-            return new List<Round>(_cacheRounds.Values);
+            List<Round> copiedRounds;
+            lock (_cacheRoundsLock)
+            {
+                copiedRounds = _cacheRounds.Values.Select(round => new Round(round)).ToList();
+            }
+            return copiedRounds;
         }
 
         public  List<Round> GetAllRoundsSortedByIdDescending()
@@ -52,15 +60,19 @@ namespace dkgServiceNode.Services.Cache
             return new List<Round>(_cacheRounds.Values.OrderByDescending(r => r.Id));
         }
 
-        public  void AddRoundToCache(Round round)
+        public  void SaveRoundToCache(Round round)
         {
             lock (_cacheRoundsLock)
             {
-                SaveRoundToCache(round);
+                _cacheRounds[round.Id] = new Round(round);
             }
         }
+        public void SaveRoundToCacheNoLock(Round round)
+        {
+            _cacheRounds[round.Id] = new Round(round);
+        }
 
-        public  void UpdateRoundInCache(Round round)
+        public void UpdateRoundInCache(Round round)
         {
             lock (_cacheRoundsLock)
             {
@@ -78,12 +90,22 @@ namespace dkgServiceNode.Services.Cache
 
         public  bool RoundExists(int id)
         {
-            return _cacheRounds.ContainsKey(id);
+            bool res = false;
+            lock (_cacheRoundsLock)
+            {
+                res = _cacheRounds.ContainsKey(id);
+            }
+            return res;
         }
 
         public  int? LastRoundResult()
         {
-            return _cacheRounds.Values.OrderByDescending(r => r.Id).FirstOrDefault()?.Result;
+            int? res = null;
+            lock (_cacheRoundsLock)
+            {
+                res = _cacheRounds.Values.OrderByDescending(r => r.Id).FirstOrDefault()?.Result;
+            }
+            return res;
         }
     }
 }

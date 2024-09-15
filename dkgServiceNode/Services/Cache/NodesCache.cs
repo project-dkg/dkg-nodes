@@ -33,7 +33,7 @@ namespace dkgServiceNode.Services.Cache
     public  class NodesCache
     {
         private  readonly Dictionary<int, Node> _cacheNodes = new();
-        private  readonly ConcurrentDictionary<string, int> _addressToId = new();
+        private  readonly Dictionary<string, int> _addressToId = new();
         private  readonly object _cacheNodesLock = new();
         public void SaveNodeToCacheNoLock(Node node)
         {
@@ -65,11 +65,18 @@ namespace dkgServiceNode.Services.Cache
 
         public  Node? GetNodeByAddress(string address)
         {
-            if (_addressToId.TryGetValue(address, out var id))
+            Node? res = null;
+            lock (_cacheNodesLock)
             {
-                return GetNodeById(id);
+                if (_addressToId.TryGetValue(address, out var id))
+                {
+                    if (_cacheNodes.TryGetValue(id, out Node? node))
+                    {
+                        res = new Node(node);
+                    }
+                }
             }
-            return null;
+            return res;
         }
 
         public  List<Node> GetAllNodes()
@@ -128,32 +135,25 @@ namespace dkgServiceNode.Services.Cache
             return filteredNodes;
         }
 
-        private  void RemoveToIdEntries(ConcurrentDictionary<string, int> dictionary, int nodeId)
-        {
-            var keysToRemove = dictionary
-                .Where(kvp => kvp.Value == nodeId)
-                .Select(kvp => kvp.Key)
-                .ToList();
-
-            foreach (var key in keysToRemove)
-            {
-                dictionary.TryRemove(key, out _);
-            }
-        }
-
         public  void UpdateNodeInCache(Node node)
         {
-            // Update node in the cache
-            RemoveToIdEntries(_addressToId, node.Id);
-            SaveNodeToCache(node);
+            lock (_cacheNodesLock)
+            {
+                var addr = _cacheNodes[node.Id]?.Address;
+                if (addr != null && addr!= node.Address)
+                {
+                    _addressToId.Remove(addr);
+                }
+                _cacheNodes[node.Id] = new Node(node);
+                _addressToId[node.Address] = node.Id;
+            }
         }
 
         public  void DeleteNodeFromCache(Node node)
         {
-            // Remove node from the cache
-            RemoveToIdEntries(_addressToId, node.Id);
             lock (_cacheNodesLock)
             {
+                _addressToId.Remove(node.Address);
                 _cacheNodes.Remove(node.Id);
             }
         }

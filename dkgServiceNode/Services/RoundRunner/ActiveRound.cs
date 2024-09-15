@@ -31,6 +31,7 @@ using dkg.vss;
 using dkgServiceNode.Services.CRandom;
 
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 [assembly: InternalsVisibleTo("dkgNodesTests")]
 
 
@@ -169,6 +170,9 @@ namespace dkgServiceNode.Services.RoundRunner
                 int failed = Nodes.Count(node => node.Failed);
                 int finished = Nodes.Count(node => node.Finished);
                 int timedOut = Nodes.Count(node => node.TimedOut);
+
+                Logger.LogDebug("Finished: {finished}; failed: {failed}; timed-out {timedOut}; minimum T: {minimumT}",
+                                    finished, failed, timedOut, VssTools.MinimumT(Nodes.Length));
 
                 if ((ResultStartWaitingTime == DateTime.MinValue || DateTime.Now - ResultStartWaitingTime < TimeSpan.FromSeconds(Round.TimeoutR)) &&
                     VssTools.MinimumT(Nodes.Length) >= finished &&

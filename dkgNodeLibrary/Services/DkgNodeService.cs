@@ -263,7 +263,10 @@ namespace dkgNode.Services
                             Name, PublicKeys.Length, Round);
             Status = WaitingStepTwo;
 
-            if (dieOnStep2) Thread.Sleep(4000);
+            if (dieOnStep2)
+            {
+                Thread.Sleep(40000);
+            }
             statusResponse = await ReportStatus(httpClient, encodedDeals);
             if (!ShallContinue([WaitingStepTwo, RunningStepTwo], stoppingToken)) return;
 
@@ -282,7 +285,7 @@ namespace dkgNode.Services
                              Name, PublicKeys.Length, Round);
             Status = WaitingStepThree;
 
-            if (dieOnStep2) Thread.Sleep(4000);
+            if (dieOnStep2) Thread.Sleep(40000);
             statusResponse = await ReportStatus(httpClient, encodedResponses);
             if (!ShallContinue([WaitingStepThree, RunningStepThree], stoppingToken)) return;
 
@@ -296,7 +299,10 @@ namespace dkgNode.Services
             if (!await ReportStatusAndCheck(httpClient, [RunningStepThree], stoppingToken)) return;
             RunDkgStepThree(statusResponse.Data);
 
-
+            if (dieOnStep3)
+            {
+                Thread.Sleep(4000);
+            }
             DistributedPublicKey = null;
             string[] encodedResult = [];
 

@@ -128,7 +128,7 @@ namespace dkgServiceNode.Data
             {
                 Rounds.Add(round);
                 await SaveChangesAsync();
-                roundsCache.AddRoundToCache(round);
+                roundsCache.SaveRoundToCache(round);
             }
             catch (Exception ex)
             {

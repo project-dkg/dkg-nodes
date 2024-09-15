@@ -29,7 +29,7 @@ namespace dkgServiceNode.Data
 {
     public static class DbEnsure
     {
-        readonly static string sqlScript_0_8_0 = @"
+        readonly static string sqlScript_0_12_1 = @"
             START TRANSACTION;
 
             DROP TABLE IF EXISTS ""users"";
@@ -91,50 +91,6 @@ namespace dkgServiceNode.Data
             CREATE INDEX ""idx_nodes_round_history_round_id"" ON ""nodes_round_history"" (""round_id"");
             CREATE INDEX ""idx_nodes_round_history_node_id"" ON ""nodes_round_history"" (""node_id"");
 
-            CREATE OR REPLACE FUNCTION update_nodes_round_history() RETURNS TRIGGER AS $$
-              BEGIN
-                IF OLD.round_id IS NOT NULL AND NEW.round_id IS NULL THEN
-                    -- Check if a record already exists in nodes_round_history
-                    IF EXISTS (SELECT 1 FROM nodes_round_history WHERE node_id = OLD.id AND round_id = OLD.round_id) THEN
-                        -- Update the existing record
-                        UPDATE nodes_round_history 
-                        SET node_final_status = OLD.status
-                        WHERE node_id = OLD.id AND round_id = OLD.round_id;
-                    ELSE
-                        -- Insert a new record
-                        INSERT INTO nodes_round_history (round_id, node_id, node_final_status, node_random)
-                        VALUES (OLD.round_id, OLD.id, OLD.status, OLD.random);
-                    END IF;
-                END IF;
-                RETURN NEW;
-              END;
-            $$ LANGUAGE plpgsql;
-
-             CREATE TRIGGER nodes_before_update_trigger
-             BEFORE UPDATE ON nodes
-             FOR EACH ROW
-             EXECUTE PROCEDURE update_nodes_round_history();
-
-            DROP TABLE IF EXISTS ""versions"";
-
-            CREATE TABLE ""versions"" (
-              ""id""      SERIAL PRIMARY KEY,
-              ""version"" VARCHAR(16) NOT NULL,
-              ""date""    DATE NOT NULL DEFAULT now()
-            );
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.8.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_12_1 = @"
-            START TRANSACTION;
-
-            DROP TRIGGER IF EXISTS nodes_before_update_trigger ON nodes;
-            DROP FUNCTION IF EXISTS update_nodes_round_history();
-
             CREATE OR REPLACE PROCEDURE upsert_node_round_history(
                 p_node_id INT,
                 p_round_id INT,
@@ -162,6 +118,14 @@ namespace dkgServiceNode.Data
                 END IF;
             END;
             $$;
+
+            DROP TABLE IF EXISTS ""versions"";
+
+            CREATE TABLE ""versions"" (
+              ""id""      SERIAL PRIMARY KEY,
+              ""version"" VARCHAR(16) NOT NULL,
+              ""date""    DATE NOT NULL DEFAULT now()
+            );
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
             ('0.12.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
@@ -199,6 +163,16 @@ namespace dkgServiceNode.Data
             COMMIT;
             ";
 
+        readonly static string sqlScript_0_13_1 = @"
+            START TRANSACTION;
+
+            DROP FUNCTION IF EXISTS update_nodes_round_history();
+
+            INSERT INTO ""versions"" (""version"", ""date"") VALUES
+            ('0.13.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            COMMIT;
+            ";
+
         private static string PuVersionUpdateQuery(string v)
         {
             return @"
@@ -220,7 +194,7 @@ namespace dkgServiceNode.Data
             return (rows != null && (long)rows != 0);
         }
 
-        public static int Ensure_0_8_0(NpgsqlConnection connection)
+        public static int Ensure_0_12_1(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
@@ -231,14 +205,14 @@ namespace dkgServiceNode.Data
 
             if (rows != null && (long)rows != 0)
             {
-                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.8.0';";
+                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.12.1';";
                 command = new NpgsqlCommand(sql, connection);
                 rows = command.ExecuteScalar();
             }
 
             if (rows == null || (long)rows == 0)
             {
-                var scriptCommand = new NpgsqlCommand(sqlScript_0_8_0, connection);
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_12_1, connection);
                 r = scriptCommand.ExecuteNonQuery();
             }
 
@@ -265,12 +239,12 @@ namespace dkgServiceNode.Data
         {
             try
             {
-                logger.LogInformation("Initializing database at 0.8.0");
-                Ensure_0_8_0(connection);
-                logger.LogInformation("Update to 0.12.1");
-                EnsureVersion("0.12.1", sqlScript_0_12_1, connection);
+                logger.LogInformation("Initializing database at 0.12.1");
+                Ensure_0_12_1(connection);
                 logger.LogInformation("Update to 0.13.0");
                 EnsureVersion("0.13.0", sqlScript_0_13_0, connection);
+                logger.LogInformation("Update to 0.13.1");
+                EnsureVersion("0.13.1", sqlScript_0_13_1, connection);
             }
             catch (Exception ex)
             {
