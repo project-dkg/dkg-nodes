@@ -25,37 +25,32 @@
 
 using dkgCommon.Constants;
 using dkgServiceNode.Models;
-using Npgsql;
-using System.Collections.Concurrent;
 
 namespace dkgServiceNode.Services.Cache
 {
-    public  class NodesCache
+    public class NodesCache
     {
-        private  readonly Dictionary<int, Node> _cacheNodes = new();
-        private  readonly Dictionary<string, int> _addressToId = new();
+        private  readonly Dictionary<string, Node> _cacheNodes = new();
         private  readonly object _cacheNodesLock = new();
         public void SaveNodeToCacheNoLock(Node node)
         {
-            _cacheNodes[node.Id] = new Node(node);
-            _addressToId[node.Address] = node.Id;
+            _cacheNodes[node.Address] = new Node(node);
         }
 
-        public  void SaveNodeToCache(Node node)
+        public void SaveNodeToCache(Node node)
         {
             lock (_cacheNodesLock)
             {
-                _cacheNodes[node.Id] = new Node(node);
-                _addressToId[node.Address] = node.Id;
+                _cacheNodes[node.Address] = new Node(node);
             }
         }
 
-        public  Node? GetNodeById(int id)
+        public Node? GetNodeByAddress(string address)
         {
             Node? res = null;
             lock (_cacheNodesLock)
             {
-                if (_cacheNodes.TryGetValue(id, out Node? node))
+                if (_cacheNodes.TryGetValue(address, out Node? node))
                 {
                     res = new Node(node);
                 }
@@ -63,23 +58,7 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        public  Node? GetNodeByAddress(string address)
-        {
-            Node? res = null;
-            lock (_cacheNodesLock)
-            {
-                if (_addressToId.TryGetValue(address, out var id))
-                {
-                    if (_cacheNodes.TryGetValue(id, out Node? node))
-                    {
-                        res = new Node(node);
-                    }
-                }
-            }
-            return res;
-        }
-
-        public  List<Node> GetAllNodes()
+        public List<Node> GetAllNodes()
         {
             List<Node> copiedNodes;
             lock (_cacheNodesLock)
@@ -89,7 +68,7 @@ namespace dkgServiceNode.Services.Cache
             return copiedNodes;
         }
 
-        public  int GetNodeCount()
+        public int GetNodeCount()
         {
             int res = 0;
             lock (_cacheNodesLock)
@@ -99,7 +78,7 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        public  List<Node> GetAllNodesSortedById()
+        public List<Node> GetAllNodesSortedById()
         {
             List<Node> copiedNodes;
             lock (_cacheNodesLock)
@@ -111,12 +90,12 @@ namespace dkgServiceNode.Services.Cache
             return copiedNodes;
         }
 
-        public  List<Node> GetFilteredNodes(string search = "")
+        public List<Node> GetFilteredNodes(string search = "")
         {
             return string.IsNullOrWhiteSpace(search) ? GetAllNodes() : GetFilteredNodesInternal(search);
         }
 
-        private  List<Node> GetFilteredNodesInternal(string search)
+        private List<Node> GetFilteredNodesInternal(string search)
         {
             List<Node> filteredNodes;
             lock (_cacheNodesLock)
@@ -124,7 +103,6 @@ namespace dkgServiceNode.Services.Cache
                 filteredNodes = _cacheNodes
                  .Where(kvp =>
                      kvp.Value.Name.Contains(search) ||
-                     kvp.Value.Id.ToString().Contains(search) ||
                      kvp.Value.Address.Contains(search) ||
                      (kvp.Value.RoundId != null && kvp.Value.RoundId.ToString()!.Contains(search)) ||
                      (kvp.Value.RoundId == null && ("null".Contains(search) || "--".Contains(search))) ||
@@ -135,26 +113,40 @@ namespace dkgServiceNode.Services.Cache
             return filteredNodes;
         }
 
-        public  void UpdateNodeInCache(Node node)
+        public void UpdateNodeInCache(Node node)
         {
             lock (_cacheNodesLock)
             {
-                var addr = _cacheNodes[node.Id]?.Address;
-                if (addr != null && addr!= node.Address)
+                _cacheNodes[node.Address] = new Node(node);
+            }
+        }
+        public void UpdateNodeInCache(string address, NodeStatus status)
+        {
+            lock (_cacheNodesLock)
+            {
+                if (_cacheNodes.TryGetValue(address, out Node? node))
                 {
-                    _addressToId.Remove(addr);
+                    node.Status = status;
                 }
-                _cacheNodes[node.Id] = new Node(node);
-                _addressToId[node.Address] = node.Id;
+            }
+        }
+        public void UpdateNodeInCache(string address, NodeStatus status, int? roundId)
+        {
+            lock (_cacheNodesLock)
+            {
+                if (_cacheNodes.TryGetValue(address, out Node? node))
+                {
+                    node.Status = status;
+                    node.RoundId = roundId;
+                }
             }
         }
 
-        public  void DeleteNodeFromCache(Node node)
+        public void DeleteNodeFromCache(Node node)
         {
             lock (_cacheNodesLock)
             {
-                _addressToId.Remove(node.Address);
-                _cacheNodes.Remove(node.Id);
+                _cacheNodes.Remove(node.Address);
             }
         }
     }

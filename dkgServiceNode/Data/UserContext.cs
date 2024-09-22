@@ -34,33 +34,33 @@ namespace dkgServiceNode.Data
     {
         public UserContext(DbContextOptions<UserContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
-        public async Task<bool> Exists(int id)
+        public async Task<bool> ExistsAsync(int id)
         {
             return await Users.AnyAsync(e => e.Id == id);
         }
-        public async Task<bool> Exists(string email)
+        public async Task<bool> ExistsAsync(string email)
         {
             return await Users.AnyAsync(e => e.Email == email);
         }
-        public async Task<List<UserViewItem>> UserViewItems()
+        public async Task<List<UserViewItem>> UserViewItemsAsync()
         {
             return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
         }
-        public async Task<UserViewItem?> UserViewItem(int id)
+        public async Task<UserViewItem?> UserViewItemAsync(int id)
         {
             var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
             return user ?? null;
         }
-        public async Task<ActionResult<bool>> CheckAdmin(int cuid)
+        public async Task<ActionResult<bool>> CheckAdminAsync(int cuid)
         {
-            var curUser = await UserViewItem(cuid);
+            var curUser = await UserViewItemAsync(cuid);
             return curUser != null && curUser.IsAdmin;
         }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUser(int id, int cuid)
+        public async Task<ActionResult<bool>> CheckAdminOrSameUserAsync(int id, int cuid)
         {
             if (cuid == 0) return false;
             if (cuid == id) return true;
-            return await CheckAdmin(cuid);
+            return await CheckAdminAsync(cuid);
         }
         public bool CheckSameUser(int id, int cuid)
         {

@@ -29,6 +29,8 @@ using dkgServiceNode.Models;
 using dkgCommon.Constants;
 using Microsoft.EntityFrameworkCore;
 using dkgServiceNode.Services.Cache;
+using System.Xml.Linq;
+using System.Net.NetworkInformation;
 
 namespace dkgServiceNode.Controllers
 {
@@ -140,9 +142,10 @@ namespace dkgServiceNode.Controllers
             return StatusCode(StatusCodes.Status404NotFound,
                               new { message = "Failed to found current database version." });
         }
-        protected ObjectResult _404Node(int id)
+        protected ObjectResult _404Node(string address)
         {
-            return _404(id, "Node");
+            return StatusCode(StatusCodes.Status404NotFound,
+                              new { message = $"Failed to find node [@{address}]." });
         }
         protected ObjectResult _404Node(string address, string name)
         {
@@ -203,44 +206,31 @@ namespace dkgServiceNode.Controllers
             }
         }
 
-        protected async Task ResetNodeState(DkgContext dkgContext, Node node)
+        protected void ResetNodeState(NodeCompositeContext ncContext, Node node)
         {
-            bool needsUpdate = false;
-            if (node.StatusValue != (short)NStatus.NotRegistered)
+            if (node.Status != NStatus.NotRegistered || node.RoundId != null)
             {
-                node.StatusValue = (short)NStatus.NotRegistered;
-                needsUpdate = true;
-            }
-
-            if (node.RoundId != null)
-            {
+                node.Status = NStatus.NotRegistered;
                 node.RoundId = null;
-                needsUpdate = true;
-            }
-
-            if (needsUpdate)
-            {
-                await dkgContext.UpdateNodeAsync(node);
+                ncContext.UpdateNode(node);
             }
         }
 
-        protected async Task ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
+        protected void ResetNodeStates(NodeCompositeContext ncContext, List<Node> nodes)
         {
-            List<Task> tasks = [];
             foreach (var node in nodes)
             {
-                tasks.Add(ResetNodeState(dkgContext, node));
+                ResetNodeState(ncContext, node);
             }
-            await Task.WhenAll(tasks);
         }
 
-        protected async Task UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
+        protected void UpdateNodeState(NodeCompositeContext ncContext, Node node, NStatus nStatus, int? roundId)
         {
-            if (node.StatusValue != nStatus || node.RoundId != roundId)
+            if (node.Status != nStatus || node.RoundId != roundId)
             {
-                node.StatusValue = nStatus;
+                node.Status = nStatus;
                 node.RoundId = roundId;
-                await dkgContext.UpdateNodeAsync(node);
+                ncContext.UpdateNode(node);
             }
         }
     }

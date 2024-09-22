@@ -35,7 +35,7 @@ namespace dkgServiceNode.Services.Initialization
         NodesCache nodesCache,
         RoundsCache roundsCache,
         NodesRoundHistoryCache nodesRoundHistoryCache,
-        ILogger logger)
+        ILogger logger): IDisposable
     {
         private readonly NodesCache _nodesCache = nodesCache;
         private readonly RoundsCache _roundsCache = roundsCache;
@@ -80,13 +80,11 @@ namespace dkgServiceNode.Services.Initialization
 
                 while (reader.Read())
                 {
-                    int id = reader.GetInt32(0);
-                    string address = reader.GetString(1);
-                    string name = reader.GetString(2);
+                    string address = reader.GetString(reader.GetOrdinal("address"));
+                    string name = reader.GetString(reader.GetOrdinal("name"));
 
                     Node node = new()
                     {
-                        Id = id,
                         Address = address,
                         Name = name
                     };
@@ -167,16 +165,16 @@ namespace dkgServiceNode.Services.Initialization
             try
             {
                 string selectQuery = @"
-                    SELECT DISTINCT ON (node_id)
+                    SELECT DISTINCT ON (node_address)
                         id,
                         round_id,
-                        node_id,
+                        node_address,
                         node_final_status,
                         node_random
                     FROM
                         nodes_round_history
                     ORDER BY
-                        node_id,
+                        node_address,
                         round_id DESC,
                         id ASC;";
 
@@ -191,9 +189,9 @@ namespace dkgServiceNode.Services.Initialization
                     {
                         Id = reader.GetInt32(reader.GetOrdinal("id")),
                         RoundId = reader.GetInt32(reader.GetOrdinal("round_id")),
-                        NodeId = reader.GetInt32(reader.GetOrdinal("node_id")),
+                        NodeAddress = reader.GetString(reader.GetOrdinal("node_address")),
                         NodeFinalStatusValue = reader.GetInt16(reader.GetOrdinal("node_final_status")),
-                        NodeRandom = reader.IsDBNull(reader.GetOrdinal("node_random")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("node_random"))
+                        NodeRandom = reader.IsDBNull(reader.GetOrdinal("node_random")) ? null : reader.GetInt32(reader.GetOrdinal("node_random"))
                     };
 
                     _nodesRoundHistoryCache.SaveNodesRoundHistoryToCacheNoLock(history);
@@ -241,6 +239,11 @@ namespace dkgServiceNode.Services.Initialization
             {
                 _logger.LogError("Failed to populate history counters from database: {msg}", ex.Message);
             }
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

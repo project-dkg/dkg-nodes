@@ -204,9 +204,9 @@ namespace dkgNode.Services
                             }
                             else
                             {
-                                Logger.LogInformation("'{Name}': registered with '{ServiceNodeUrl}' [Round {roundId}]",
+                                Logger.LogInformation("'{Name}': waiting registration with '{ServiceNodeUrl}' [Round {roundId}]",
                                                         Name, ServiceNodeUrl, roundId);
-                                SetStatusOnly(WaitingRoundStart);
+                                // SetStatusOnly(WaitingRoundStart);
                             }
                         }
                     }

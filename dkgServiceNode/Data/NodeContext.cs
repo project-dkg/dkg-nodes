@@ -23,61 +23,54 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using Microsoft.EntityFrameworkCore;
+using dkgServiceNode.Models;
+using dkgServiceNode.Services.Cache;
 using dkgCommon.Constants;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace dkgServiceNode.Models
+namespace dkgServiceNode.Data
 {
-    [Table("nodes_round_history")]
-
-    public class NodesRoundHistory
+    public class NodeContext : DbContext
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
+        private readonly ILogger _logger;
+        private readonly NodesCache _nodesCache;
+        private readonly NodesRoundHistoryCache _nodesRoundHistoryCache;
 
-        [Required]
-        [Column("round_id")]
-        public int RoundId { get; set; }
-
-        [Required]
-        [Column("node_address")]
-        public string NodeAddress { get; set; } = "";
-
-        [Required]
-        [Column("node_final_status")]
-        public short NodeFinalStatusValue { get; set; } = 0;
-
-        [Column("node_random")]
-        public int? NodeRandom { get; set; }
-
-        [NotMapped]
-        public NodeStatus NodeFinalStatus
+        public NodeContext(
+            DbContextOptions<NodeContext> options,
+            NodesCache nc,
+            NodesRoundHistoryCache nrhc,
+            ILogger<NodeContext> lggr) : base(options) 
         {
-            get { return NodeStatusConstants.GetNodeStatusById(NodeFinalStatusValue); }
-            set { NodeFinalStatusValue = (short)value.NodeStatusId; }
+            _logger = lggr;
+            _nodesCache = nc;
+            _nodesRoundHistoryCache = nrhc;
+        }
+        public DbSet<Node> Nodes { get; set; }
+        public async Task<bool> ExistsAsync(string address)
+        {
+            return await Nodes.AnyAsync(e => e.Address == address);
         }
 
-        public NodesRoundHistory()
+        public async Task<bool> DeleteAsync(string address)
         {
+            return await Nodes.AnyAsync(e => e.Address == address);
         }
-        public NodesRoundHistory(Node node)
+
+        public async Task DeleteAsync(Node node)
         {
-            NodeAddress = node.Address;
-            NodeFinalStatus = node.Status;
-            NodeRandom = node.Random;
-            RoundId = node.RoundId ?? 0;
+            try
+            {
+                _nodesRoundHistoryCache.UpdateNodeCounts(node.RoundId, node.Status, null, NStatus.NotRegistered);
+                Nodes.Remove(node);
+                await SaveChangesAsync();
+                _nodesCache.DeleteNodeFromCache(node);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error deleting node: {msg}", ex.Message);
+            }
         }
-        public NodesRoundHistory(NodesRoundHistory other)
-        {
-            Id = other.Id;
-            RoundId = other.RoundId;
-            NodeAddress = other.NodeAddress;
-            NodeFinalStatusValue = other.NodeFinalStatusValue;
-            NodeRandom = other.NodeRandom;
-            NodeFinalStatus = other.NodeFinalStatus;
-        }
+
     }
 }

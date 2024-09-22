@@ -29,7 +29,7 @@ namespace dkgServiceNode.Data
 {
     public static class DbEnsure
     {
-        readonly static string sqlScript_0_12_1 = @"
+        readonly static string sqlScript_0_14_0 = @"
             START TRANSACTION;
 
             DROP TABLE IF EXISTS ""users"";
@@ -67,32 +67,25 @@ namespace dkgServiceNode.Data
             DROP TABLE IF EXISTS ""nodes"";
 
             CREATE TABLE ""nodes"" (
-              ""id""              SERIAL PRIMARY KEY,
-              ""address""         VARCHAR(128) NOT NULL, 
-              ""name""            VARCHAR(64) NOT NULL DEFAULT '--',
-              ""public_key""      VARCHAR(128) NOT NULL DEFAULT '',
-              ""status""          SMALLINT NOT NULL DEFAULT 0,
-              ""random""          INTEGER,
-              ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
+              ""address""         VARCHAR(128) NOT NULL PRIMARY KEY, 
+              ""name""            VARCHAR(64) NOT NULL DEFAULT '--'
             );
-
-            CREATE UNIQUE INDEX ""idx_nodes_address"" ON ""nodes"" (""address"");
 
             DROP TABLE IF EXISTS ""nodes_round_history"";
 
             CREATE TABLE ""nodes_round_history"" (
               ""id""                 SERIAL PRIMARY KEY,
               ""round_id""           INTEGER NOT NULL REFERENCES ""rounds"" (""id"") ON DELETE CASCADE,
-              ""node_id""            INTEGER NOT NULL REFERENCES ""nodes"" (""id"") ON DELETE CASCADE,
+              ""node_address""       VARCHAR(128) NOT NULL REFERENCES ""nodes"" (""address"") ON DELETE CASCADE,
               ""node_final_status""  SMALLINT NOT NULL DEFAULT 0,
               ""node_random""        INTEGER
             );
 
             CREATE INDEX ""idx_nodes_round_history_round_id"" ON ""nodes_round_history"" (""round_id"");
-            CREATE INDEX ""idx_nodes_round_history_node_id"" ON ""nodes_round_history"" (""node_id"");
+            CREATE INDEX ""idx_nodes_round_history_node_address"" ON ""nodes_round_history"" (""node_address"");
 
             CREATE OR REPLACE PROCEDURE upsert_node_round_history(
-                p_node_id INT,
+                p_node_address VARCHAR(128),
                 p_round_id INT,
                 p_node_final_status SMALLINT,
                 p_node_random INT
@@ -104,18 +97,92 @@ namespace dkgServiceNode.Data
                 IF EXISTS(
                     SELECT 1
                     FROM nodes_round_history
-                    WHERE node_id = p_node_id AND round_id = p_round_id
+                    WHERE node_address = p_node_address AND round_id = p_round_id
                 ) THEN
             -- Update the existing record and return it
                     UPDATE nodes_round_history
                     SET node_final_status = p_node_final_status,
                         node_random = p_node_random
-                    WHERE node_id = p_node_id AND round_id = p_round_id;
+                    WHERE node_address = p_node_address AND round_id = p_round_id;
                 ELSE
             -- Insert a new record and return it
-                    INSERT INTO nodes_round_history(node_id, round_id, node_final_status, node_random)
-                    VALUES(p_node_id, p_round_id, p_node_final_status, p_node_random);
+                    INSERT INTO nodes_round_history(node_address, round_id, node_final_status, node_random)
+                    VALUES(p_node_address, p_round_id, p_node_final_status, p_node_random);
                 END IF;
+            END;
+            $$;
+
+            CREATE OR REPLACE PROCEDURE bulk_upsert_node_round_history(
+                p_items JSON
+            )
+            LANGUAGE plpgsql
+            AS $$
+            DECLARE
+                item JSON;
+                node_address VARCHAR(128);
+                round_id INT;
+                node_final_status SMALLINT;
+                node_random INT;
+            BEGIN
+                FOR item IN SELECT * FROM json_array_elements(p_items)
+                LOOP
+                    node_address := (item->>'node_address')::VARCHAR(128);
+                    round_id := (item->>'round_id')::INT;
+                    node_final_status := (item->>'node_final_status')::SMALLINT;
+                    node_random := (item->>'node_random')::INT;
+
+                    -- Call the existing upsert_node_round_history procedure
+                    CALL upsert_node_round_history(node_address, round_id, node_final_status, node_random);
+                END LOOP;
+            END;
+            $$;
+
+            CREATE OR REPLACE PROCEDURE insert_node_with_round_history(
+                p_node_address VARCHAR(128),
+                p_node_name VARCHAR(64),
+                p_round_id INT,
+                p_node_final_status SMALLINT,
+                p_node_random INT
+            )
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                -- 
+                INSERT INTO nodes(address, name)
+                VALUES(p_node_address, p_node_name)
+                ON CONFLICT (address) DO NOTHING;
+
+                -- 
+                INSERT INTO nodes_round_history(node_address, round_id, node_final_status, node_random)
+                VALUES(p_node_address, p_round_id, p_node_final_status, p_node_random);
+
+            END;
+            $$;
+
+           CREATE OR REPLACE PROCEDURE bulk_insert_node_with_round_history(
+                p_items JSON
+            )
+            LANGUAGE plpgsql
+            AS $$
+            DECLARE
+                item JSON;
+                node_address VARCHAR(128);
+                node_name VARCHAR(64);
+                round_id INT;
+                node_final_status SMALLINT;
+                node_random INT;
+            BEGIN
+                FOR item IN SELECT * FROM json_array_elements(p_items)
+                LOOP
+                    node_address := (item->>'node_address')::VARCHAR(128);
+                    node_name := (item->>'node_name')::VARCHAR(64);
+                    round_id := (item->>'round_id')::INT;
+                    node_final_status := (item->>'node_final_status')::SMALLINT;
+                    node_random := (item->>'node_random')::INT;
+
+                    -- Call the existing insert_node_with_round_history procedure
+                    CALL insert_node_with_round_history(node_address, node_name, round_id, node_final_status, node_random);
+                END LOOP;
             END;
             $$;
 
@@ -128,48 +195,8 @@ namespace dkgServiceNode.Data
             );
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.12.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+            ('0.14.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
 
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_13_0 = @"
-            START TRANSACTION;
-
-            ALTER TABLE nodes
-                DROP COLUMN IF EXISTS public_key,
-                DROP COLUMN IF EXISTS status,
-                DROP COLUMN IF EXISTS random;
-
-            CREATE OR REPLACE FUNCTION get_node_counts()
-            RETURNS TABLE (round_id INT, status INT, count INT) AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT 
-                    round_id, 
-                    node_final_status AS status, 
-                    COUNT(*) AS count
-                FROM 
-                    nodes_round_history
-                GROUP BY 
-                    round_id, 
-                    node_final_status;
-            END;
-            $$ LANGUAGE plpgsql;
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.13.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_13_1 = @"
-            START TRANSACTION;
-
-            DROP FUNCTION IF EXISTS update_nodes_round_history();
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.13.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
             COMMIT;
             ";
 
@@ -194,7 +221,7 @@ namespace dkgServiceNode.Data
             return (rows != null && (long)rows != 0);
         }
 
-        public static int Ensure_0_12_1(NpgsqlConnection connection)
+        public static int Ensure_0_14_0(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
@@ -205,14 +232,14 @@ namespace dkgServiceNode.Data
 
             if (rows != null && (long)rows != 0)
             {
-                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.12.1';";
+                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.14.0';";
                 command = new NpgsqlCommand(sql, connection);
                 rows = command.ExecuteScalar();
             }
 
             if (rows == null || (long)rows == 0)
             {
-                var scriptCommand = new NpgsqlCommand(sqlScript_0_12_1, connection);
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_14_0, connection);
                 r = scriptCommand.ExecuteNonQuery();
             }
 
@@ -239,12 +266,8 @@ namespace dkgServiceNode.Data
         {
             try
             {
-                logger.LogInformation("Initializing database at 0.12.1");
-                Ensure_0_12_1(connection);
-                logger.LogInformation("Update to 0.13.0");
-                EnsureVersion("0.13.0", sqlScript_0_13_0, connection);
-                logger.LogInformation("Update to 0.13.1");
-                EnsureVersion("0.13.1", sqlScript_0_13_1, connection);
+                logger.LogInformation("Initializing database at 0.14.0");
+                Ensure_0_14_0(connection);
             }
             catch (Exception ex)
             {

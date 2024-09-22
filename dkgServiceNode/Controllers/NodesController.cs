@@ -44,16 +44,21 @@ namespace dkgServiceNode.Controllers
 
     public class NodesController : DControllerBase
     {
-        protected readonly DkgContext dkgContext;
+        protected readonly NodeCompositeContext ncContext;
+        protected readonly NodeContext nodeContext;
         protected readonly Runner runner;
         protected readonly ILogger logger;
 
         public NodesController(IHttpContextAccessor httpContextAccessor,
-                               UserContext uContext, DkgContext dContext,
-                               Runner rnner, ILogger<NodesController> lgger) :
+                               UserContext uContext,
+                               NodeContext noContext,
+                               NodeCompositeContext nContext,
+                               Runner rnner, 
+                               ILogger<NodesController> lgger) :
                base(httpContextAccessor, uContext)
         {
-            dkgContext = dContext;
+            nodeContext = noContext;
+            ncContext = nContext;
             runner = rnner;
             logger = lgger;
         }
@@ -66,8 +71,8 @@ namespace dkgServiceNode.Controllers
             Stopwatch stopwatch = new();
             stopwatch.Start();
 
-            var sf = dkgContext.GetNodeCount();
-            var nf = dkgContext.GetFilteredNodes(nodesFrame.Search);
+            var sf = ncContext.GetNodeCount();
+            var nf = ncContext.GetFilteredNodes(nodesFrame.Search);
 
             if (nodesFrame.SortBy != null && nodesFrame.SortBy.Length > 0)
             {
@@ -79,9 +84,6 @@ namespace dkgServiceNode.Controllers
                 {
                     case "name":
                         nf = sortOrder == "asc" ? [.. nf.OrderBy(n => n.Name)] : [.. nf.OrderByDescending(n => n.Name)];
-                        break;
-                    case "id":
-                        nf = sortOrder == "asc" ? [.. nf.OrderBy(n => n.Id)] : [.. nf.OrderByDescending(n => n.Id)];
                         break;
                     case "address":
                         nf = sortOrder == "asc" ? [.. nf.OrderBy(n => n.Address)] : [.. nf.OrderByDescending(n => n.Address)];
@@ -112,32 +114,29 @@ namespace dkgServiceNode.Controllers
             return res;
         }
 
-        // RESET: api/nodes/reset/5
-        [HttpPost("reset/{id}")]
+        // RESET: api/nodes/reset/123a5
+        [HttpPost("reset/{address}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<IActionResult> ResetNode(int id)
+        public async Task<IActionResult> ResetNode(string address)
         {
             Stopwatch stopwatch = new();
             stopwatch.Start();
             IActionResult res;
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();
             }
             else
             {
-                var node = dkgContext.GetNodeById(id);
+                var node = ncContext.GetNodeByAddress(address);
                 if (node == null)
                 {
-                    res = _404Node(id);
+                    res = _404Node(address);
                 }
                 else
                 {
-                    node.StatusValue = (short)NStatus.NotRegistered;
-                    node.RoundId = null;
-                    await dkgContext.UpdateNodeAsync(node);
-
+                    ResetNodeState(ncContext, node);
                     res = NoContent();
                 }
             }
@@ -146,33 +145,31 @@ namespace dkgServiceNode.Controllers
             return res;
         }
 
-        // DELETE: api/nodes/5
-        [HttpDelete("{id}")]
+        // DELETE: api/nodes/123a5
+        [HttpDelete("{address}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<IActionResult> DeleteNode(int id)
+        public async Task<IActionResult> DeleteNode(string address)
         {
             Stopwatch stopwatch = new();
             stopwatch.Start();
 
             IActionResult res;
 
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();
             }
             else
             {
-
-
-                var node = dkgContext.GetNodeById(id);
+                var node = ncContext.GetNodeByAddress(address);
                 if (node == null)
                 {
-                    res = _404Node(id);
+                    res = _404Node(address);
                 }
                 else
                 {
-                    await dkgContext.DeleteNodeAsync(node);
+                    await nodeContext.DeleteAsync(node);
                     res = NoContent();
                 }
             }
@@ -189,23 +186,23 @@ namespace dkgServiceNode.Controllers
             Stopwatch stopwatch = new();
             stopwatch.Start();
 
-            var res = dkgContext.GetAllNodesSortedById();
+            var res = ncContext.GetAllNodesSortedById();
 
             stopwatch.Stop();
             UpdateE2GetAll(stopwatch.Elapsed);
             return Ok(res);
         }
 
-        // GET: api/nodes/5
-        [HttpGet("{id}")]
+        // GET: api/nodes/123a5
+        [HttpGet("{address}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Node))]
-        public ActionResult<Node> GetNode(int id)
+        public ActionResult<Node> GetNode(string address)
         {
             Stopwatch stopwatch = new();
             stopwatch.Start();
 
-            var node = dkgContext.GetNodeById(id);
-            if (node == null) return _404Node(id);
+            var node = ncContext.GetNodeByAddress(address);
+            if (node == null) return _404Node(address);
 
             stopwatch.Stop();
             UpdateE2Get(stopwatch.Elapsed);
@@ -222,7 +219,7 @@ namespace dkgServiceNode.Controllers
             stopwatch.Start();
             
             ActionResult<IEnumerable<TimingResult>> res;
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();

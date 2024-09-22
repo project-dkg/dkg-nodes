@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
-using dkgServiceNode.Services.RoundRunner;
 using dkgServiceNode.Services.Cache;
 using dkgServiceNode.Services.Initialization;
+using dkgServiceNode.Services.RequestProcessors;
+using dkgServiceNode.Services.RequestLimitingMiddleware;
+using dkgServiceNode.Services.RoundRunner;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,17 +33,32 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<NodesCache>();
 builder.Services.AddSingleton<RoundsCache>();
 builder.Services.AddSingleton<NodesRoundHistoryCache>();
+builder.Services.AddSingleton<NodeCompositeContext>();
 
 var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
 
 builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<DkgContext>(options => {
+builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<RoundContext>(options => {
     options.UseNpgsql(connectionString);
     options.EnableSensitiveDataLogging();
 });
 
 builder.Services.AddSingleton<Runner>();
+
+builder.Services.AddSingleton<NrhAddProcessor>(serviceProvider =>
+{
+    var logger = serviceProvider.GetRequiredService<ILogger<NrhAddProcessor>>();
+    return new NrhAddProcessor(connectionString, logger);
+});
+
+builder.Services.AddSingleton<NodeAddProcessor>(serviceProvider =>
+{
+    var logger = serviceProvider.GetRequiredService<ILogger<NodeAddProcessor>>();
+    return new NodeAddProcessor(connectionString, logger);
+});
+
 
 var app = builder.Build();
 
@@ -54,8 +71,16 @@ var initializer = new Initializer(
         app.Services.GetRequiredService<ILogger<Initializer>>()
         );
 initializer.Initialize(connectionString);
-// -------------------------------------------------------------
 
+app.Services
+    .GetRequiredService<NrhAddProcessor>()
+    .Start();
+
+app.Services
+    .GetRequiredService<NodeAddProcessor>()
+    .Start(app.Services.GetRequiredService<NodeCompositeContext>());
+
+// -------------------------------------------------------------
 
 app.UseMiddleware<RequestLimitingMiddleware>(controllers);
 
