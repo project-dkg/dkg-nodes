@@ -45,20 +45,20 @@ namespace dkgServiceNode.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserViewItem>>> GetUsers()
         {
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            return await userContext.UserViewItems();
+            return await userContext.UserViewItemsAsync();
         }
 
         // GET: api/users/5
         [HttpGet("{id}")]
         public async Task<ActionResult<UserViewItem>> GetUser(int id)
         {
-            var ch = await userContext.CheckAdminOrSameUser(id, curUserId);
+            var ch = await userContext.CheckAdminOrSameUserAsync(id, curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            var user = await userContext.UserViewItem(id);
+            var user = await userContext.UserViewItemAsync(id);
             return (user == null) ? _404User(id) : user;
         }
 
@@ -66,10 +66,10 @@ namespace dkgServiceNode.Controllers
         [HttpPost("add")]
         public async Task<ActionResult<Reference>> AddUser(User user)
         {
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            if (await userContext.Exists(user.Email)) return _409Email(user.Email);
+            if (await userContext.ExistsAsync(user.Email)) return _409Email(user.Email);
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
 
@@ -92,8 +92,8 @@ namespace dkgServiceNode.Controllers
             bool adminRequired = (user.IsEnabled != update.IsEnabled) || (user.IsAdmin != update.IsAdmin);
 
             ActionResult<bool> ch;
-            ch = adminRequired ? await userContext.CheckAdmin(curUserId) :
-                                 await userContext.CheckAdminOrSameUser(id, curUserId);
+            ch = adminRequired ? await userContext.CheckAdminAsync(curUserId) :
+                                 await userContext.CheckAdminOrSameUserAsync(id, curUserId);
             if (ch == null || !ch.Value) return _403();
 
             user.Name = update.Name;
@@ -115,7 +115,7 @@ namespace dkgServiceNode.Controllers
         {
             if (id==1) return _403Protect();
 
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
             var user = await userContext.Users.FindAsync(id);

@@ -203,7 +203,7 @@ namespace dkgServiceNode.Controllers
             }
         }
 
-        protected async Task ResetNodeState(DkgContext dkgContext, Node node)
+        protected void ResetNodeState(DkgContext dkgContext, Node node)
         {
             bool needsUpdate = false;
             if (node.StatusValue != (short)NStatus.NotRegistered)
@@ -220,27 +220,25 @@ namespace dkgServiceNode.Controllers
 
             if (needsUpdate)
             {
-                await dkgContext.UpdateNodeAsync(node);
+                dkgContext.UpdateNode(node);
             }
         }
 
-        protected async Task ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
+        protected void ResetNodeStates(DkgContext dkgContext, List<Node> nodes)
         {
-            List<Task> tasks = [];
             foreach (var node in nodes)
             {
-                tasks.Add(ResetNodeState(dkgContext, node));
+                ResetNodeState(dkgContext, node);
             }
-            await Task.WhenAll(tasks);
         }
 
-        protected async Task UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
+        protected void UpdateNodeState(DkgContext dkgContext, Node node, short nStatus, int? roundId)
         {
             if (node.StatusValue != nStatus || node.RoundId != roundId)
             {
                 node.StatusValue = nStatus;
                 node.RoundId = roundId;
-                await dkgContext.UpdateNodeAsync(node);
+                dkgContext.UpdateNode(node);
             }
         }
     }

@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 using dkgServiceNode.Data;
 using dkgServiceNode.Services.Authorization;
-using dkgServiceNode.Services.RoundRunner;
 using dkgServiceNode.Services.Cache;
 using dkgServiceNode.Services.Initialization;
+using dkgServiceNode.Services.RequestProcessors;
+using dkgServiceNode.Services.RequestLimitingMiddleware;
+using dkgServiceNode.Services.RoundRunner;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +45,12 @@ builder.Services.AddDbContext<DkgContext>(options => {
 
 builder.Services.AddSingleton<Runner>();
 
+builder.Services.AddSingleton<NrhAddProcessor>(serviceProvider =>
+{
+    var logger = serviceProvider.GetRequiredService<ILogger<NrhAddProcessor>>();
+    return new NrhAddProcessor(connectionString, logger);
+});
+
 var app = builder.Build();
 
 // -------------- Initialize database and caches ---------------
@@ -54,8 +62,10 @@ var initializer = new Initializer(
         app.Services.GetRequiredService<ILogger<Initializer>>()
         );
 initializer.Initialize(connectionString);
-// -------------------------------------------------------------
 
+app.Services.GetRequiredService<NrhAddProcessor>().Start();
+
+// -------------------------------------------------------------
 
 app.UseMiddleware<RequestLimitingMiddleware>(controllers);
 

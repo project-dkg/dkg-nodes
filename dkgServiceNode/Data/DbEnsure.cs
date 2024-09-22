@@ -29,7 +29,7 @@ namespace dkgServiceNode.Data
 {
     public static class DbEnsure
     {
-        readonly static string sqlScript_0_12_1 = @"
+        readonly static string sqlScript_0_13_1 = @"
             START TRANSACTION;
 
             DROP TABLE IF EXISTS ""users"";
@@ -70,10 +70,6 @@ namespace dkgServiceNode.Data
               ""id""              SERIAL PRIMARY KEY,
               ""address""         VARCHAR(128) NOT NULL, 
               ""name""            VARCHAR(64) NOT NULL DEFAULT '--',
-              ""public_key""      VARCHAR(128) NOT NULL DEFAULT '',
-              ""status""          SMALLINT NOT NULL DEFAULT 0,
-              ""random""          INTEGER,
-              ""round_id""        INTEGER REFERENCES ""rounds"" (""id"") ON DELETE RESTRICT
             );
 
             CREATE UNIQUE INDEX ""idx_nodes_address"" ON ""nodes"" (""address"");
@@ -128,50 +124,44 @@ namespace dkgServiceNode.Data
             );
 
             INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.12.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_13_0 = @"
-            START TRANSACTION;
-
-            ALTER TABLE nodes
-                DROP COLUMN IF EXISTS public_key,
-                DROP COLUMN IF EXISTS status,
-                DROP COLUMN IF EXISTS random;
-
-            CREATE OR REPLACE FUNCTION get_node_counts()
-            RETURNS TABLE (round_id INT, status INT, count INT) AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT 
-                    round_id, 
-                    node_final_status AS status, 
-                    COUNT(*) AS count
-                FROM 
-                    nodes_round_history
-                GROUP BY 
-                    round_id, 
-                    node_final_status;
-            END;
-            $$ LANGUAGE plpgsql;
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
-            ('0.13.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
-
-            COMMIT;
-            ";
-
-        readonly static string sqlScript_0_13_1 = @"
-            START TRANSACTION;
-
-            DROP FUNCTION IF EXISTS update_nodes_round_history();
-
-            INSERT INTO ""versions"" (""version"", ""date"") VALUES
             ('0.13.1', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
             COMMIT;
             ";
+
+        readonly static string sqlScript_0_14_0 = @"
+              START TRANSACTION;
+
+              CREATE OR REPLACE PROCEDURE bulk_upsert_node_round_history(
+                    p_items JSON
+                )
+                LANGUAGE plpgsql
+                AS $$
+                DECLARE
+                    item JSON;
+                    node_id INT;
+                    round_id INT;
+                    node_final_status SMALLINT;
+                    node_random INT;
+                BEGIN
+                    FOR item IN SELECT * FROM json_array_elements(p_items)
+                    LOOP
+                        node_id := (item->>'node_id')::INT;
+                        round_id := (item->>'round_id')::INT;
+                        node_final_status := (item->>'node_final_status')::SMALLINT;
+                        node_random := (item->>'node_random')::INT;
+
+                        -- Call the existing upsert_node_round_history procedure
+                        CALL upsert_node_round_history(node_id, round_id, node_final_status, node_random);
+                    END LOOP;
+                END;
+                $$;
+
+                INSERT INTO ""versions"" (""version"", ""date"") VALUES
+                ('0.14.0', '" + DateTime.Now.ToString("yyyy-MM-dd") + @"');
+
+                COMMIT;
+                ";
 
         private static string PuVersionUpdateQuery(string v)
         {
@@ -194,7 +184,7 @@ namespace dkgServiceNode.Data
             return (rows != null && (long)rows != 0);
         }
 
-        public static int Ensure_0_12_1(NpgsqlConnection connection)
+        public static int Ensure_0_13_1(NpgsqlConnection connection)
         {
             // Check if table 'versions' exists
             var sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'versions';";
@@ -205,14 +195,14 @@ namespace dkgServiceNode.Data
 
             if (rows != null && (long)rows != 0)
             {
-                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.12.1';";
+                sql = "SELECT COUNT(*) FROM versions WHERE version = '0.13.1';";
                 command = new NpgsqlCommand(sql, connection);
                 rows = command.ExecuteScalar();
             }
 
             if (rows == null || (long)rows == 0)
             {
-                var scriptCommand = new NpgsqlCommand(sqlScript_0_12_1, connection);
+                var scriptCommand = new NpgsqlCommand(sqlScript_0_13_1, connection);
                 r = scriptCommand.ExecuteNonQuery();
             }
 
@@ -239,12 +229,10 @@ namespace dkgServiceNode.Data
         {
             try
             {
-                logger.LogInformation("Initializing database at 0.12.1");
-                Ensure_0_12_1(connection);
-                logger.LogInformation("Update to 0.13.0");
-                EnsureVersion("0.13.0", sqlScript_0_13_0, connection);
-                logger.LogInformation("Update to 0.13.1");
-                EnsureVersion("0.13.1", sqlScript_0_13_1, connection);
+                logger.LogInformation("Initializing database at 0.13.1");
+                Ensure_0_13_1(connection);
+                logger.LogInformation("Update to 0.14.0");
+                EnsureVersion("0.14.0", sqlScript_0_14_0, connection);
             }
             catch (Exception ex)
             {

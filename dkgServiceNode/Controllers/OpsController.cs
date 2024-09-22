@@ -119,7 +119,8 @@ namespace dkgServiceNode.Controllers
                     else
                     {
                         node.CalculateRandom();
-                        await dkgContext.AddNodeAsync(node);
+                        node.StatusValue = (short)NStatus.WaitingRegistration;
+                        dkgContext.RegisterNode(node);
                     }
                     xNode = dkgContext.GetNodeByAddress(node.Address);
                 }
@@ -135,6 +136,7 @@ namespace dkgServiceNode.Controllers
                     if (xNode.RoundId != roundId)
                     {
                         xNode.RoundId = roundId;
+                        node.StatusValue = (short)NStatus.WaitingRegistration;
                         modified = true;
                     }
 
@@ -156,7 +158,7 @@ namespace dkgServiceNode.Controllers
 
                     if (modified)
                     {
-                        await dkgContext.UpdateNodeAsync(xNode);
+                        dkgContext.UpdateNode(xNode);
                     }
                 }
 
@@ -182,7 +184,7 @@ namespace dkgServiceNode.Controllers
         // Acknowledges that the status report has been received
         internal async Task<ObjectResult> Accept(Round? round, Node node, NodesRoundHistory? lastRoundHistory, StatusReport stReport)
         {
-            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
+            UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
             if (round != null)
             {
                 await UpdateRoundState(round);
@@ -198,7 +200,8 @@ namespace dkgServiceNode.Controllers
                 runner.SetNoResult(round, node);
             }
 
-            await ResetNodeState(dkgContext, node);
+            ResetNodeState(dkgContext, node);
+            await Task.Delay(0);
             var response = CreateStatusResponse(round, lastRoundHistory, NStatus.NotRegistered, node.Random);
             if (stReport.Status != NStatus.NotRegistered || stReport.RoundId != 0)
             {
@@ -216,7 +219,7 @@ namespace dkgServiceNode.Controllers
 
             if (!runner.CheckNode(round, node))
             {
-                await ResetNodeState(dkgContext, node);
+                ResetNodeState(dkgContext, node);
                 var response = CreateStatusResponse(round, lastRoundHistory, NStatus.NotRegistered, node.Random);
                 if (stReport.Status != NStatus.NotRegistered || stReport.RoundId != 0)
                 {
@@ -241,7 +244,7 @@ namespace dkgServiceNode.Controllers
 
             if (runner.CheckTimedOutNode(round, node))
             {
-                await UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
+                UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
                 var response = CreateStatusResponse(round, lastRoundHistory, NStatus.TimedOut, node.Random);
                 if (stReport.Status != NStatus.TimedOut)
                 {
@@ -250,7 +253,7 @@ namespace dkgServiceNode.Controllers
             }
 
             runner.SetStepTwoWaitingTime(round);
-            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
+            UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
@@ -274,7 +277,7 @@ namespace dkgServiceNode.Controllers
 
             if (runner.CheckTimedOutNode(round, node))
             {
-                await UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
+                UpdateNodeState(dkgContext, node, (short)NStatus.TimedOut, round.Id);
                 var response = CreateStatusResponse(round, lastRoundHistory, NStatus.TimedOut, node.Random);
                 if (stReport.Status != NStatus.TimedOut)
                 {
@@ -283,7 +286,7 @@ namespace dkgServiceNode.Controllers
             }
 
             runner.SetStepThreeWaitingTime(round);
-            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
+            UpdateNodeState(dkgContext, node, (short)stReport.Status, round?.Id);
 
             if (stReport.Data.Length != 0)
             {
@@ -305,7 +308,8 @@ namespace dkgServiceNode.Controllers
                 runner.SetNoResult(round, node);
             }
 
-            await ResetNodeState(dkgContext, node);
+            ResetNodeState(dkgContext, node);
+            await Task.Delay(0);
             string rStatus = round == null ? "null" : GetRoundStatusById(round.StatusValue).ToString();
             return _409Status(stReport.Address, stReport.Name, GetNodeStatusById(stReport.Status).ToString(), rStatus);
         }
@@ -327,14 +331,14 @@ namespace dkgServiceNode.Controllers
                 if (stReport.Data.Length != 0)
                 {
                     runner.SetResult(round, node, stReport.Data);
-                    await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
+                    UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
                     await UpdateRoundState(round);
                     return Accepted(CreateStatusResponse(round, lastRoundHistory, stReport.Status, node.Random));
                 }
                 else
                 {
                     runner.SetNoResult(round, node);
-                    await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
+                    UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
                     await UpdateRoundState(round);
                     return _400NoResult(round.Id, node.Name, node.PublicKey);
                 }
@@ -350,7 +354,7 @@ namespace dkgServiceNode.Controllers
             runner.SetResultWaitingTime(round);
 
             runner.SetNoResult(round, node);
-            await UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
+            UpdateNodeState(dkgContext, node, (short)stReport.Status, round.Id);
             await UpdateRoundState(round);
             
             return Accepted(CreateStatusResponse(round, lastRoundHistory, stReport.Status, node.Random));
@@ -407,6 +411,17 @@ namespace dkgServiceNode.Controllers
                 { (RStatus.Cancelled, NStatus.NotRegistered), WrongStatus },
                 { (RStatus.Failed, NStatus.NotRegistered), WrongStatus },
                 { (RStatus.Unknown, NStatus.NotRegistered), WrongStatus },
+
+                { (null, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.NotStarted, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.Registration, NStatus.WaitingRegistration), Accept },
+                { (RStatus.CreatingDeals, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.ProcessingDeals, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.ProcessingResponses, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.Finished, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.Cancelled, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.Failed, NStatus.WaitingRegistration), WrongStatus },
+                { (RStatus.Unknown, NStatus.WaitingRegistration), WrongStatus },
 
                 { (null, NStatus.WaitingRoundStart), WrongStatus },
                 { (RStatus.NotStarted, NStatus.WaitingRoundStart), WrongStatus },

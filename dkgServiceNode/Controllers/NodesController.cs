@@ -45,14 +45,19 @@ namespace dkgServiceNode.Controllers
     public class NodesController : DControllerBase
     {
         protected readonly DkgContext dkgContext;
+        protected readonly NodeContext nodeContext;
         protected readonly Runner runner;
         protected readonly ILogger logger;
 
         public NodesController(IHttpContextAccessor httpContextAccessor,
-                               UserContext uContext, DkgContext dContext,
-                               Runner rnner, ILogger<NodesController> lgger) :
+                               UserContext uContext,
+                               NodeContext nContext,
+                               DkgContext dContext,
+                               Runner rnner, 
+                               ILogger<NodesController> lgger) :
                base(httpContextAccessor, uContext)
         {
+            nodeContext = nContext;
             dkgContext = dContext;
             runner = rnner;
             logger = lgger;
@@ -120,7 +125,7 @@ namespace dkgServiceNode.Controllers
             Stopwatch stopwatch = new();
             stopwatch.Start();
             IActionResult res;
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();
@@ -136,7 +141,7 @@ namespace dkgServiceNode.Controllers
                 {
                     node.StatusValue = (short)NStatus.NotRegistered;
                     node.RoundId = null;
-                    await dkgContext.UpdateNodeAsync(node);
+                    dkgContext.UpdateNode(node);
 
                     res = NoContent();
                 }
@@ -156,15 +161,13 @@ namespace dkgServiceNode.Controllers
 
             IActionResult res;
 
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();
             }
             else
             {
-
-
                 var node = dkgContext.GetNodeById(id);
                 if (node == null)
                 {
@@ -172,7 +175,7 @@ namespace dkgServiceNode.Controllers
                 }
                 else
                 {
-                    await dkgContext.DeleteNodeAsync(node);
+                    await nodeContext.DeleteAsync(node);
                     res = NoContent();
                 }
             }
@@ -222,7 +225,7 @@ namespace dkgServiceNode.Controllers
             stopwatch.Start();
             
             ActionResult<IEnumerable<TimingResult>> res;
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value)
             {
                 res = _403();

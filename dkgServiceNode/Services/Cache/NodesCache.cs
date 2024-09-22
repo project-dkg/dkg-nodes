@@ -25,12 +25,10 @@
 
 using dkgCommon.Constants;
 using dkgServiceNode.Models;
-using Npgsql;
-using System.Collections.Concurrent;
 
 namespace dkgServiceNode.Services.Cache
 {
-    public  class NodesCache
+    public class NodesCache
     {
         private  readonly Dictionary<int, Node> _cacheNodes = new();
         private  readonly Dictionary<string, int> _addressToId = new();
@@ -41,7 +39,7 @@ namespace dkgServiceNode.Services.Cache
             _addressToId[node.Address] = node.Id;
         }
 
-        public  void SaveNodeToCache(Node node)
+        public void SaveNodeToCache(Node node)
         {
             lock (_cacheNodesLock)
             {
@@ -50,7 +48,7 @@ namespace dkgServiceNode.Services.Cache
             }
         }
 
-        public  Node? GetNodeById(int id)
+        public Node? GetNodeById(int id)
         {
             Node? res = null;
             lock (_cacheNodesLock)
@@ -63,7 +61,7 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        public  Node? GetNodeByAddress(string address)
+        public Node? GetNodeByAddress(string address)
         {
             Node? res = null;
             lock (_cacheNodesLock)
@@ -79,7 +77,7 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        public  List<Node> GetAllNodes()
+        public List<Node> GetAllNodes()
         {
             List<Node> copiedNodes;
             lock (_cacheNodesLock)
@@ -89,7 +87,7 @@ namespace dkgServiceNode.Services.Cache
             return copiedNodes;
         }
 
-        public  int GetNodeCount()
+        public int GetNodeCount()
         {
             int res = 0;
             lock (_cacheNodesLock)
@@ -99,7 +97,7 @@ namespace dkgServiceNode.Services.Cache
             return res;
         }
 
-        public  List<Node> GetAllNodesSortedById()
+        public List<Node> GetAllNodesSortedById()
         {
             List<Node> copiedNodes;
             lock (_cacheNodesLock)
@@ -111,12 +109,12 @@ namespace dkgServiceNode.Services.Cache
             return copiedNodes;
         }
 
-        public  List<Node> GetFilteredNodes(string search = "")
+        public List<Node> GetFilteredNodes(string search = "")
         {
             return string.IsNullOrWhiteSpace(search) ? GetAllNodes() : GetFilteredNodesInternal(search);
         }
 
-        private  List<Node> GetFilteredNodesInternal(string search)
+        private List<Node> GetFilteredNodesInternal(string search)
         {
             List<Node> filteredNodes;
             lock (_cacheNodesLock)
@@ -135,7 +133,7 @@ namespace dkgServiceNode.Services.Cache
             return filteredNodes;
         }
 
-        public  void UpdateNodeInCache(Node node)
+        public void UpdateNodeInCache(Node node)
         {
             lock (_cacheNodesLock)
             {
@@ -149,7 +147,7 @@ namespace dkgServiceNode.Services.Cache
             }
         }
 
-        public  void DeleteNodeFromCache(Node node)
+        public void DeleteNodeFromCache(Node node)
         {
             lock (_cacheNodesLock)
             {

@@ -26,43 +26,48 @@
 using dkgCommon.Constants;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Cache;
+using dkgServiceNode.Services.RequestProcessors;
 using Microsoft.EntityFrameworkCore;
 
 namespace dkgServiceNode.Data
 {
     public class DkgContext : DbContext
     {
-        private DbSet<Node> Nodes { get; set; }
+        //private DbSet<Node> Nodes { get; set; }
         private DbSet<Round> Rounds { get; set; }
-        private DbSet<NodesRoundHistory> NodesRoundHistory { get; set; }
 
         private readonly NodesCache nodesCache;
         private readonly RoundsCache roundsCache;
         private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
+        private readonly NodeAddProcessor nodeRequestProcessor;
+        private readonly NrhAddProcessor nrhRequestProcessor;
 
         private readonly ILogger logger;
         public DkgContext(DbContextOptions<DkgContext> options,
                           NodesCache nc,
                           RoundsCache rc,  
                           NodesRoundHistoryCache nrhc,
+                          NodeAddProcessor nodep,
+                          NrhAddProcessor nrhp,
                           ILogger<DkgContext> lggr) : base(options)
         {
             nodesCache = nc;
             roundsCache = rc;
             nodesRoundHistoryCache = nrhc;
+            nodeRequestProcessor = nodep;
+            nrhRequestProcessor = nrhp;
 
             logger = lggr;
         }
         public Node? GetNodeById(int id) => nodesCache.GetNodeById(id);
         public Node? GetNodeByAddress(string address) => nodesCache.GetNodeByAddress(address);
-        public async Task AddNodeAsync(Node node)
+        public void RegisterNode(Node node)
         {
             try
             { 
-                Nodes.Add(node);
-                await SaveChangesAsync();
+                nodeRequestProcessor.EnqueueRequest(new Node(node));
                 nodesCache.SaveNodeToCache(node);
-                await SaveNodesRoundHistory(node);
+                SaveNodesRoundHistory(node);
                 nodesRoundHistoryCache.UpdateNodeCounts(null, NStatus.NotRegistered, node.RoundId, node.Status);
             }
             catch (Exception ex)
@@ -71,51 +76,35 @@ namespace dkgServiceNode.Data
             }
         }
 
-        private async Task SaveNodesRoundHistory(Node node)
+        private void SaveNodesRoundHistory(Node node)
         {
             if (node.RoundId != null && node.Random != null)
             {
                 nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(new NodesRoundHistory(node));
-
-                await Database.ExecuteSqlRawAsync(
-                  "CALL upsert_node_round_history({0}, {1}, {2}, {3})",
-                  node.Id, node.RoundId, node.StatusValue, node.Random);
+                nrhRequestProcessor.EnqueueRequest(new Node(node));
             }
         }
         public List<Node> GetAllNodes() => nodesCache.GetAllNodes();
-
         public int GetNodeCount() => nodesCache.GetNodeCount();
         public List<Node> GetAllNodesSortedById() => nodesCache.GetAllNodesSortedById();
         public List<Node> GetFilteredNodes(string search = "") => nodesCache.GetFilteredNodes(search);
-        public async Task UpdateNodeAsync(Node node)
+        public void UpdateNode(Node node)
         {
             try
             {
                 NodesRoundHistory? nrh = GetLastNodeRoundHistory(node.Id, -1);
-                nodesRoundHistoryCache.UpdateNodeCounts(nrh?.RoundId, nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
-                                                        node.RoundId, node.Status);
+                nodesRoundHistoryCache.UpdateNodeCounts(
+                    nrh?.RoundId, 
+                    nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
+                    node.RoundId, 
+                    node.Status);
 
-                await SaveNodesRoundHistory(node);
+                SaveNodesRoundHistory(node);
                 nodesCache.UpdateNodeInCache(node);
             }
             catch (Exception ex)
             {
                 logger.LogError("Error updating node: {msg}", ex.Message);
-            }
-        }
-
-        public async Task DeleteNodeAsync(Node node)
-        {
-            try
-            {
-                nodesRoundHistoryCache.UpdateNodeCounts(node.RoundId, node.Status, null, NStatus.NotRegistered);
-                Nodes.Remove(node);
-                await SaveChangesAsync();
-                nodesCache.DeleteNodeFromCache(node);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Error deleting node: {msg}", ex.Message);
             }
         }
 

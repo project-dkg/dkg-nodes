@@ -72,7 +72,8 @@ namespace dkgServiceNode.Controllers
 
             foreach (var round in rounds)
             {
-                int nodeCountWaitingRoundStart = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingRoundStart);
+                round.NodeCountWRegistration = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingRegistration);
+                round.NodeCountWRoundStart = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingRoundStart);
                 round.NodeCountStepOne = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepOne);
                 round.NodeCountWStepTwo = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.WaitingStepTwo);
                 round.NodeCountStepTwo = nodesRoundHistoryCache.GetNodeCountForRound(round.Id, NStatus.RunningStepTwo);
@@ -92,7 +93,8 @@ namespace dkgServiceNode.Controllers
                               round.NodeCountFailed +
                               round.NodeCountFinished +
                               round.NodeCountTimedOut +
-                              nodeCountWaitingRoundStart;
+                              round.NodeCountWRoundStart +
+                              round.NodeCountWRegistration;
 
                 round.NodeCount = eaCount;
             }
@@ -119,7 +121,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Reference>> AddRound(RoundSettings roundSettings)
         {
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
             Round round = new()
@@ -144,7 +146,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Round>> NextRoundStep(int id)
         {
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
             Round? round = dkgContext.GetRoundById(id);
@@ -193,7 +195,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
         public async Task<ActionResult<Round>> CancelRound(int id)
         {
-            var ch = await userContext.CheckAdmin(curUserId);
+            var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
             Round? round = dkgContext.GetRoundById(id);
@@ -218,18 +220,20 @@ namespace dkgServiceNode.Controllers
                     .Where(node => dkgContext.CheckNodeQualification(node.Id, round.Id - 1))
                     .ToList();
 
+            await Task.Delay(0);
+            
             if (fiNodes.Count < 3)
             {
                 logger.LogWarning("Not enough nodes has been qualified to start a round. Count = {count}, minimum = 3", fiNodes.Count);
 
-                await ResetNodeStates(dkgContext, rNodes);
+                ResetNodeStates(dkgContext, rNodes);
                 round.Result = null;
                 round.StatusValue = (short)RStatus.Failed;
             }
             else
             {
                 List<Node> reNodes = rNodes.Except(fiNodes).ToList();
-                await ResetNodeStates(dkgContext, reNodes);
+                ResetNodeStates(dkgContext, reNodes);
 
                 List<Node> fi2Nodes = fiNodes;
                 reNodes = [];
@@ -242,7 +246,7 @@ namespace dkgServiceNode.Controllers
                     reNodes = fiNodes.Skip(round.MaxNodes).ToList();
                 }
                 runner.RunRound(round, fi2Nodes);
-                await ResetNodeStates(dkgContext, reNodes);
+                ResetNodeStates(dkgContext, reNodes);
             }
         }
         internal async Task<ActionResult<Round>> UpdateRoundState(DkgContext dkgContext, Round round)

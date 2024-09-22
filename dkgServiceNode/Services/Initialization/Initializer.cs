@@ -35,7 +35,7 @@ namespace dkgServiceNode.Services.Initialization
         NodesCache nodesCache,
         RoundsCache roundsCache,
         NodesRoundHistoryCache nodesRoundHistoryCache,
-        ILogger logger)
+        ILogger logger): IDisposable
     {
         private readonly NodesCache _nodesCache = nodesCache;
         private readonly RoundsCache _roundsCache = roundsCache;
@@ -241,6 +241,11 @@ namespace dkgServiceNode.Services.Initialization
             {
                 _logger.LogError("Failed to populate history counters from database: {msg}", ex.Message);
             }
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

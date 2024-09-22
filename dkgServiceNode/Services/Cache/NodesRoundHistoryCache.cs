@@ -31,10 +31,10 @@ namespace dkgServiceNode.Services.Cache
     public  class NodesRoundHistoryCache
     {
         private  readonly Dictionary<int, List<NodesRoundHistory>> _cacheNodesRoundHistory = [];
-        private readonly object _cacheNodesRoundHistoryLock = new();
+        private  readonly object _cacheNodesRoundHistoryLock = new();
         private  readonly object _cacheCountsRoundHistoryLock = new();
 
-        private Dictionary<(int RoundId, NStatus Status), int> _nodeCounts = [];
+        private readonly Dictionary<(int RoundId, NStatus Status), int> _nodeCounts = [];
 
         public void SetHistoryCounterNoLock(int roundId, NStatus status, int count)
         {

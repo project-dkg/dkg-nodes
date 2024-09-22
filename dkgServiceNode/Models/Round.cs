@@ -58,6 +58,12 @@ namespace dkgServiceNode.Models
         public int NodeCount { get; set; } = 0;
 
         [NotMapped]
+        public int NodeCountWRegistration { get; set; } = 0;
+
+        [NotMapped]
+        public int NodeCountWRoundStart { get; set; } = 0;
+
+        [NotMapped]
         public int NodeCountStepOne { get; set; } = 0;
 
         [NotMapped]

@@ -23,50 +23,58 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
 using dkgServiceNode.Models;
+using dkgServiceNode.Services.Cache;
+using dkgCommon.Constants;
 
 namespace dkgServiceNode.Data
 {
-    public class UserContext : DbContext
+    public class NodeContext : DbContext
     {
-        public UserContext(DbContextOptions<UserContext> options) : base(options) { }
-        public DbSet<User> Users { get; set; }
+        private readonly ILogger _logger;
+        private readonly NodesCache _nodesCache;
+        private readonly NodesRoundHistoryCache _nodesRoundHistoryCache;
+
+        public NodeContext(
+            DbContextOptions<NodeContext> options,
+            NodesCache nc,
+            NodesRoundHistoryCache nrhc,
+            ILogger<NodeContext> lggr) : base(options) 
+        {
+            _logger = lggr;
+            _nodesCache = nc;
+            _nodesRoundHistoryCache = nrhc;
+        }
+        public DbSet<Node> Nodes { get; set; }
         public async Task<bool> ExistsAsync(int id)
         {
-            return await Users.AnyAsync(e => e.Id == id);
+            return await Nodes.AnyAsync(e => e.Id == id);
         }
-        public async Task<bool> ExistsAsync(string email)
+        public async Task<bool> ExistsAsync(string address)
         {
-            return await Users.AnyAsync(e => e.Email == email);
+            return await Nodes.AnyAsync(e => e.Address == address);
         }
-        public async Task<List<UserViewItem>> UserViewItemsAsync()
+
+        public async Task<bool> DeleteAsync(string address)
         {
-            return await Users.AsNoTracking().Select(x => new UserViewItem(x)).ToListAsync();
+            return await Nodes.AnyAsync(e => e.Address == address);
         }
-        public async Task<UserViewItem?> UserViewItemAsync(int id)
+
+        public async Task DeleteAsync(Node node)
         {
-            var user = await Users.AsNoTracking().Where(x => x.Id == id).Select(x => new UserViewItem(x)).FirstOrDefaultAsync();
-            return user ?? null;
+            try
+            {
+                _nodesRoundHistoryCache.UpdateNodeCounts(node.RoundId, node.Status, null, NStatus.NotRegistered);
+                Nodes.Remove(node);
+                await SaveChangesAsync();
+                _nodesCache.DeleteNodeFromCache(node);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error deleting node: {msg}", ex.Message);
+            }
         }
-        public async Task<ActionResult<bool>> CheckAdminAsync(int cuid)
-        {
-            var curUser = await UserViewItemAsync(cuid);
-            return curUser != null && curUser.IsAdmin;
-        }
-        public async Task<ActionResult<bool>> CheckAdminOrSameUserAsync(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return await CheckAdminAsync(cuid);
-        }
-        public bool CheckSameUser(int id, int cuid)
-        {
-            if (cuid == 0) return false;
-            if (cuid == id) return true;
-            return false;
-        }
+
     }
 }
