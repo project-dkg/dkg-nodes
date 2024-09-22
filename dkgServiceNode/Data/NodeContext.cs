@@ -47,10 +47,6 @@ namespace dkgServiceNode.Data
             _nodesRoundHistoryCache = nrhc;
         }
         public DbSet<Node> Nodes { get; set; }
-        public async Task<bool> ExistsAsync(int id)
-        {
-            return await Nodes.AnyAsync(e => e.Id == id);
-        }
         public async Task<bool> ExistsAsync(string address)
         {
             return await Nodes.AnyAsync(e => e.Address == address);

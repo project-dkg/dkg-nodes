@@ -43,8 +43,8 @@ namespace dkgServiceNode.Models
         public int RoundId { get; set; }
 
         [Required]
-        [Column("node_id")]
-        public int NodeId { get; set; }
+        [Column("node_address")]
+        public string NodeAddress { get; set; } = "";
 
         [Required]
         [Column("node_final_status")]
@@ -65,7 +65,7 @@ namespace dkgServiceNode.Models
         }
         public NodesRoundHistory(Node node)
         {
-            NodeId = node.Id;
+            NodeAddress = node.Address;
             NodeFinalStatus = node.Status;
             NodeRandom = node.Random;
             RoundId = node.RoundId ?? 0;
@@ -74,7 +74,7 @@ namespace dkgServiceNode.Models
         {
             Id = other.Id;
             RoundId = other.RoundId;
-            NodeId = other.NodeId;
+            NodeAddress = other.NodeAddress;
             NodeFinalStatusValue = other.NodeFinalStatusValue;
             NodeRandom = other.NodeRandom;
             NodeFinalStatus = other.NodeFinalStatus;

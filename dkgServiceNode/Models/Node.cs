@@ -34,14 +34,10 @@ namespace dkgServiceNode.Models
     [Table("nodes")]
     public class Node
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Column("id")]
-        public int Id { get; set; }
-
         [Column("name")]
         public string Name { get; set; } = "--";
 
+        [Key]
         [Column("address")]
         // Solana Wallet Address
         public string Address { get; set; } = string.Empty;
@@ -85,7 +81,7 @@ namespace dkgServiceNode.Models
         }
         public Node(Node other)
         {
-            Id = other.Id;
+            Address = other.Address;
             Name = other.Name;
             PublicKey = other.PublicKey;
             RoundId = other.RoundId;

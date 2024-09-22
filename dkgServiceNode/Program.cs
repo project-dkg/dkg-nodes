@@ -33,12 +33,14 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<NodesCache>();
 builder.Services.AddSingleton<RoundsCache>();
 builder.Services.AddSingleton<NodesRoundHistoryCache>();
+builder.Services.AddSingleton<NodeCompositeContext>();
 
 var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
 
 builder.Services.AddDbContext<VersionContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddDbContext<UserContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddDbContext<DkgContext>(options => {
+builder.Services.AddDbContext<NodeContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<RoundContext>(options => {
     options.UseNpgsql(connectionString);
     options.EnableSensitiveDataLogging();
 });
@@ -50,6 +52,13 @@ builder.Services.AddSingleton<NrhAddProcessor>(serviceProvider =>
     var logger = serviceProvider.GetRequiredService<ILogger<NrhAddProcessor>>();
     return new NrhAddProcessor(connectionString, logger);
 });
+
+builder.Services.AddSingleton<NodeAddProcessor>(serviceProvider =>
+{
+    var logger = serviceProvider.GetRequiredService<ILogger<NodeAddProcessor>>();
+    return new NodeAddProcessor(connectionString, logger);
+});
+
 
 var app = builder.Build();
 
@@ -63,7 +72,13 @@ var initializer = new Initializer(
         );
 initializer.Initialize(connectionString);
 
-app.Services.GetRequiredService<NrhAddProcessor>().Start();
+app.Services
+    .GetRequiredService<NrhAddProcessor>()
+    .Start();
+
+app.Services
+    .GetRequiredService<NodeAddProcessor>()
+    .Start(app.Services.GetRequiredService<NodeCompositeContext>());
 
 // -------------------------------------------------------------
 

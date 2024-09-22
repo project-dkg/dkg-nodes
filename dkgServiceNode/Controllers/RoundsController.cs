@@ -44,20 +44,23 @@ namespace dkgServiceNode.Controllers
 
     public class RoundsController : DControllerBase
     {
-        protected readonly DkgContext dkgContext;
+        protected readonly RoundContext roundContext;
+        protected readonly NodeCompositeContext ncContext;
         protected readonly Runner runner;
         protected readonly ILogger logger;
         private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
 
         public RoundsController(IHttpContextAccessor httpContextAccessor, 
                                 UserContext uContext, 
-                                DkgContext dContext, 
+                                RoundContext rContext,
+                                NodeCompositeContext nContext,
                                 Runner rnner,
                                 NodesRoundHistoryCache nrhc,
                                 ILogger<NodesController> lgger) :
                                 base(httpContextAccessor, uContext)
         {
-            dkgContext = dContext;
+            roundContext = rContext;
+            ncContext = nContext;
             runner = rnner;
             logger = lgger;
             nodesRoundHistoryCache = nrhc;
@@ -68,7 +71,7 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<Round>))]
         public ActionResult<IEnumerable<Round>> GetRounds()
         {
-            var rounds = dkgContext.GetAllRoundsSortedByIdDescending();
+            var rounds = roundContext.GetAllRoundsSortedByIdDescending();
 
             foreach (var round in rounds)
             {
@@ -108,9 +111,9 @@ namespace dkgServiceNode.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ErrMessage))]
         public ActionResult<Round> GetRound(int id)
         {
-            var round = dkgContext.GetRoundById(id);
+            var round = roundContext.GetRoundById(id);
             if (round == null) return _404Round(id);
-            round.NodeCount = dkgContext.GetAllNodes().Count(n => n.RoundId == round.Id);
+            round.NodeCount = ncContext.GetAllNodes().Count(n => n.RoundId == round.Id);
 
             return round;
         }
@@ -132,7 +135,7 @@ namespace dkgServiceNode.Controllers
                 TimeoutR = roundSettings.TimeoutR
             };
 
-            await dkgContext.AddRoundAsync(round);
+            await roundContext.AddRoundAsync(round);
 
             var reference = new Reference(round.Id);
             return CreatedAtAction(nameof(AddRound), new { id = round.Id }, reference);
@@ -149,7 +152,7 @@ namespace dkgServiceNode.Controllers
             var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            Round? round = dkgContext.GetRoundById(id);
+            Round? round = roundContext.GetRoundById(id);
             if (round == null) return _404Round(id);
 
             round.ModifiedOn = DateTime.Now.ToUniversalTime();
@@ -184,7 +187,7 @@ namespace dkgServiceNode.Controllers
                     break;
             }
 
-            return await UpdateRoundState(dkgContext, round);
+            return await UpdateRoundState(roundContext, round);
         }
 
         // POST: api/rounds/cancel/5
@@ -198,7 +201,7 @@ namespace dkgServiceNode.Controllers
             var ch = await userContext.CheckAdminAsync(curUserId);
             if (ch == null || !ch.Value) return _403();
 
-            Round? round = dkgContext.GetRoundById(id);
+            Round? round = roundContext.GetRoundById(id);
             if (round == null) return _404Round(id);
 
             round.ModifiedOn = DateTime.Now.ToUniversalTime();
@@ -206,18 +209,18 @@ namespace dkgServiceNode.Controllers
             round.Status = RoundStatusConstants.Cancelled;
 
             runner.CancelRound(round);
-            return await UpdateRoundState(dkgContext, round);
+            return await UpdateRoundState(roundContext, round);
         }
 
         internal async Task TryRunRound(Round round)
         {
-            List<Node> rNodes = dkgContext.GetAllNodes()
+            List<Node> rNodes = ncContext.GetAllNodes()
                     .Where(n => n.RoundId == round.Id && n.Status == NStatus.WaitingRoundStart)
                     .ToList();
 
 
             List<Node> fiNodes = rNodes
-                    .Where(node => dkgContext.CheckNodeQualification(node.Id, round.Id - 1))
+                    .Where(node => ncContext.CheckNodeQualification(node.Address, round.Id - 1))
                     .ToList();
 
             await Task.Delay(0);
@@ -226,34 +229,34 @@ namespace dkgServiceNode.Controllers
             {
                 logger.LogWarning("Not enough nodes has been qualified to start a round. Count = {count}, minimum = 3", fiNodes.Count);
 
-                ResetNodeStates(dkgContext, rNodes);
+                ResetNodeStates(ncContext, rNodes);
                 round.Result = null;
                 round.StatusValue = (short)RStatus.Failed;
             }
             else
             {
                 List<Node> reNodes = rNodes.Except(fiNodes).ToList();
-                ResetNodeStates(dkgContext, reNodes);
+                ResetNodeStates(ncContext, reNodes);
 
                 List<Node> fi2Nodes = fiNodes;
                 reNodes = [];
                     
                 if (round.MaxNodes < fiNodes.Count)
                 {
-                    int lastRR = dkgContext.LastRoundResult() ?? new Random().Next();
+                    int lastRR = roundContext.LastRoundResult() ?? new Random().Next();
                     fiNodes.Sort(new NodeComparer(lastRR, round.Id - 1, nodesRoundHistoryCache));
                     fi2Nodes = fiNodes.Take(round.MaxNodes).ToList();
                     reNodes = fiNodes.Skip(round.MaxNodes).ToList();
                 }
                 runner.RunRound(round, fi2Nodes);
-                ResetNodeStates(dkgContext, reNodes);
+                ResetNodeStates(ncContext, reNodes);
             }
         }
-        internal async Task<ActionResult<Round>> UpdateRoundState(DkgContext dkgContext, Round round)
+        internal async Task<ActionResult<Round>> UpdateRoundState(RoundContext roundContext, Round round)
         {
             try
             {
-                await dkgContext.UpdateRoundAsync(round);
+                await roundContext.UpdateRoundAsync(round);
             }
             catch 
             {

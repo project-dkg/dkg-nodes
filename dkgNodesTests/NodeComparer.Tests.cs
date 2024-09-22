@@ -45,12 +45,12 @@ namespace dkgNodesTests
         [Test]
         public void Compare_FirstNodeNull_ReturnsOne()
         {
-            // Arrange
-            var comparer = new NodeComparer(0, 1, nodesRoundHistoryCache); 
-            var node = new Node() { Id = 100181 };
 
-            var history1 = new NodesRoundHistory { NodeId = 100181, RoundId = 1, NodeRandom = 5 };
-            var history2 = new NodesRoundHistory { NodeId = 100182, RoundId = 1, NodeRandom = 3 };
+            var comparer = new NodeComparer(0, 1, nodesRoundHistoryCache); 
+            var node = new Node() { Address = "100181" };
+
+            var history1 = new NodesRoundHistory { NodeAddress = "100181", RoundId = 1, NodeRandom = 5 };
+            var history2 = new NodesRoundHistory { NodeAddress = "100182", RoundId = 1, NodeRandom = 3 };
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
 
@@ -61,7 +61,7 @@ namespace dkgNodesTests
         public void Compare_SecondNodeNull_ReturnsMinusOne()
         {
             var comparer = new NodeComparer(0, 1, nodesRoundHistoryCache);
-            var node = new Node { Id = 1001810 };
+            var node = new Node { Address = "1001810" };
             var result = comparer.Compare(node, null);
             Assert.That(result, Is.EqualTo(0));
         }
@@ -70,11 +70,11 @@ namespace dkgNodesTests
         public void Compare_BothNodesHaveSameNodeRandom_ReturnsZero()
         {
             var comparer = new NodeComparer(0, 1,nodesRoundHistoryCache);
-            var node1 = new Node { Id = 1001811 };
-            var node2 = new Node { Id = 1001812 };
+            var node1 = new Node { Address = "1001811" };
+            var node2 = new Node { Address = "1001812" };
 
-            var history1 = new NodesRoundHistory { NodeId = 1001811, RoundId = 1, NodeRandom = 5 };
-            var history2 = new NodesRoundHistory { NodeId = 1001812, RoundId = 1, NodeRandom = 5 };
+            var history1 = new NodesRoundHistory { NodeAddress = "1001811", RoundId = 1, NodeRandom = 5 };
+            var history2 = new NodesRoundHistory { NodeAddress = "1001812", RoundId = 1, NodeRandom = 5 };
 
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
@@ -87,11 +87,11 @@ namespace dkgNodesTests
         public void Compare_FirstNodeHasSmallerNodeRandom_ReturnsMinusOne()
         {
             var comparer = new NodeComparer(0, 1, nodesRoundHistoryCache);
-            var node1 = new Node { Id = 1001821 };
-            var node2 = new Node { Id = 1001822 };
+            var node1 = new Node { Address = "1001821" };
+            var node2 = new Node { Address = "1001822" };
 
-            var history1 = new NodesRoundHistory { NodeId = 1001821, RoundId = 1, NodeRandom = 3 };
-            var history2 = new NodesRoundHistory { NodeId = 1001822, RoundId = 1, NodeRandom = 5 };
+            var history1 = new NodesRoundHistory { NodeAddress = "1001821", RoundId = 1, NodeRandom = 3 };
+            var history2 = new NodesRoundHistory { NodeAddress = "1001822", RoundId = 1, NodeRandom = 5 };
 
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);
@@ -104,11 +104,11 @@ namespace dkgNodesTests
         public void Compare_SecondNodeHasSmallerNodeRandom_ReturnsOne()
         {
             var comparer = new NodeComparer(0, 1, nodesRoundHistoryCache);
-            var node1 = new Node { Id = 1001831 };
-            var node2 = new Node { Id = 1001832 };
+            var node1 = new Node { Address = "1001831" };
+            var node2 = new Node { Address = "1001832" };
 
-            var history1 = new NodesRoundHistory { NodeId = 1001831, RoundId = 1, NodeRandom = 5 };
-            var history2 = new NodesRoundHistory { NodeId = 1001832, RoundId = 1, NodeRandom = 3 };
+            var history1 = new NodesRoundHistory { NodeAddress = "1001831", RoundId = 1, NodeRandom = 5 };
+            var history2 = new NodesRoundHistory { NodeAddress = "1001832", RoundId = 1, NodeRandom = 3 };
 
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history1);
             nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(history2);

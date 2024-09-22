@@ -23,91 +23,27 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using dkgCommon.Constants;
 using dkgServiceNode.Models;
 using dkgServiceNode.Services.Cache;
-using dkgServiceNode.Services.RequestProcessors;
 using Microsoft.EntityFrameworkCore;
 
 namespace dkgServiceNode.Data
 {
-    public class DkgContext : DbContext
+    public class RoundContext : DbContext
     {
-        //private DbSet<Node> Nodes { get; set; }
         private DbSet<Round> Rounds { get; set; }
 
-        private readonly NodesCache nodesCache;
         private readonly RoundsCache roundsCache;
-        private readonly NodesRoundHistoryCache nodesRoundHistoryCache;
-        private readonly NodeAddProcessor nodeRequestProcessor;
-        private readonly NrhAddProcessor nrhRequestProcessor;
 
         private readonly ILogger logger;
-        public DkgContext(DbContextOptions<DkgContext> options,
-                          NodesCache nc,
-                          RoundsCache rc,  
-                          NodesRoundHistoryCache nrhc,
-                          NodeAddProcessor nodep,
-                          NrhAddProcessor nrhp,
-                          ILogger<DkgContext> lggr) : base(options)
+        public RoundContext(
+            DbContextOptions<RoundContext> options,
+            RoundsCache rc,  
+            ILogger<RoundContext> lggr) : base(options)
         {
-            nodesCache = nc;
             roundsCache = rc;
-            nodesRoundHistoryCache = nrhc;
-            nodeRequestProcessor = nodep;
-            nrhRequestProcessor = nrhp;
-
             logger = lggr;
         }
-        public Node? GetNodeById(int id) => nodesCache.GetNodeById(id);
-        public Node? GetNodeByAddress(string address) => nodesCache.GetNodeByAddress(address);
-        public void RegisterNode(Node node)
-        {
-            try
-            { 
-                nodeRequestProcessor.EnqueueRequest(new Node(node));
-                nodesCache.SaveNodeToCache(node);
-                SaveNodesRoundHistory(node);
-                nodesRoundHistoryCache.UpdateNodeCounts(null, NStatus.NotRegistered, node.RoundId, node.Status);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Error adding node: {msg}", ex.Message);
-            }
-        }
-
-        private void SaveNodesRoundHistory(Node node)
-        {
-            if (node.RoundId != null && node.Random != null)
-            {
-                nodesRoundHistoryCache.SaveNodesRoundHistoryToCache(new NodesRoundHistory(node));
-                nrhRequestProcessor.EnqueueRequest(new Node(node));
-            }
-        }
-        public List<Node> GetAllNodes() => nodesCache.GetAllNodes();
-        public int GetNodeCount() => nodesCache.GetNodeCount();
-        public List<Node> GetAllNodesSortedById() => nodesCache.GetAllNodesSortedById();
-        public List<Node> GetFilteredNodes(string search = "") => nodesCache.GetFilteredNodes(search);
-        public void UpdateNode(Node node)
-        {
-            try
-            {
-                NodesRoundHistory? nrh = GetLastNodeRoundHistory(node.Id, -1);
-                nodesRoundHistoryCache.UpdateNodeCounts(
-                    nrh?.RoundId, 
-                    nrh != null ? nrh.NodeFinalStatus : NStatus.NotRegistered,
-                    node.RoundId, 
-                    node.Status);
-
-                SaveNodesRoundHistory(node);
-                nodesCache.UpdateNodeInCache(node);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Error updating node: {msg}", ex.Message);
-            }
-        }
-
         public Round? GetRoundById(int id) => roundsCache.GetRoundById(id);
         public List<Round> GetAllRounds() => roundsCache.GetAllRounds();
         public List<Round> GetAllRoundsSortedByIdDescending() => roundsCache.GetAllRoundsSortedByIdDescending();
@@ -152,9 +88,6 @@ namespace dkgServiceNode.Data
         }
         public bool RoundExists(int id) => roundsCache.RoundExists(id);
         public int? LastRoundResult() => roundsCache.LastRoundResult();
-        public NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int RoundId) => nodesRoundHistoryCache.GetLastNodeRoundHistory(nodeId, RoundId);
-        public bool CheckNodeQualification(int nodeId, int previousRoundId) => nodesRoundHistoryCache.CheckNodeQualification(nodeId, previousRoundId);
-        public int? GetNodeRandomForRound(int nodeId, int roundId) => nodesRoundHistoryCache.GetNodeRandomForRound(nodeId, roundId);
 
     }
 }

@@ -42,7 +42,7 @@ namespace dkgServiceNode.Services.NodeComparer
 
         private int? GetInt(Node? x)
         {
-            return x != null ? nodesRoundHistoryCache.GetNodeRandomForRound(x.Id, RoundId) : null;
+            return x != null ? nodesRoundHistoryCache.GetNodeRandomForRound(x.Address, RoundId) : null;
         }
         public int Compare(Node? x, Node? y)
         {

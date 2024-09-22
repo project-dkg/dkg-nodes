@@ -30,7 +30,7 @@ namespace dkgServiceNode.Services.Cache
 {
     public  class NodesRoundHistoryCache
     {
-        private  readonly Dictionary<int, List<NodesRoundHistory>> _cacheNodesRoundHistory = [];
+        private  readonly Dictionary<string, List<NodesRoundHistory>> _cacheNodesRoundHistory = [];
         private  readonly object _cacheNodesRoundHistoryLock = new();
         private  readonly object _cacheCountsRoundHistoryLock = new();
 
@@ -83,20 +83,20 @@ namespace dkgServiceNode.Services.Cache
 
         public void SaveNodesRoundHistoryToCacheNoLock(NodesRoundHistory history)
         {
-            if (!_cacheNodesRoundHistory.ContainsKey(history.NodeId))
+            if (!_cacheNodesRoundHistory.ContainsKey(history.NodeAddress))
             {
-                _cacheNodesRoundHistory[history.NodeId] = [];
+                _cacheNodesRoundHistory[history.NodeAddress] = [];
             }
-            _cacheNodesRoundHistory[history.NodeId].Add(new NodesRoundHistory(history));
+            _cacheNodesRoundHistory[history.NodeAddress].Add(new NodesRoundHistory(history));
         }
 
         public  void SaveNodesRoundHistoryToCache(NodesRoundHistory history)
         {
             lock (_cacheNodesRoundHistoryLock)
             {
-                if (!_cacheNodesRoundHistory.TryGetValue(history.NodeId, out List<NodesRoundHistory>? histories))
+                if (!_cacheNodesRoundHistory.TryGetValue(history.NodeAddress, out List<NodesRoundHistory>? histories))
                 {
-                    _cacheNodesRoundHistory[history.NodeId] = [new NodesRoundHistory(history)];
+                    _cacheNodesRoundHistory[history.NodeAddress] = [new NodesRoundHistory(history)];
                 }
                 else
                 {
@@ -106,25 +106,25 @@ namespace dkgServiceNode.Services.Cache
                     // If the existing record is found, replace it with the new history
                     if (index != -1)
                     {
-                        _cacheNodesRoundHistory[history.NodeId][index] = new NodesRoundHistory(history);
+                        _cacheNodesRoundHistory[history.NodeAddress][index] = new NodesRoundHistory(history);
                     }
                     else
                     {
                         // Add the new history to the list if it doesn't exist
-                        _cacheNodesRoundHistory[history.NodeId].Add(new NodesRoundHistory(history));
+                        _cacheNodesRoundHistory[history.NodeAddress].Add(new NodesRoundHistory(history));
 
                         // Remove excess items if the list has more than 10 items
-                        if (_cacheNodesRoundHistory[history.NodeId].Count > 10)
+                        if (_cacheNodesRoundHistory[history.NodeAddress].Count > 10)
                         {
                             // Find the two items with the largest RoundId
-                            var largestRoundIds = _cacheNodesRoundHistory[history.NodeId]
+                            var largestRoundIds = _cacheNodesRoundHistory[history.NodeAddress]
                                 .OrderByDescending(nrh => nrh.RoundId)
                                 .Take(2)
                                 .Select(nrh => nrh.RoundId)
                                 .ToList();
 
                             // Remove all items except the two with the largest RoundId
-                            _cacheNodesRoundHistory[history.NodeId] = _cacheNodesRoundHistory[history.NodeId]
+                            _cacheNodesRoundHistory[history.NodeAddress] = _cacheNodesRoundHistory[history.NodeAddress]
                                 .Where(nrh => largestRoundIds.Contains(nrh.RoundId))
                                 .ToList();
                         }
@@ -133,12 +133,12 @@ namespace dkgServiceNode.Services.Cache
             }
         }
 
-        public  NodesRoundHistory? GetLastNodeRoundHistory(int nodeId, int RoundId)
+        public  NodesRoundHistory? GetLastNodeRoundHistory(string nodeAddress, int RoundId)
         {
             NodesRoundHistory? res = null;
             lock (_cacheNodesRoundHistoryLock)
             {
-                if (_cacheNodesRoundHistory.TryGetValue(nodeId, out List<NodesRoundHistory>? histories))
+                if (_cacheNodesRoundHistory.TryGetValue(nodeAddress, out List<NodesRoundHistory>? histories))
                 {
                     var history = histories.Where(nrh => nrh.RoundId != RoundId)
                                            .OrderByDescending(nrh => nrh.RoundId)
@@ -151,16 +151,16 @@ namespace dkgServiceNode.Services.Cache
             }
             return res;
         }
-        public  bool CheckNodeQualification(int nodeId, int previousRoundId)
+        public  bool CheckNodeQualification(string nodeAddress, int previousRoundId)
         {
-            return previousRoundId > 0 && GetNodeRandomForRound(nodeId, previousRoundId) != null;
+            return previousRoundId > 0 && GetNodeRandomForRound(nodeAddress, previousRoundId) != null;
         }
-        public  int? GetNodeRandomForRound(int nodeId, int roundId)
+        public  int? GetNodeRandomForRound(string nodeAddress, int roundId)
         {
             int? res = null;
             lock (_cacheNodesRoundHistoryLock)
             {
-                if (_cacheNodesRoundHistory.TryGetValue(nodeId, out List<NodesRoundHistory>? histories))
+                if (_cacheNodesRoundHistory.TryGetValue(nodeAddress, out List<NodesRoundHistory>? histories))
                 {
                     var history = histories.Where(nrh => nrh.RoundId == roundId)
                                            .FirstOrDefault();

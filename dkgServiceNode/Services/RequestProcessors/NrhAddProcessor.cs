@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json;
+using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using Npgsql;
 
@@ -98,7 +99,7 @@ namespace dkgServiceNode.Services.RequestProcessors
                     {
                         var items = requests.Select(r => new
                         {
-                            node_id = r.Id,
+                            node_address = r.Address,
                             round_id = r.RoundId,
                             node_final_status = r.StatusValue,
                             node_random = r.Random

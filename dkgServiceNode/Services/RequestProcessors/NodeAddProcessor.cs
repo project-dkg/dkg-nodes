@@ -1,6 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using dkgCommon.Constants;
+using dkgServiceNode.Data;
 using dkgServiceNode.Models;
+using dkgServiceNode.Services.Cache;
 using Npgsql;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace dkgServiceNode.Services.RequestProcessors
 {
@@ -12,19 +16,25 @@ namespace dkgServiceNode.Services.RequestProcessors
 
         private readonly ConcurrentQueue<Node> requestQueue = new();
         private readonly CancellationTokenSource cancellationTokenSource = new();
+
         private Task? backgroundTask = null;
+        private NodeCompositeContext? ncContext = null;
+
         private volatile bool isRunning = false;
         private readonly ILogger logger;
         private readonly string connectionString;
         private bool disposed = false;
 
-        public NodeAddProcessor(string connectionStr, ILogger<NodeAddProcessor> lgger)
+        public NodeAddProcessor(
+            string connectionStr,
+            ILogger<NodeAddProcessor> lgger
+        )
         {
             connectionString = connectionStr;
             logger = lgger;
         }
 
-        public void Start()
+        public void Start(NodeCompositeContext nContext)
         {
             if (isRunning)
             {
@@ -33,6 +43,7 @@ namespace dkgServiceNode.Services.RequestProcessors
             else
             {
                 isRunning = true;
+                ncContext = nContext;
                 backgroundTask = Task.Run(ProcessRequests, cancellationTokenSource.Token);
                 logger.LogInformation("Request Processor has been started.");
             }
@@ -88,34 +99,27 @@ namespace dkgServiceNode.Services.RequestProcessors
                 {
                     try
                     {
-                        using var writer = dbConnection.BeginBinaryImport("COPY nodes (address, name) FROM STDIN (FORMAT BINARY)");
+                        // Convert the list of requests to a JSON array
+                        var jsonItems = System.Text.Json.JsonSerializer.Serialize(requests.Select(r => new
+                        {
+                            node_address = r.Address,
+                            node_name = r.Name,
+                            round_id = r.RoundId,
+                            node_final_status = r.StatusValue,
+                            node_random = r.Random
+                        }));
 
+                        // Call the bulk_insert_node_with_round_history procedure
+                        using (var command = new NpgsqlCommand("CALL bulk_insert_node_with_round_history(@p_items)", dbConnection))
+                        {
+                            command.Parameters.AddWithValue("p_items", NpgsqlTypes.NpgsqlDbType.Json, jsonItems);
+                            await command.ExecuteNonQueryAsync();
+                        }
+
+                        // Finalize registration for each request
                         foreach (var request in requests)
                         {
-                            writer.StartRow();
-                            writer.Write(request.Address, NpgsqlTypes.NpgsqlDbType.Text);
-                            writer.Write(request.Name, NpgsqlTypes.NpgsqlDbType.Text);
-                        }
-
-                        await writer.CompleteAsync(cancellationTokenSource.Token);
-
-                        // Retrieve the IDs and addresses of the inserted rows
-                        var insertedNodes = new List<(string Address, int Id)>();
-                        using (var command = new NpgsqlCommand("SELECT address, id FROM nodes WHERE address = ANY(@addresses)", dbConnection))
-                        {
-                            command.Parameters.AddWithValue("addresses", requests.Select(r => r.Address).ToArray());
-                            using var reader = await command.ExecuteReaderAsync(cancellationTokenSource.Token);
-                            while (await reader.ReadAsync(cancellationTokenSource.Token))
-                            {
-                                var address = reader.GetString(0);
-                                var id = reader.GetInt32(1);
-                                insertedNodes.Add((address, id));
-                            }
-                        }
-
-                        foreach (var (Address, Id) in insertedNodes)
-                        {
-                            logger.LogInformation("Inserted node with Address: {address}, ID: {id}", Address, Id);
+                            ncContext!.FinalizeRegistration(request);
                         }
                     }
                     catch (Exception ex)
@@ -145,6 +149,7 @@ namespace dkgServiceNode.Services.RequestProcessors
                     cancellationTokenSource.Dispose();
                     backgroundTask?.Dispose();
                 }
+                ncContext = null;
                 disposed = true;
             }
         }
