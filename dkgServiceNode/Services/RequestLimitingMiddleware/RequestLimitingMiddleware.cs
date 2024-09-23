@@ -28,7 +28,7 @@ namespace dkgServiceNode.Services.RequestLimitingMiddleware
     public class RequestLimitingMiddleware(RequestDelegate next, int maxConcurrentRequests)
     {
         private readonly RequestDelegate _next = next;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(maxConcurrentRequests, maxConcurrentRequests);
+        private readonly SemaphoreSlim _semaphore = new(maxConcurrentRequests, maxConcurrentRequests);
 
         public async Task InvokeAsync(HttpContext context)
         {

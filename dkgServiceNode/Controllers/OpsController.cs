@@ -103,13 +103,15 @@ namespace dkgServiceNode.Controllers
                 int? roundId = null;
                 Round? round = null;
                 List<Round> rounds = roundContext.GetAllRounds().Where(r => r.StatusValue == (short)RStatus.Registration).ToList();
+                var xNode = ncContext.GetNodeByAddress(node.Address);
+                NodesRoundHistory? lastRoundHistory = null;
+
                 if (rounds.Count != 0)
                 {
                     logger.LogDebug("{count} round{s} open for registration", rounds.Count, rounds.Count != 1 ? "s" : "");
                     round = rounds[new Random().Next(rounds.Count)];
                     roundId = round.Id;
 
-                    var xNode = ncContext.GetNodeByAddress(node.Address);
                     if (xNode == null)
                     {
                         logger.LogDebug("Registering new node for round [{roundId}]", roundId);
@@ -141,7 +143,6 @@ namespace dkgServiceNode.Controllers
                         ncContext.UpdateNode(xNode, true);
                     }
 
-                    NodesRoundHistory? lastRoundHistory = null;
                     if (xNode is not null)
                     {
                         lastRoundHistory = ncContext.GetLastNodeRoundHistory(xNode.Address, roundId ?? 0);
@@ -154,8 +155,12 @@ namespace dkgServiceNode.Controllers
                 }
                 else
                 {
+                    if (xNode is not null)
+                    {
+                        lastRoundHistory = ncContext.GetLastNodeRoundHistory(xNode.Address, roundId ?? 0);
+                    }
                     logger.LogDebug("No rounds open for registration");
-                    res = Ok(CreateStatusResponse(null, null, NStatus.NotRegistered, null));
+                    res = Ok(CreateStatusResponse(null, lastRoundHistory, NStatus.NotRegistered, node.Random));
                 }
             }
             stopwatch.Stop();

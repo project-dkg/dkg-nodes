@@ -1,58 +1,44 @@
-﻿using System.Collections.Concurrent;
+﻿// Copyright (C) 2024 Maxim [maxirmx] Samsonov (www.sw.consulting)
+// All rights reserved.
+// This file is a part of dkg service node
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
+// documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+using System.Collections.Concurrent;
 using System.Text.Json;
-using dkgServiceNode.Data;
 using dkgServiceNode.Models;
 using Npgsql;
 
 namespace dkgServiceNode.Services.RequestProcessors
 {
-    public class NrhAddProcessor : IDisposable
+    public class NrhAddProcessor : RequestProcessorBase
     {
-        private readonly int _database_reconnect_delay = 3000;
-        private readonly int _queue_reparse_delay = 1000;
-        private readonly int _bulk_upsert_limit = 10000;
-
-        private readonly ConcurrentQueue<Node> requestQueue = new();
-        private readonly CancellationTokenSource cancellationTokenSource = new();
-        private Task? backgroundTask = null;
-        private volatile bool isRunning = false;
-        private readonly ILogger logger;
-        private readonly string connectionString;
-        private bool disposed = false;
-
-        public NrhAddProcessor(string connectionStr, ILogger<NrhAddProcessor> lgger)
+        public NrhAddProcessor( 
+            string connectionStr,
+            int bInsertLimit,
+            int qReparseDelay,
+            ILogger<NrhAddProcessor> lgger
+        ) : base(connectionStr, bInsertLimit, qReparseDelay, lgger)
         {
-            connectionString = connectionStr;
-            logger = lgger;
-        }
-
-        public void Start()
-        {
-            if (isRunning)
-            {
-                logger.LogWarning("Nodes Round History Request Processor is already running. 'Start' ignored.");
-            }
-            else
-            {
-                isRunning = true;
-                backgroundTask = Task.Run(ProcessRequests, cancellationTokenSource.Token);
-                logger.LogInformation("Request Processor has been started.");
-            }
-        }
-
-        public void Stop()
-        {
-            if (!isRunning)
-            {
-                logger.LogWarning("Request Processor is not running. 'Stop' ignored.");
-            }
-            else
-            {
-                cancellationTokenSource.Cancel();
-                backgroundTask?.Wait();
-                isRunning = false;
-                logger.LogInformation("Request Processor has been stopped.");
-            }
         }
 
         public void EnqueueRequest(Node request)
@@ -67,7 +53,7 @@ namespace dkgServiceNode.Services.RequestProcessors
             }
         }
 
-        private async Task ProcessRequests()
+        protected override async Task ProcessRequests()
         {
             using var dbConnection = new NpgsqlConnection(connectionString);
             while (!cancellationTokenSource.Token.IsCancellationRequested)
@@ -80,7 +66,7 @@ namespace dkgServiceNode.Services.RequestProcessors
                 catch (Exception ex)
                 {
                     logger.LogError("Failed to create database connection: {msg}", ex.Message);
-                    await Task.Delay(_database_reconnect_delay, cancellationTokenSource.Token);
+                    await Task.Delay(databaseReconnectDelay, cancellationTokenSource.Token);
                 }
             }
 
@@ -88,7 +74,7 @@ namespace dkgServiceNode.Services.RequestProcessors
             {
                 var requests = new List<Node>();
 
-                while (requestQueue.TryDequeue(out var request) && requests.Count < _bulk_upsert_limit)
+                while (requestQueue.TryDequeue(out var request) && requests.Count < bulkInsertLimit)
                 {
                     requests.Add(request);
                 }
@@ -123,34 +109,9 @@ namespace dkgServiceNode.Services.RequestProcessors
                 }
                 else
                 {
-                    await Task.Delay(_queue_reparse_delay, cancellationTokenSource.Token);
+                    await Task.Delay(queueReparseDelay, cancellationTokenSource.Token);
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    Stop();
-                    cancellationTokenSource.Dispose();
-                    backgroundTask?.Dispose();
-                }
-                disposed = true;
-            }
-        }
-
-        ~NrhAddProcessor()
-        {
-            Dispose(false);
         }
     }
 }
