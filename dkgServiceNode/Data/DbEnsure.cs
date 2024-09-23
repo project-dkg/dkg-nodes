@@ -270,6 +270,8 @@ namespace dkgServiceNode.Data
                 Ensure_0_14_0(connection);
                 logger.LogInformation("Tagging 0.14.1");
                 PuVersionUpdate("0.14.1", connection);
+                logger.LogInformation("Tagging 0.14.2");
+                PuVersionUpdate("0.14.2", connection);
             }
             catch (Exception ex)
             {

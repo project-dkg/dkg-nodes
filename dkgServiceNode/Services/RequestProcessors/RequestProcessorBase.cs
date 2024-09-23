@@ -34,6 +34,7 @@ namespace dkgServiceNode.Services.RequestProcessors
         protected readonly int databaseReconnectDelay = 3000;
         protected readonly int queueReparseDelay;
         protected readonly int bulkInsertLimit;
+        protected readonly int bulkRestLimit = 100;
 
         protected readonly CancellationTokenSource cancellationTokenSource = new();
 

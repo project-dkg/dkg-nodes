@@ -65,10 +65,15 @@ namespace dkgServiceNode.Services.RequestProcessors
             while (!cancellationTokenSource.Token.IsCancellationRequested)
             {
                 var requests = new List<Node>();
-
+                int counter = 0;
                 while (requestQueue.TryDequeue(out var request) && requests.Count < bulkInsertLimit)
                 {
                     requests.Add(request);
+                    if (counter++ > bulkRestLimit)
+                    {
+                        counter = 0;
+                        await Task.Delay(0);
+                    }
                 }
 
                 if (requests.Count > 0)
@@ -96,6 +101,11 @@ namespace dkgServiceNode.Services.RequestProcessors
                         foreach (var request in requests)
                         {
                             ncContext!.FinalizeRegistration(request);
+                            if (counter++ > bulkRestLimit)
+                            {
+                                counter = 0;
+                                await Task.Delay(0);
+                            }
                         }
                     }
                     catch (Exception ex)
